@@ -1,0 +1,27 @@
+# Dependencies & Runtimes
+node_modules/
+target/
+dist/
+__pycache__/
+*.zip
+*.jar
+*.exe
+jdk/
+maven/
+Digital_App/
+DigitalLogicSim_App/
+Logisim_App/
+
+# External Cloned Repositories
+Digital/
+Digital-Logic-Sim/
+digital-logic-circuit-simulator/
+logisim-evolution/
+
+# Project Specific
+silicon-logic-studio/node_modules/
+silicon-logic-studio/core/target/
+
+# OS Files
+Thumbs.db
+.DS_Store

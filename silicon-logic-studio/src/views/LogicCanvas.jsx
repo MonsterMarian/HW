@@ -30,7 +30,9 @@ export function LogicCanvas({
   onSelectComponent,
   selectedComponentId,
   displayMode = 'schematic', // 'schematic' | 'hardware'
-  onInspectComponent,
+  hierarchyStack,
+  onNavigateUp,
+  onDrillDown,
 }) {
   const canvasRef = useRef(null);
   const [viewState, setViewState] = useState({ x: 80, y: 70, zoom: 1.0 });
@@ -43,6 +45,31 @@ export function LogicCanvas({
 
   const animFrameRef = useRef(null);
   const animTimeRef = useRef(0);
+
+  // Keyboard shortcut listener: Backspace or Esc to navigate up
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (hierarchyStack && hierarchyStack.length > 1) {
+        if (e.key === 'Backspace' || e.key === 'Escape') {
+          if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+          e.preventDefault();
+          if (onNavigateUp) onNavigateUp();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hierarchyStack, onNavigateUp]);
+
+  // Reset view centering when hierarchyStack depth changes
+  const prevStackLenRef = useRef(hierarchyStack ? hierarchyStack.length : 1);
+  useEffect(() => {
+    const currentLen = hierarchyStack ? hierarchyStack.length : 1;
+    if (currentLen !== prevStackLenRef.current) {
+      prevStackLenRef.current = currentLen;
+      setViewState({ x: 90, y: 80, zoom: 0.95 });
+    }
+  }, [hierarchyStack]);
 
   // Dimensions helper
   const getDims = useCallback((comp) => {
@@ -2233,7 +2260,7 @@ export function LogicCanvas({
     }));
   };
 
-  // Double-Click to inspect internal component architecture
+  // Double-Click to drill down into internal subcircuit schematic
   const handleDoubleClick = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const cx = (e.clientX - rect.left - viewState.x) / viewState.zoom;
@@ -2242,9 +2269,8 @@ export function LogicCanvas({
     for (const comp of Array.from(engine.components.values()).reverse()) {
       const { w, h } = getDims(comp);
       if (cx >= comp.x && cx <= comp.x + w && cy >= comp.y && cy <= comp.y + h) {
-        if (onInspectComponent) {
-          audioEngine.playRelayClick(1.6);
-          onInspectComponent(comp);
+        if (onDrillDown) {
+          onDrillDown(comp);
         }
         return;
       }
@@ -2262,6 +2288,68 @@ export function LogicCanvas({
         onWheel={handleWheel}
         className="w-full h-full cursor-crosshair block"
       />
+
+      {/* Hierarchical Drill-Down Breadcrumb Navigation Bar */}
+      {hierarchyStack && hierarchyStack.length > 1 && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-auto">
+          <div className="flex items-center space-x-2 bg-[#080D1A]/95 border border-cyan-500/50 rounded-xl px-4 py-2 shadow-[0_10px_35px_rgba(0,240,255,0.18)] backdrop-blur-xl">
+            {/* Level Up Button */}
+            <button
+              onClick={() => onNavigateUp()}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-cyan-950 to-blue-950 hover:from-cyan-900 hover:to-blue-900 border border-cyan-400/60 rounded-lg text-cyan-300 hover:text-cyan-100 text-xs font-mono font-bold tracking-wider transition-all duration-150 active:scale-95 shadow-md shadow-cyan-950/50"
+              title="Přejít o úroveň výš (Zkratka: Backspace / Esc)"
+            >
+              <span className="text-sm">⇦</span>
+              <span>LEVEL UP (ZPĚT)</span>
+            </button>
+
+            <div className="h-5 w-px bg-cyan-900/60 mx-1" />
+
+            {/* Breadcrumb Path Trail */}
+            <div className="flex items-center space-x-1.5 text-xs font-mono overflow-x-auto max-w-[650px] scrollbar-none py-0.5">
+              {hierarchyStack.map((lvl, idx) => {
+                const isCurrent = idx === hierarchyStack.length - 1;
+                return (
+                  <React.Fragment key={lvl.id + '-' + idx}>
+                    {idx > 0 && <span className="text-cyan-500/60 font-bold select-none">›</span>}
+                    <button
+                      onClick={() => onNavigateUp(idx)}
+                      disabled={isCurrent}
+                      className={`px-2.5 py-1 rounded-md transition-all duration-150 flex items-center space-x-1.5 ${
+                        isCurrent
+                          ? 'text-cyan-300 font-bold bg-cyan-950/80 border border-cyan-400/50 shadow-inner'
+                          : 'text-gray-400 hover:text-cyan-200 hover:bg-white/5'
+                      }`}
+                    >
+                      <span className="text-[10px] text-cyan-500/80 font-semibold">L{idx + 1}:</span>
+                      <span className="whitespace-nowrap">
+                        {lvl.title.length > 25 ? lvl.title.slice(0, 23) + '…' : lvl.title}
+                      </span>
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            <div className="h-5 w-px bg-cyan-900/60 mx-1" />
+
+            {/* Depth Badge */}
+            <span className="text-[10px] font-mono font-semibold text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-md border border-cyan-700/50 whitespace-nowrap">
+              ÚROVEŇ {hierarchyStack.length} / 8
+            </span>
+          </div>
+
+          {/* Subtitle / Micro-Architecture Formula Banner */}
+          {hierarchyStack[hierarchyStack.length - 1].subtitle && (
+            <div className="mt-1.5 text-[11px] font-mono text-cyan-300/90 bg-[#060A14]/90 border border-cyan-500/30 px-3.5 py-1 rounded-full shadow-lg backdrop-blur-md flex items-center space-x-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>{hierarchyStack[hierarchyStack.length - 1].subtitle}</span>
+              <span className="text-gray-500 ml-1 text-[10px]">(Dvojklikem lze jít ještě hlouběji)</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* HUD Telemetry Overlay */}
       <div className="absolute top-4 left-4 flex items-center space-x-2.5 pointer-events-none text-xs font-mono">
         <span className="bg-[#0A0E1A]/85 border border-[#1E2638] px-3 py-1.5 rounded text-cyan-400 font-semibold shadow-2xl backdrop-blur-md flex items-center space-x-2">

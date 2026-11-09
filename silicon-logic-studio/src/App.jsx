@@ -13,6 +13,10 @@ import { AiPanel } from './components/AiPanel';
 import { GalleryDrawer } from './components/GalleryDrawer';
 import { Nv1DiagnosticModal } from './components/Nv1DiagnosticModal';
 
+const ROOT_TITLE = 'NVIDIA NV1 (1995)';
+const ROOT_SUBTITLE = "Nvidia's First Product: Diamond Edge 3D PCI Multimedia Card";
+const makeRootEntry = (title, subtitle) => ({ id: 'root', key: 'root', title, subtitle, level: 1, state: null, viewMode: 'hardware' });
+
 export default function App() {
   const engine = useMemo(() => new LogicEngine(), []);
   // 3 distinct schematic views: 'schematic' (IEEE Gate Symbols) | 'hardware' (PCB DIP Chips) | 'physics' (3D Silicon Die)
@@ -26,115 +30,72 @@ export default function App() {
   const [selectedComponentId, setSelectedComponentId] = useState(null);
 
   // Hierarchical Drill-Down Circuit Stack
-  const [hierarchyStack, setHierarchyStack] = useState([
-    {
-      id: 'root',
-      title: "NVIDIA NV1 (1995)",
-      subtitle: "Nvidia's First Product: Diamond Edge 3D PCI Multimedia Card",
-      state: null,
-      viewMode: 'hardware',
-    }
-  ]);
+  const [hierarchyStack, setHierarchyStack] = useState(() => [makeRootEntry(ROOT_TITLE, ROOT_SUBTITLE)]);
+  const [drillHint, setDrillHint] = useState(null);
 
   // Initialize with Nvidia NV1 (1995) PCI architecture demo circuit
   useEffect(() => {
-    const demo = PRESET_CIRCUITS.nvidia_nv1 || PRESET_CIRCUITS.mini_pc;
-    demo.components.forEach((c) => {
-      engine.addComponent(JSON.parse(JSON.stringify(c)));
-    });
-    demo.wires.forEach((w) => {
-      engine.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin);
-    });
-    engine.propagate();
-    engine.notify();
+    engine.loadCircuit(PRESET_CIRCUITS.nvidia_nv1);
   }, [engine]);
+
+  useEffect(() => {
+    if (!drillHint) return;
+    const t = setTimeout(() => setDrillHint(null), 2200);
+    return () => clearTimeout(t);
+  }, [drillHint]);
 
   // Drill down into internal subcircuit schematic on double click
   const handleDrillDown = useCallback((component) => {
     const subcircuit = findSubcircuit(component, hierarchyStack);
     if (!subcircuit) {
-      console.log(`Žádné hlubší podsystémové schéma pro: ${component.label || component.id}`);
+      setDrillHint(`${component.label || component.id}: nejnižší úroveň – dál už nelze`);
       return;
     }
 
-    // Save current engine state to current hierarchy entry
-    const currentState = engine.exportState();
-    setHierarchyStack((prev) => {
-      const updated = [...prev];
-      updated[updated.length - 1].state = currentState;
-      updated[updated.length - 1].viewMode = viewMode;
+    // Snapshot the current level so "level up" restores it exactly
+    const parent = { ...hierarchyStack[hierarchyStack.length - 1], state: engine.exportState(), viewMode };
+    engine.loadCircuit(subcircuit);
+    audioEngine.playRelayClick(1.6);
 
-      // Populate engine with the subcircuit's components & wires
-      engine.clear();
-      subcircuit.components.forEach((c) => {
-        engine.addComponent(JSON.parse(JSON.stringify(c)));
-      });
-      subcircuit.wires.forEach((w) => {
-        engine.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin);
-      });
-      engine.propagate();
-      engine.notify();
-
-      // Play audio confirmation
-      audioEngine.playRelayClick(1.6);
-
-      // Subcircuits look great in schematic view when in hardware mode
-      // If in 3D physics view, stay in 3D physics view!
-      if (viewMode === 'hardware' && updated.length >= 1) {
-        setViewMode('schematic');
-      }
-
-      return [
-        ...updated,
-        {
-          id: component.id,
-          title: subcircuit.name,
-          subtitle: subcircuit.subtitle,
-          level: subcircuit.level || (updated.length + 1),
-          state: null,
-          viewMode: viewMode,
-        }
-      ];
-    });
-
+    // The board PCB view only makes sense at the root; inside a chip use the schematic (3D stays 3D)
+    const nextView = viewMode === 'hardware' ? 'schematic' : viewMode;
+    setViewMode(nextView);
+    setHierarchyStack([
+      ...hierarchyStack.slice(0, -1),
+      parent,
+      {
+        id: component.id,
+        key: subcircuit.key,
+        title: subcircuit.name,
+        subtitle: subcircuit.subtitle,
+        level: subcircuit.level || hierarchyStack.length + 1,
+        state: null,
+        viewMode: nextView,
+      },
+    ]);
     setSelectedComponentId(null);
   }, [engine, viewMode, hierarchyStack]);
 
-  // Navigate up through hierarchy stack
+  // Navigate up through hierarchy stack (default: one level up)
   const handleNavigateUp = useCallback((targetIndex) => {
-    setHierarchyStack((prev) => {
-      const targetIdx = targetIndex !== undefined ? targetIndex : prev.length - 2;
-      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
+    const targetIdx = targetIndex !== undefined ? targetIndex : hierarchyStack.length - 2;
+    if (targetIdx < 0 || targetIdx >= hierarchyStack.length - 1) return;
 
-      const targetLevel = prev[targetIdx];
+    const target = hierarchyStack[targetIdx];
+    if (target.state) engine.importState(target.state);
+    else engine.loadCircuit(PRESET_CIRCUITS.nvidia_nv1);
 
-      // Restore state
-      if (targetLevel.state) {
-        engine.importState(targetLevel.state);
-      } else if (targetIdx === 0) {
-        // Restore root NV1
-        engine.clear();
-        const demo = PRESET_CIRCUITS.nvidia_nv1 || PRESET_CIRCUITS.mini_pc;
-        demo.components.forEach((c) => {
-          engine.addComponent(JSON.parse(JSON.stringify(c)));
-        });
-        demo.wires.forEach((w) => {
-          engine.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin);
-        });
-        engine.propagate();
-        engine.notify();
-      }
-
-      if (targetLevel.viewMode) {
-        setViewMode(targetLevel.viewMode);
-      }
-
-      audioEngine.playRelayClick(1.3);
-      return prev.slice(0, targetIdx + 1);
-    });
-
+    if (target.viewMode) setViewMode(target.viewMode);
+    audioEngine.playRelayClick(1.3);
+    setHierarchyStack(hierarchyStack.slice(0, targetIdx + 1));
     setSelectedComponentId(null);
-  }, [engine]);
+  }, [engine, hierarchyStack]);
+
+  // A new top-level circuit was loaded (gallery, import, AI copilot): restart the hierarchy at it
+  const handleCircuitReplaced = useCallback((name) => {
+    setHierarchyStack([makeRootEntry(name || 'Vlastní obvod', '')]);
+    setSelectedComponentId(null);
+  }, []);
 
   return (
     <div className="w-screen h-screen bg-[#060911] text-gray-200 flex flex-col overflow-hidden font-sans border border-[#161D2B]">
@@ -167,6 +128,7 @@ export default function App() {
           engine={engine}
           isOpen={showGallery}
           onClose={() => setShowGallery(false)}
+          onCircuitReplaced={handleCircuitReplaced}
         />
 
         {/* Central Viewport: Schematic vs Hardware PCB vs Physics 3D Die */}
@@ -189,11 +151,16 @@ export default function App() {
               onDrillDown={handleDrillDown}
             />
           )}
+          {drillHint && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-lg bg-[#1A1206]/95 border border-amber-500/50 text-amber-300 text-xs font-mono shadow-xl pointer-events-none">
+              {drillHint}
+            </div>
+          )}
         </div>
 
         {/* Right Drawer: AI Copilot */}
         {showAi && (
-          <AiPanel engine={engine} onClose={() => setShowAi(false)} />
+          <AiPanel engine={engine} onClose={() => setShowAi(false)} onCircuitReplaced={handleCircuitReplaced} />
         )}
 
         {/* Right Drawer: Custom ISA & Monaco Assembler */}

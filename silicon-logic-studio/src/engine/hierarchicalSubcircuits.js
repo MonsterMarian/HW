@@ -146,15 +146,19 @@ export const HIERARCHICAL_SUBCIRCUITS = {
       { id: 'pmos_2', type: 'NOT', label: 'PMOS 2 (PULL-UP)', x: 460, y: 90, inputs: { in: 1 }, outputs: { out: 0 } },
       { id: 'nmos_1', type: 'AND', label: 'NMOS 1 (PULL-DOWN)', x: 380, y: 240, inputs: { a: 1, b: 1 }, outputs: { out: 1 } },
       { id: 'nmos_2', type: 'AND', label: 'NMOS 2 (PULL-DOWN)', x: 380, y: 360, inputs: { a: 1, b: 1 }, outputs: { out: 1 } },
-      { id: 'out_node', type: 'PROBE', label: 'DRAIN NODE (OUTPUT Y)', x: 740, y: 200, inputs: { in: 0 }, outputs: { val: 0 } },
+      { id: 'drain_node', type: 'OR', label: 'SHARED DRAIN (PARALLEL PMOS)', x: 600, y: 90, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'out_node', type: 'PROBE', label: 'DRAIN NODE (OUTPUT Y)', x: 780, y: 200, inputs: { in: 0 }, outputs: { val: 0 } },
     ],
     wires: [
       { from: { id: 'in_cmos_a', pin: 'out' }, to: { id: 'pmos_1', pin: 'in' } },
       { from: { id: 'in_cmos_b', pin: 'out' }, to: { id: 'pmos_2', pin: 'in' } },
       { from: { id: 'in_cmos_a', pin: 'out' }, to: { id: 'nmos_1', pin: 'a' } },
+      { from: { id: 'in_cmos_a', pin: 'out' }, to: { id: 'nmos_1', pin: 'b' } },
       { from: { id: 'in_cmos_b', pin: 'out' }, to: { id: 'nmos_2', pin: 'a' } },
       { from: { id: 'nmos_1', pin: 'out' }, to: { id: 'nmos_2', pin: 'b' } },
-      { from: { id: 'pmos_1', pin: 'out' }, to: { id: 'out_node', pin: 'in' } },
+      { from: { id: 'pmos_1', pin: 'out' }, to: { id: 'drain_node', pin: 'a' } },
+      { from: { id: 'pmos_2', pin: 'out' }, to: { id: 'drain_node', pin: 'b' } },
+      { from: { id: 'drain_node', pin: 'out' }, to: { id: 'out_node', pin: 'in' } },
     ]
   },
 
@@ -191,12 +195,14 @@ export const HIERARCHICAL_SUBCIRCUITS = {
       { id: 'gate_voltage_n', type: 'INPUT', label: 'V_GATE (5V=ON, 0V=OFF)', x: 60, y: 100, inputs: {}, outputs: { out: 1 } },
       { id: 'source_gnd', type: 'INPUT', label: 'V_SOURCE (GND 0.0V)', x: 60, y: 220, inputs: {}, outputs: { out: 0 } },
       { id: 'sub_bias', type: 'INPUT', label: 'V_SUB (P-SUBSTRATE)', x: 60, y: 340, inputs: {}, outputs: { out: 0 } },
-      { id: 'electron_channel', type: 'AND', label: 'N-INVERSION CHANNEL (ELECTRONS)', x: 340, y: 160, inputs: { a: 1, b: 1 }, outputs: { out: 1 } },
-      { id: 'drain_current_n', type: 'PROBE', label: 'I_DS DRAIN CURRENT (mA)', x: 660, y: 160, inputs: { in: 1 }, outputs: { val: 1 } },
-      { id: 'channel_pinch', type: 'PROBE', label: 'PINCH-OFF REGION', x: 660, y: 280, inputs: { in: 1 }, outputs: { val: 1 } },
+      { id: 'sio2_dielectric_n', type: 'TRI_STATE_BUFFER', label: 'GATE OXIDE (3.5nm SiO2)', x: 300, y: 100, inputs: { in: 1, enable: 1 }, outputs: { out: 1 } },
+      { id: 'electron_channel', type: 'AND', label: 'N-INVERSION CHANNEL (ELECTRONS)', x: 500, y: 160, inputs: { a: 1, b: 1 }, outputs: { out: 1 } },
+      { id: 'drain_current_n', type: 'PROBE', label: 'I_DS DRAIN CURRENT (mA)', x: 740, y: 160, inputs: { in: 1 }, outputs: { val: 1 } },
+      { id: 'channel_pinch', type: 'PROBE', label: 'PINCH-OFF REGION', x: 740, y: 280, inputs: { in: 1 }, outputs: { val: 1 } },
     ],
     wires: [
-      { from: { id: 'gate_voltage_n', pin: 'out' }, to: { id: 'electron_channel', pin: 'a' } },
+      { from: { id: 'gate_voltage_n', pin: 'out' }, to: { id: 'sio2_dielectric_n', pin: 'in' } },
+      { from: { id: 'sio2_dielectric_n', pin: 'out' }, to: { id: 'electron_channel', pin: 'a' } },
       { from: { id: 'gate_voltage_n', pin: 'out' }, to: { id: 'electron_channel', pin: 'b' } },
       { from: { id: 'electron_channel', pin: 'out' }, to: { id: 'drain_current_n', pin: 'in' } },
       { from: { id: 'electron_channel', pin: 'out' }, to: { id: 'channel_pinch', pin: 'in' } },
@@ -292,7 +298,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   NOT: {
-    level: 5,
+    level: 6,
     name: 'SN74LS04 HEX INVERTER (CMOS COMPLEMENTARY PAIR)',
     subtitle: '1× PMOS Pull-Up + 1× NMOS Pull-Down (2 Transistors)',
     components: [
@@ -308,46 +314,35 @@ export const HIERARCHICAL_SUBCIRCUITS = {
     ]
   },
 
-  NAND: {
-    level: 5,
-    name: 'SN74LS00 QUAD 2-INPUT NAND GATE',
-    subtitle: '2× PMOS Parallel + 2× NMOS Series (4 Transistors)',
-    components: [
-      { id: 'nand_a', type: 'INPUT', label: 'INPUT A', x: 80, y: 130, inputs: {}, outputs: { out: 1 } },
-      { id: 'nand_b', type: 'INPUT', label: 'INPUT B', x: 80, y: 250, inputs: {}, outputs: { out: 1 } },
-      { id: 'and_core', type: 'AND', label: 'AND STAGE', x: 320, y: 190, inputs: { a: 1, b: 1 }, outputs: { out: 1 } },
-      { id: 'inv_bubble', type: 'NOT', label: 'INVERSION BUBBLE', x: 520, y: 190, inputs: { in: 1 }, outputs: { out: 0 } },
-      { id: 'nand_out', type: 'PROBE', label: 'OUTPUT Y = (A·B)̄', x: 740, y: 190, inputs: { in: 0 }, outputs: { val: 0 } },
-    ],
-    wires: [
-      { from: { id: 'nand_a', pin: 'out' }, to: { id: 'and_core', pin: 'a' } },
-      { from: { id: 'nand_b', pin: 'out' }, to: { id: 'and_core', pin: 'b' } },
-      { from: { id: 'and_core', pin: 'out' }, to: { id: 'inv_bubble', pin: 'in' } },
-      { from: { id: 'inv_bubble', pin: 'out' }, to: { id: 'nand_out', pin: 'in' } },
-    ]
-  },
+  // NAND is a primitive CMOS gate: its generic drill-down is the transistor level (alias to nand_center below).
 
   NOR: {
-    level: 5,
-    name: 'SN74LS02 QUAD 2-INPUT NOR GATE',
-    subtitle: '2× PMOS Series + 2× NMOS Parallel (4 Transistors)',
+    level: 6,
+    name: 'CMOS NOR GATE (TRANSISTOR LEVEL)',
+    subtitle: 'NOR Gate: 2× PMOS (Series Pull-Up) + 2× NMOS (Parallel Pull-Down)',
     components: [
-      { id: 'nor_a', type: 'INPUT', label: 'INPUT A', x: 80, y: 130, inputs: {}, outputs: { out: 0 } },
-      { id: 'nor_b', type: 'INPUT', label: 'INPUT B', x: 80, y: 250, inputs: {}, outputs: { out: 0 } },
-      { id: 'or_core', type: 'OR', label: 'OR STAGE', x: 320, y: 190, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
-      { id: 'inv_bubble', type: 'NOT', label: 'INVERSION BUBBLE', x: 520, y: 190, inputs: { in: 0 }, outputs: { out: 1 } },
-      { id: 'nor_out', type: 'PROBE', label: 'OUTPUT Y = (A+B)̄', x: 740, y: 190, inputs: { in: 1 }, outputs: { val: 1 } },
+      { id: 'nor_a', type: 'INPUT', label: 'GATE INPUT A', x: 60, y: 140, inputs: {}, outputs: { out: 0 } },
+      { id: 'nor_b', type: 'INPUT', label: 'GATE INPUT B', x: 60, y: 300, inputs: {}, outputs: { out: 0 } },
+      { id: 'pmos_nor_a', type: 'NOT', label: 'PMOS A (SERIES PULL-UP)', x: 300, y: 90, inputs: { in: 0 }, outputs: { out: 1 } },
+      { id: 'pmos_nor_b', type: 'NOT', label: 'PMOS B (SERIES PULL-UP)', x: 460, y: 90, inputs: { in: 0 }, outputs: { out: 1 } },
+      { id: 'nmos_nor_a', type: 'NOT', label: 'NMOS A (PARALLEL PULL-DOWN)', x: 300, y: 300, inputs: { in: 0 }, outputs: { out: 1 } },
+      { id: 'nmos_nor_b', type: 'NOT', label: 'NMOS B (PARALLEL PULL-DOWN)', x: 460, y: 300, inputs: { in: 0 }, outputs: { out: 1 } },
+      { id: 'nor_node', type: 'AND', label: 'DRAIN NODE (WIRED)', x: 620, y: 190, inputs: { a: 1, b: 1 }, outputs: { out: 1 } },
+      { id: 'nor_out', type: 'PROBE', label: 'OUTPUT Y = (A+B)̄', x: 800, y: 190, inputs: { in: 1 }, outputs: { val: 1 } },
     ],
     wires: [
-      { from: { id: 'nor_a', pin: 'out' }, to: { id: 'or_core', pin: 'a' } },
-      { from: { id: 'nor_b', pin: 'out' }, to: { id: 'or_core', pin: 'b' } },
-      { from: { id: 'or_core', pin: 'out' }, to: { id: 'inv_bubble', pin: 'in' } },
-      { from: { id: 'inv_bubble', pin: 'out' }, to: { id: 'nor_out', pin: 'in' } },
+      { from: { id: 'nor_a', pin: 'out' }, to: { id: 'pmos_nor_a', pin: 'in' } },
+      { from: { id: 'nor_b', pin: 'out' }, to: { id: 'pmos_nor_b', pin: 'in' } },
+      { from: { id: 'nor_a', pin: 'out' }, to: { id: 'nmos_nor_a', pin: 'in' } },
+      { from: { id: 'nor_b', pin: 'out' }, to: { id: 'nmos_nor_b', pin: 'in' } },
+      { from: { id: 'pmos_nor_a', pin: 'out' }, to: { id: 'nor_node', pin: 'a' } },
+      { from: { id: 'pmos_nor_b', pin: 'out' }, to: { id: 'nor_node', pin: 'b' } },
+      { from: { id: 'nor_node', pin: 'out' }, to: { id: 'nor_out', pin: 'in' } },
     ]
   },
 
   D_FF: {
-    level: 4,
+    level: 5,
     name: 'SN74LS74AN DUAL D-TYPE POSITIVE-EDGE FLIP-FLOP',
     subtitle: 'Master-Slave Cross-Coupled NAND Latch Matrix (6 Gates / 24 Transistors)',
     components: [
@@ -374,7 +369,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   REGISTER_8BIT: {
-    level: 3,
+    level: 4,
     name: 'SN74LS374 OCTAL D-TYPE FLIP-FLOP REGISTER SCHEMATIC',
     subtitle: '8× High-Speed Edge-Triggered D-FF Cells + Tristate 3-State Output Bus Drivers',
     components: [
@@ -383,22 +378,33 @@ export const HIERARCHICAL_SUBCIRCUITS = {
       { id: 'ff_bit0', type: 'D_FF', label: 'BIT 0 D-FF CELL', x: 280, y: 80, inputs: { d: 1, clk: 1 }, outputs: { q: 1, nq: 0 } },
       { id: 'ff_bit1', type: 'D_FF', label: 'BIT 1 D-FF CELL', x: 280, y: 200, inputs: { d: 0, clk: 1 }, outputs: { q: 0, nq: 1 } },
       { id: 'ff_bit2', type: 'D_FF', label: 'BIT 2 D-FF CELL', x: 280, y: 320, inputs: { d: 1, clk: 1 }, outputs: { q: 1, nq: 0 } },
-      { id: 'bus_drv0', type: 'TRI_STATE', label: 'TRI-STATE DRV 0', x: 540, y: 80, inputs: { in: 1, en: 1 }, outputs: { out: 1 } },
-      { id: 'bus_drv1', type: 'TRI_STATE', label: 'TRI-STATE DRV 1', x: 540, y: 200, inputs: { in: 0, en: 1 }, outputs: { out: 0 } },
-      { id: 'probe_byte', type: 'PROBE', label: 'DATA BUS [7:0]', x: 760, y: 140, inputs: { in: 1 }, outputs: { val: 1 } },
+      { id: 'oe_inv', type: 'NOT', label: 'OE# INVERTER', x: 280, y: 420, inputs: { in: 0 }, outputs: { out: 1 } },
+      { id: 'bus_drv0', type: 'TRI_STATE_BUFFER', label: 'TRI-STATE DRV 0', x: 540, y: 80, inputs: { in: 1, enable: 1 }, outputs: { out: 1 } },
+      { id: 'bus_drv1', type: 'TRI_STATE_BUFFER', label: 'TRI-STATE DRV 1', x: 540, y: 200, inputs: { in: 0, enable: 1 }, outputs: { out: 0 } },
+      { id: 'bus_drv2', type: 'TRI_STATE_BUFFER', label: 'TRI-STATE DRV 2', x: 540, y: 320, inputs: { in: 1, enable: 1 }, outputs: { out: 1 } },
+      { id: 'probe_q0', type: 'PROBE', label: 'Q0', x: 760, y: 80, inputs: { in: 1 }, outputs: { val: 1 } },
+      { id: 'probe_q1', type: 'PROBE', label: 'Q1', x: 760, y: 200, inputs: { in: 0 }, outputs: { val: 0 } },
+      { id: 'probe_q2', type: 'PROBE', label: 'Q2', x: 760, y: 320, inputs: { in: 1 }, outputs: { val: 1 } },
     ],
     wires: [
       { from: { id: 'reg_clk', pin: 'out' }, to: { id: 'ff_bit0', pin: 'clk' } },
       { from: { id: 'reg_clk', pin: 'out' }, to: { id: 'ff_bit1', pin: 'clk' } },
       { from: { id: 'reg_clk', pin: 'out' }, to: { id: 'ff_bit2', pin: 'clk' } },
+      { from: { id: 'reg_oe', pin: 'out' }, to: { id: 'oe_inv', pin: 'in' } },
       { from: { id: 'ff_bit0', pin: 'q' }, to: { id: 'bus_drv0', pin: 'in' } },
       { from: { id: 'ff_bit1', pin: 'q' }, to: { id: 'bus_drv1', pin: 'in' } },
-      { from: { id: 'bus_drv0', pin: 'out' }, to: { id: 'probe_byte', pin: 'in' } },
+      { from: { id: 'ff_bit2', pin: 'q' }, to: { id: 'bus_drv2', pin: 'in' } },
+      { from: { id: 'oe_inv', pin: 'out' }, to: { id: 'bus_drv0', pin: 'enable' } },
+      { from: { id: 'oe_inv', pin: 'out' }, to: { id: 'bus_drv1', pin: 'enable' } },
+      { from: { id: 'oe_inv', pin: 'out' }, to: { id: 'bus_drv2', pin: 'enable' } },
+      { from: { id: 'bus_drv0', pin: 'out' }, to: { id: 'probe_q0', pin: 'in' } },
+      { from: { id: 'bus_drv1', pin: 'out' }, to: { id: 'probe_q1', pin: 'in' } },
+      { from: { id: 'bus_drv2', pin: 'out' }, to: { id: 'probe_q2', pin: 'in' } },
     ]
   },
 
   MUX: {
-    level: 3,
+    level: 4,
     name: 'SN74LS157 QUAD 2-TO-1 DATA SELECTOR / MULTIPLEXER',
     subtitle: 'Y = (A · S̄) + (B · S) (AND-OR-INVERT Logic Matrix)',
     components: [
@@ -607,15 +613,43 @@ export const HIERARCHICAL_SUBCIRCUITS = {
       { id: 'ram_addr', type: 'INPUT', label: 'ADDR [14:0]', x: 60, y: 100, inputs: {}, outputs: { out: 1 } },
       { id: 'ram_din', type: 'INPUT', label: 'DATA IN [7:0]', x: 60, y: 220, inputs: {}, outputs: { out: 0xAA } },
       { id: 'ram_we', type: 'INPUT', label: 'WRITE ENABLE (WE#)', x: 60, y: 340, inputs: {}, outputs: { out: 0 } },
-      { id: 'addr_dec', type: 'REGISTER_8BIT', label: 'ROW/COL WORDLINE DECODER', x: 300, y: 140, inputs: { d: 1, clk: 1, we: 1 }, outputs: { q: 1 } },
+      { id: 'we_inv', type: 'NOT', label: 'WE# INVERTER', x: 300, y: 340, inputs: { in: 0 }, outputs: { out: 1 } },
+      { id: 'addr_dec', type: 'AND', label: 'WORDLINE DECODER (ADDR · WE)', x: 300, y: 140, inputs: { a: 1, b: 1 }, outputs: { out: 1 } },
       { id: 'cell_6t', type: 'D_FF', label: '6T SRAM CELL MATRIX', x: 520, y: 140, inputs: { d: 1, clk: 1 }, outputs: { q: 1, nq: 0 } },
       { id: 'probe_ram_out', type: 'PROBE', label: 'DATA OUT [7:0]', x: 760, y: 140, inputs: { in: 1 }, outputs: { val: 1 } },
     ],
     wires: [
-      { from: { id: 'ram_addr', pin: 'out' }, to: { id: 'addr_dec', pin: 'd' } },
-      { from: { id: 'addr_dec', pin: 'q' }, to: { id: 'cell_6t', pin: 'clk' } },
+      { from: { id: 'ram_addr', pin: 'out' }, to: { id: 'addr_dec', pin: 'a' } },
+      { from: { id: 'ram_we', pin: 'out' }, to: { id: 'we_inv', pin: 'in' } },
+      { from: { id: 'we_inv', pin: 'out' }, to: { id: 'addr_dec', pin: 'b' } },
+      { from: { id: 'addr_dec', pin: 'out' }, to: { id: 'cell_6t', pin: 'clk' } },
       { from: { id: 'ram_din', pin: 'out' }, to: { id: 'cell_6t', pin: 'd' } },
       { from: { id: 'cell_6t', pin: 'q' }, to: { id: 'probe_ram_out', pin: 'in' } },
+    ]
+  },
+
+  TRI_STATE_BUFFER: {
+    level: 6,
+    name: 'CMOS TRI-STATE BUFFER (CLOCKED INVERTER PAIR)',
+    subtitle: 'Data Inverter + Enable-Gated PMOS/NMOS Stack → Output 0 / 1 / High-Z',
+    components: [
+      { id: 'ts_in', type: 'INPUT', label: 'DATA IN (A)', x: 60, y: 120, inputs: {}, outputs: { out: 1 } },
+      { id: 'ts_en', type: 'INPUT', label: 'ENABLE (EN)', x: 60, y: 300, inputs: {}, outputs: { out: 1 } },
+      { id: 'pmos_ts_data', type: 'NOT', label: 'PMOS DATA (PULL-UP)', x: 300, y: 80, inputs: { in: 1 }, outputs: { out: 0 } },
+      { id: 'nmos_ts_data', type: 'NOT', label: 'NMOS DATA (PULL-DOWN)', x: 300, y: 200, inputs: { in: 1 }, outputs: { out: 0 } },
+      { id: 'pmos_ts_en', type: 'NOT', label: 'PMOS ENABLE (EN#)', x: 300, y: 320, inputs: { in: 1 }, outputs: { out: 0 } },
+      { id: 'out_inv', type: 'NOT', label: 'OUTPUT RESTORE', x: 520, y: 140, inputs: { in: 0 }, outputs: { out: 1 } },
+      { id: 'ts_node', type: 'TRI_STATE_BUFFER', label: 'OUTPUT NODE (0/1/Z)', x: 700, y: 180, inputs: { in: 1, enable: 1 }, outputs: { out: 1 } },
+      { id: 'ts_out', type: 'PROBE', label: 'OUTPUT Y', x: 880, y: 180, inputs: { in: 1 }, outputs: { val: 1 } },
+    ],
+    wires: [
+      { from: { id: 'ts_in', pin: 'out' }, to: { id: 'pmos_ts_data', pin: 'in' } },
+      { from: { id: 'ts_in', pin: 'out' }, to: { id: 'nmos_ts_data', pin: 'in' } },
+      { from: { id: 'ts_en', pin: 'out' }, to: { id: 'pmos_ts_en', pin: 'in' } },
+      { from: { id: 'pmos_ts_data', pin: 'out' }, to: { id: 'out_inv', pin: 'in' } },
+      { from: { id: 'out_inv', pin: 'out' }, to: { id: 'ts_node', pin: 'in' } },
+      { from: { id: 'ts_en', pin: 'out' }, to: { id: 'ts_node', pin: 'enable' } },
+      { from: { id: 'ts_node', pin: 'out' }, to: { id: 'ts_out', pin: 'in' } },
     ]
   },
 
@@ -626,14 +660,21 @@ export const HIERARCHICAL_SUBCIRCUITS = {
     components: [
       { id: 'rom_addr_in', type: 'INPUT', label: 'ADDR [12:0]', x: 60, y: 120, inputs: {}, outputs: { out: 1 } },
       { id: 'rom_oe_in', type: 'INPUT', label: 'OUTPUT ENABLE (OE#)', x: 60, y: 260, inputs: {}, outputs: { out: 0 } },
-      { id: 'rom_dec', type: 'REGISTER_8BIT', label: 'EEPROM ROW DECODER', x: 300, y: 140, inputs: { d: 1, clk: 1, we: 1 }, outputs: { q: 1 } },
-      { id: 'probe_flotox', type: 'PROBE', label: 'FLOTOX TUNNEL OXIDE CELL', x: 560, y: 140, inputs: { in: 1 }, outputs: { val: 1 } },
-      { id: 'probe_rom_dout', type: 'PROBE', label: 'DATA OUTPUT (BYTE)', x: 780, y: 140, inputs: { in: 1 }, outputs: { val: 1 } },
+      { id: 'oe_inv_rom', type: 'NOT', label: 'OE# INVERTER', x: 300, y: 280, inputs: { in: 0 }, outputs: { out: 1 } },
+      { id: 'rom_dec', type: 'AND', label: 'EEPROM ROW DECODER', x: 300, y: 140, inputs: { a: 1, b: 1 }, outputs: { out: 1 } },
+      { id: 'flotox_cell', type: 'D_FF', label: 'FLOTOX FLOATING-GATE CELL', x: 520, y: 140, inputs: { d: 1, clk: 1 }, outputs: { q: 1, nq: 0 } },
+      { id: 'rom_out_drv', type: 'TRI_STATE_BUFFER', label: 'OUTPUT BUFFER (OE)', x: 720, y: 140, inputs: { in: 1, enable: 1 }, outputs: { out: 1 } },
+      { id: 'probe_rom_dout', type: 'PROBE', label: 'DATA OUTPUT (BYTE)', x: 900, y: 140, inputs: { in: 1 }, outputs: { val: 1 } },
     ],
     wires: [
-      { from: { id: 'rom_addr_in', pin: 'out' }, to: { id: 'rom_dec', pin: 'd' } },
-      { from: { id: 'rom_dec', pin: 'q' }, to: { id: 'probe_flotox', pin: 'in' } },
-      { from: { id: 'probe_flotox', pin: 'val' }, to: { id: 'probe_rom_dout', pin: 'in' } },
+      { from: { id: 'rom_addr_in', pin: 'out' }, to: { id: 'rom_dec', pin: 'a' } },
+      { from: { id: 'rom_oe_in', pin: 'out' }, to: { id: 'oe_inv_rom', pin: 'in' } },
+      { from: { id: 'oe_inv_rom', pin: 'out' }, to: { id: 'rom_dec', pin: 'b' } },
+      { from: { id: 'oe_inv_rom', pin: 'out' }, to: { id: 'rom_out_drv', pin: 'enable' } },
+      { from: { id: 'rom_dec', pin: 'out' }, to: { id: 'flotox_cell', pin: 'clk' } },
+      { from: { id: 'rom_addr_in', pin: 'out' }, to: { id: 'flotox_cell', pin: 'd' } },
+      { from: { id: 'flotox_cell', pin: 'q' }, to: { id: 'rom_out_drv', pin: 'in' } },
+      { from: { id: 'rom_out_drv', pin: 'out' }, to: { id: 'probe_rom_dout', pin: 'in' } },
     ]
   },
 };
@@ -664,197 +705,63 @@ HIERARCHICAL_SUBCIRCUITS.nand1 = HIERARCHICAL_SUBCIRCUITS.nand_center;
 HIERARCHICAL_SUBCIRCUITS.nand2 = HIERARCHICAL_SUBCIRCUITS.nand_center;
 HIERARCHICAL_SUBCIRCUITS.nand3 = HIERARCHICAL_SUBCIRCUITS.nand_center;
 HIERARCHICAL_SUBCIRCUITS.nand4 = HIERARCHICAL_SUBCIRCUITS.nand_center;
+// Generic type → subcircuit (component types that differ from their subcircuit key)
+HIERARCHICAL_SUBCIRCUITS.NAND = HIERARCHICAL_SUBCIRCUITS.nand_center;
+HIERARCHICAL_SUBCIRCUITS.NV1_CORE = HIERARCHICAL_SUBCIRCUITS.nv1_core;
+HIERARCHICAL_SUBCIRCUITS.REGISTER_16BIT = HIERARCHICAL_SUBCIRCUITS.REGISTER_8BIT;
+HIERARCHICAL_SUBCIRCUITS.REGISTER_32BIT = HIERARCHICAL_SUBCIRCUITS.REGISTER_8BIT;
+
+// Stable key for each subcircuit object (first key wins, so aliases resolve to the canonical name).
+for (const [key, sub] of Object.entries(HIERARCHICAL_SUBCIRCUITS)) {
+  if (!sub.key) sub.key = key;
+}
+
+const TERMINAL_TYPES = new Set(['INPUT', 'OUTPUT', 'PROBE', 'CONSTANT', 'CLOCK', 'ATOM', 'TUNNEL_IN', 'TUNNEL_OUT']);
+
+/** Level of the deepest (current) hierarchy entry. */
+export function currentLevelOf(stack) {
+  if (!Array.isArray(stack) || stack.length === 0) return 1;
+  const top = stack[stack.length - 1];
+  return top.level || stack.length;
+}
 
 /**
- * Finds the corresponding internal subcircuit schematic for any component,
- * strictly guaranteeing no cycling or infinite loops by enforcing monotonic depth
- * and preventing any ancestor from being re-entered.
+ * Finds the internal subcircuit for a component.
+ * Lookup order: explicit `drill` key → component id → id hints (pmos/nmos/oxide) → component type.
+ * A candidate is accepted only if it is strictly deeper than the current level and is not an
+ * ancestor already on the stack, so drilling is monotonic and can never cycle.
  *
  * @param {object} comp - Component being clicked
- * @param {Array} currentStack - Active hierarchy stack
- * @returns {object|null} Next subcircuit, or null if terminal / invalid
+ * @param {Array} currentStack - Active hierarchy stack ({ id, key?, title, level })
+ * @returns {object|null} Next subcircuit, or null if terminal
  */
 export function findSubcircuit(comp, currentStack = null) {
-  if (!comp) return null;
+  if (!comp || TERMINAL_TYPES.has(comp.type)) return null;
 
-  // 1. Primitive terminal components that cannot be drilled down
-  const TERMINAL_TYPES = ['INPUT', 'OUTPUT', 'PROBE', 'CONSTANT', 'CLOCK'];
-  if (TERMINAL_TYPES.includes(comp.type)) {
-    return null;
+  const currentLevel = currentLevelOf(currentStack);
+  if (currentLevel >= 8) return null; // Level 8 = atomic lattice, physical limit
+
+  const ancestors = new Set();
+  for (const entry of currentStack || []) {
+    if (entry.key) ancestors.add(entry.key);
+    if (entry.title) ancestors.add(entry.title);
+    if (entry.id && HIERARCHICAL_SUBCIRCUITS[entry.id]) ancestors.add(HIERARCHICAL_SUBCIRCUITS[entry.id].key);
   }
 
-  // 2. Determine current level number and ancestor set from stack
-  let currentLevelNum = 1;
-  const ancestorIds = new Set();
-  const ancestorNames = new Set();
+  const id = (comp.id || '').toLowerCase();
+  const keys = [comp.drill, comp.id];
+  if (/sio2|oxide|dielectric/.test(id)) keys.push('sio2_dielectric');
+  if (id.includes('pmos')) keys.push('pmos_1');
+  if (id.includes('nmos')) keys.push('nmos_1');
+  keys.push(comp.type);
 
-  if (Array.isArray(currentStack) && currentStack.length > 0) {
-    currentLevelNum = currentStack.length;
-    for (const entry of currentStack) {
-      if (entry.id) ancestorIds.add(entry.id);
-      if (entry.title) ancestorNames.add(entry.title);
-      if (entry.level) currentLevelNum = Math.max(currentLevelNum, entry.level);
-    }
+  for (const key of keys) {
+    const sub = key && HIERARCHICAL_SUBCIRCUITS[key];
+    if (!sub || !Array.isArray(sub.components)) continue;
+    if ((sub.level || currentLevel + 1) <= currentLevel) continue;
+    if (ancestors.has(sub.key) || ancestors.has(sub.name)) continue;
+    return sub;
   }
-
-  // 3. Absolute Physical Boundary: Level 8 is the Silicon/Oxygen atomic lattice.
-  //    Nothing physically deeper exists in the system.
-  if (currentLevelNum >= 8) {
-    return null;
-  }
-
-  // Helper function to validate candidate subcircuit
-  const validateCandidate = (candidate, candidateKey) => {
-    if (!candidate || !candidate.components) return null;
-    const targetLevel = candidate.level || (currentLevelNum + 1);
-
-    // Monotonic level progression: target must be strictly deeper than current
-    if (targetLevel <= currentLevelNum) {
-      return null;
-    }
-
-    // Never re-enter any ancestor already present in current stack
-    if (ancestorIds.has(candidateKey) || ancestorNames.has(candidate.name)) {
-      return null;
-    }
-
-    return candidate;
-  };
-
-  const idLower = (comp.id || '').toLowerCase();
-  const typeUpper = (comp.type || '').toUpperCase();
-
-  // 4. LEVEL-SPECIFIC ROUTING (Prevents generic fallbacks from causing cycles):
-
-  // Level 7 (MOSFET Cross-Section): Only the Gate Oxide Dielectric can drill down to Level 8 (Atoms)
-  if (currentLevelNum === 7) {
-    if (idLower.includes('sio2') || idLower.includes('oxide') || idLower.includes('dielectric')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.sio2_dielectric, 'sio2_dielectric');
-    }
-    // Channels, voltages, depletion regions, and drain current probes are terminal!
-    return null;
-  }
-
-  // Level 6 (CMOS Transistors): PMOS and NMOS drill down to Level 7 (Cross-Section)
-  if (currentLevelNum === 6) {
-    if (idLower.includes('pmos')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.pmos_1, 'pmos_1');
-    }
-    if (idLower.includes('nmos')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.nmos_1, 'nmos_1');
-    }
-    return null;
-  }
-
-  // Level 5 (Logic Gates / 4-NAND Matrix): NAND stages drill down to Level 6 (CMOS Transistors)
-  if (currentLevelNum === 5) {
-    if (typeUpper.includes('NAND') || idLower.includes('nand') || idLower.includes('stage_nand')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.nand_center, 'nand_center');
-    }
-    if (idLower.includes('pmos')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.pmos_1, 'pmos_1');
-    }
-    if (idLower.includes('nmos')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.nmos_1, 'nmos_1');
-    }
-    return null;
-  }
-
-  // Level 4 (Full Adder / Arithmetic Unit): Logic gates drill down to Level 5
-  if (currentLevelNum === 4) {
-    if (idLower.includes('xor') || typeUpper.includes('XOR')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.fa_xor1, 'fa_xor1');
-    }
-    if (idLower.includes('and') || typeUpper.includes('AND')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.AND, 'AND');
-    }
-    if (idLower.includes('or') || typeUpper.includes('OR')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.OR, 'OR');
-    }
-    return null;
-  }
-
-  // Level 3 (QTM Pipeline / Subsystems): Arithmetic pipeline units drill down to Level 4
-  if (currentLevelNum === 3) {
-    if (idLower.includes('adder') || idLower.includes('pipe') || idLower.includes('add')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.adder_pipe, 'adder_pipe');
-    }
-    if (idLower.includes('cmp') || idLower.includes('xor') || typeUpper.includes('XOR')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.fa_xor1, 'fa_xor1');
-    }
-    if (typeUpper.includes('D_FF') || idLower.includes('dff')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.D_FF, 'D_FF');
-    }
-    if (typeUpper.includes('RAM') || typeUpper.includes('ROM')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS[comp.type] || HIERARCHICAL_SUBCIRCUITS.RAM, comp.type);
-    }
-    if (typeUpper.includes('MUX') || idLower.includes('sampler')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.MUX, 'MUX');
-    }
-    return null;
-  }
-
-  // Level 2 (STG2000X / NV1 Silicon Die): Functional blocks drill down to Level 3
-  if (currentLevelNum === 2) {
-    if (idLower.includes('qtm') || comp.id === 'qtm_3d') {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.qtm_3d, 'qtm_3d');
-    }
-    if (typeUpper.includes('VRAM') || idLower.includes('vram')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VRAM_BANK, 'VRAM_BANK');
-    }
-    if (typeUpper.includes('RAMDAC') || idLower.includes('ramdac')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.RAMDAC, 'RAMDAC');
-    }
-    if (typeUpper.includes('AUDIO') || idLower.includes('audio')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.AUDIO_DSP, 'AUDIO_DSP');
-    }
-    if (typeUpper.includes('PCI') || idLower.includes('pci')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.PCI_BUS, 'PCI_BUS');
-    }
-    if (typeUpper.includes('SATURN') || idLower.includes('saturn')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.SATURN_PAD, 'SATURN_PAD');
-    }
-    if (typeUpper.includes('SCREEN') || idLower.includes('screen')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VIRTUAL_SCREEN, 'VIRTUAL_SCREEN');
-    }
-    if (typeUpper.includes('REGISTER') || idLower.includes('bitblt')) {
-      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.REGISTER_8BIT, 'REGISTER_8BIT');
-    }
-    return null;
-  }
-
-  // Level 1 (Root PCI Board): Board components drill down to Level 2 (or direct subsystem)
-  if (HIERARCHICAL_SUBCIRCUITS[comp.id]) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS[comp.id], comp.id);
-  }
-  if (HIERARCHICAL_SUBCIRCUITS[comp.type]) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS[comp.type], comp.type);
-  }
-
-  if (idLower.includes('nv1') || typeUpper.includes('NV1')) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.nv1_core, 'nv1_core');
-  }
-  if (typeUpper.includes('VRAM') || typeUpper.includes('DRAM')) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VRAM_BANK, 'VRAM_BANK');
-  }
-  if (typeUpper.includes('RAMDAC')) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.RAMDAC, 'RAMDAC');
-  }
-  if (typeUpper.includes('AUDIO') || typeUpper.includes('DSP')) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.AUDIO_DSP, 'AUDIO_DSP');
-  }
-  if (typeUpper.includes('PCI')) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.PCI_BUS, 'PCI_BUS');
-  }
-  if (typeUpper.includes('VGA') || typeUpper.includes('BRACKET')) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VGA_BRACKET, 'VGA_BRACKET');
-  }
-  if (typeUpper.includes('SATURN') || typeUpper.includes('PAD')) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.SATURN_PAD, 'SATURN_PAD');
-  }
-  if (typeUpper.includes('SCREEN')) {
-    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VIRTUAL_SCREEN, 'VIRTUAL_SCREEN');
-  }
-
   return null;
 }
+

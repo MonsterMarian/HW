@@ -463,6 +463,56 @@ describe('Hierarchical Subcircuits - Deep Multi-Level Verification (Levels 2 to 
     assert.strictEqual(vGateCycle, null, 'gate_voltage input must return null');
   });
 
+  it('DRILL CRAWL: every subcircuit is reachable from the preset circuits and no logic block below transistor level is a dead end', () => {
+    const reached = new Set();
+    const deadEnds = [];
+    const crawl = (components, stack) => {
+      assert.ok(stack.length <= 9, `Drill path too deep: ${stack.map((s) => s.key).join(' > ')}`);
+      const level = stack[stack.length - 1].level;
+      for (const comp of components) {
+        const sub = findSubcircuit(comp, stack);
+        if (!sub) {
+          // Below the transistor level everything may be terminal; above it only I/O and self-references may be.
+          const terminal = ['INPUT', 'PROBE', 'CLOCK', 'CONSTANT', 'VIRTUAL_SCREEN', 'SEVEN_SEGMENT', 'TRI_STATE_BUFFER'];
+          if (level < 6 && !terminal.includes(comp.type)) deadEnds.push(`${stack[stack.length - 1].key}/${comp.id} (${comp.type})`);
+          continue;
+        }
+        assert.ok(sub.level > level, `Non-monotonic drill ${comp.id}: ${level} -> ${sub.level}`);
+        if (reached.has(sub.key + '@' + stack.map((s) => s.key).join('>'))) continue;
+        reached.add(sub.key + '@' + stack.map((s) => s.key).join('>'));
+        reached.add(sub.key);
+        crawl(sub.components, [...stack, { id: comp.id, key: sub.key, title: sub.name, level: sub.level }]);
+      }
+    };
+    for (const preset of Object.values(PRESET_CIRCUITS)) {
+      crawl(preset.components, [{ id: 'root', key: 'root', title: 'ROOT', level: 1 }]);
+    }
+
+    assert.deepStrictEqual(deadEnds, [], 'Dead ends found');
+    const canonical = new Set(Object.values(HIERARCHICAL_SUBCIRCUITS).map((s) => s.key));
+    for (const key of canonical) {
+      assert.ok(reached.has(key), `Subcircuit ${key} is unreachable from the preset circuits`);
+    }
+  });
+
+  it('CMOS NAND / NOR transistor subcircuits compute the right truth table', () => {
+    const run = (sub, inA, inB, outId) => {
+      const table = [];
+      for (const [a, b] of [[0, 0], [0, 1], [1, 0], [1, 1]]) {
+        const eng = new LogicEngine();
+        sub.components.forEach((c) => eng.addComponent(JSON.parse(JSON.stringify(c))));
+        sub.wires.forEach((w) => eng.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin));
+        eng.components.get(inA).outputs.out = a;
+        eng.components.get(inB).outputs.out = b;
+        eng.propagate();
+        table.push(eng.components.get(outId).inputs.in);
+      }
+      return table;
+    };
+    assert.deepStrictEqual(run(HIERARCHICAL_SUBCIRCUITS.nand_center, 'in_cmos_a', 'in_cmos_b', 'out_node'), [1, 1, 1, 0]);
+    assert.deepStrictEqual(run(HIERARCHICAL_SUBCIRCUITS.NOR, 'nor_a', 'nor_b', 'nor_out'), [1, 0, 0, 0]);
+  });
+
   it('CYCLE IMMUNITY: Primitive terminal components (INPUT, PROBE, CLOCK) never drill down at any level', () => {
     const stack = [{ id: 'root', level: 1 }];
     assert.strictEqual(findSubcircuit({ id: 'clk', type: 'CLOCK' }, stack), null);

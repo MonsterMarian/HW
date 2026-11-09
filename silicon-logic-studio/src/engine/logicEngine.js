@@ -584,19 +584,33 @@ export class LogicEngine {
     this.notify();
   }
 
+  // Replace the whole circuit with deep copies of a { components, wires } definition
+  loadCircuit(circuit) {
+    this.clear();
+    for (const c of circuit.components || []) {
+      const copy = JSON.parse(JSON.stringify(c));
+      copy.inputs = copy.inputs || {};
+      copy.outputs = copy.outputs || {};
+      this.addComponent(copy);
+    }
+    for (const w of circuit.wires || []) {
+      this.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin);
+    }
+    this.propagate();
+    this.notify();
+  }
+
   // Export full state to plain JS object
   exportState(name = 'Silicon Circuit') {
     const serializedComponents = [];
     for (const comp of this.components.values()) {
-      const copy = {
-        id: comp.id,
-        type: comp.type,
-        label: comp.label,
-        x: comp.x,
-        y: comp.y,
-        inputs: { ...comp.inputs },
-        outputs: { ...comp.outputs },
-      };
+      // Keep every plain property (tunnelName, drill, manual* overrides, internal state...), drop functions.
+      const copy = {};
+      for (const [k, v] of Object.entries(comp)) {
+        if (typeof v !== 'function') copy[k] = v;
+      }
+      copy.inputs = { ...comp.inputs };
+      copy.outputs = { ...comp.outputs };
       if (comp.memory) copy.memory = Array.from(comp.memory);
       if (comp.vram) copy.vram = Array.from(comp.vram);
       serializedComponents.push(copy);

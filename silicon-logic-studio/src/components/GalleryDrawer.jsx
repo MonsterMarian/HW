@@ -17,7 +17,7 @@ import {
 import { PRESET_CIRCUITS } from '../engine/aiCopilot';
 import { audioEngine } from '../engine/audioEngine';
 
-export function GalleryDrawer({ engine, isOpen, onClose }) {
+export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () => {} }) {
   const [savedCircuits, setSavedCircuits] = useState([]);
   const [circuitName, setCircuitName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -61,22 +61,16 @@ export function GalleryDrawer({ engine, isOpen, onClose }) {
   const handleLoadPreset = (key) => {
     const preset = PRESET_CIRCUITS[key];
     if (!preset) return;
-    engine.clear();
-    preset.components.forEach((c) => {
-      engine.addComponent(JSON.parse(JSON.stringify(c)));
-    });
-    preset.wires.forEach((w) => {
-      engine.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin);
-    });
-    engine.propagate();
-    engine.notify();
+    engine.loadCircuit(preset);
+    onCircuitReplaced(preset.name);
     audioEngine.playRelayClick(1.2);
     showNotify(`Načten obvod: ${preset.name}`);
   };
 
   // Load a user saved circuit
   const handleLoadSaved = (state) => {
-    engine.importState(state);
+    if (!engine.importState(state)) return showNotify('Chyba: Neplatný formát uloženého obvodu.');
+    onCircuitReplaced(state.name);
     audioEngine.playRelayClick(1.2);
     showNotify(`Načten uživatelský obvod: ${state.name}`);
   };
@@ -118,6 +112,7 @@ export function GalleryDrawer({ engine, isOpen, onClose }) {
         const state = JSON.parse(event.target.result);
         const success = engine.importState(state);
         if (success) {
+          onCircuitReplaced(state.name || file.name);
           audioEngine.playRelayClick(1.3);
           showNotify(`Úspěšně importován obvod ze souboru "${file.name}"!`);
         } else {
@@ -148,6 +143,7 @@ export function GalleryDrawer({ engine, isOpen, onClose }) {
   const handleClearCanvas = () => {
     if (window.confirm('Opravdu chcete vyčistit celé plátno a začít nový návrh?')) {
       engine.clear();
+      onCircuitReplaced('Nový návrh');
       audioEngine.playRelayClick(0.7);
       showNotify('Plátno bylo vyčištěno.');
     }

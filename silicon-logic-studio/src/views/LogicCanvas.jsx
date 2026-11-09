@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { audioEngine } from '../engine/audioEngine';
 import { WireState } from '../engine/logicEngine';
+import { componentDims, hardwarePinPos, NV1_CARD, nv1CardOutline, crystalFrequency } from '../engine/boardLayout';
 
 const CHIP_PROFILES = {
   AND: { code: 'SN74LS08N', desc: 'QUAD 2-INPUT AND GATE', family: 'FAST-TTL', mfr: 'TI' },
@@ -52,6 +53,8 @@ export function LogicCanvas({
       if (hierarchyStack && hierarchyStack.length > 1) {
         if (e.key === 'Backspace' || e.key === 'Escape') {
           if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+          // With a selection, Backspace deletes and Escape deselects (handled below) instead of leaving the level
+          if (selectedComponentId || wiringFrom) return;
           e.preventDefault();
           if (onNavigateUp) onNavigateUp();
         }
@@ -59,7 +62,7 @@ export function LogicCanvas({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hierarchyStack, onNavigateUp]);
+  }, [hierarchyStack, onNavigateUp, selectedComponentId, wiringFrom]);
 
   // Reset view centering when hierarchyStack depth changes
   const prevStackLenRef = useRef(hierarchyStack ? hierarchyStack.length : 1);
@@ -71,47 +74,8 @@ export function LogicCanvas({
     }
   }, [hierarchyStack]);
 
-  // Dimensions helper
-  const getDims = useCallback((comp) => {
-    if (displayMode === 'schematic') {
-      if (comp.type === 'VIRTUAL_SCREEN') return { w: 180, h: 190 };
-      if (comp.type === 'INPUT') return { w: 90, h: 56 };
-      if (comp.type === 'CLOCK') return { w: 96, h: 56 };
-      if (comp.type === 'PROBE') return { w: 84, h: 50 };
-      if (comp.type === 'NOT') return { w: 70, h: 44 };
-      if (comp.type === 'AND' || comp.type === 'NAND') return { w: 84, h: 56 };
-      if (comp.type === 'OR' || comp.type === 'NOR') return { w: 88, h: 56 };
-      if (comp.type === 'XOR') return { w: 94, h: 56 };
-      if (comp.type === 'D_FF') return { w: 86, h: 74 };
-      if (comp.type === 'MUX') return { w: 78, h: 70 };
-      if (comp.type === 'SEVEN_SEGMENT') return { w: 88, h: 108 };
-      if (comp.type === 'NV1_CORE') return { w: 190, h: 170 };
-      if (comp.type === 'PCI_BUS') return { w: 170, h: 80 };
-      if (comp.type === 'VGA_BRACKET') return { w: 160, h: 100 };
-      if (comp.type === 'VRAM_BANK') return { w: 150, h: 80 };
-      if (comp.type === 'RAMDAC') return { w: 150, h: 80 };
-      if (comp.type === 'AUDIO_DSP') return { w: 150, h: 80 };
-      if (comp.type === 'SATURN_PAD') return { w: 140, h: 76 };
-      if (['RAM', 'ROM', 'REGISTER_8BIT'].includes(comp.type)) return { w: 140, h: 96 };
-      return { w: 90, h: 60 };
-    } else {
-      // Hardware PCB IC dimensions
-      if (comp.type === 'VIRTUAL_SCREEN') return { w: 190, h: 200 };
-      if (comp.type === 'SEVEN_SEGMENT') return { w: 92, h: 112 };
-      if (comp.type === 'NV1_CORE') return { w: 180, h: 180 };
-      if (comp.type === 'PCI_BUS') return { w: 260, h: 60 };
-      if (comp.type === 'VGA_BRACKET') return { w: 84, h: 360 };
-      if (comp.type === 'VRAM_BANK') return { w: 140, h: 66 };
-      if (comp.type === 'RAMDAC') return { w: 110, h: 110 };
-      if (comp.type === 'AUDIO_DSP') return { w: 110, h: 110 };
-      if (comp.type === 'SATURN_PAD') return { w: 130, h: 86 };
-      if (comp.type === 'INPUT') return { w: 110, h: 94 };
-      if (comp.type === 'CLOCK') return { w: 130, h: 84 };
-      if (comp.type === 'PROBE') return { w: 110, h: 78 };
-      if (['RAM', 'ROM', 'REGISTER_8BIT'].includes(comp.type)) return { w: 174, h: 126 };
-      return { w: 154, h: 90 };
-    }
-  }, [displayMode]);
+  // Dimensions helper (shared with the 3D view)
+  const getDims = useCallback((comp) => componentDims(comp, displayMode), [displayMode]);
 
   // Precise Pin Coordinates
   const getPinPos = useCallback((comp, pinName, isOutput) => {
@@ -157,20 +121,8 @@ export function LogicCanvas({
         x: isOutput ? comp.x + w : comp.x,
         y: comp.y + step * (idx + 1),
       };
-    } else {
-      // Hardware mode coordinates
-      if (comp.type === 'SEVEN_SEGMENT') {
-        const segPins = ['b0', 'b1', 'b2', 'b3'];
-        const idx = segPins.indexOf(pinName);
-        if (idx !== -1) return { x: comp.x, y: comp.y + 26 + idx * 18 };
-        return { x: comp.x, y: comp.y + h / 2 };
-      }
-      const pins = isOutput ? Object.keys(comp.outputs || {}) : Object.keys(comp.inputs || {});
-      const idx = Math.max(0, pins.indexOf(pinName));
-      const pinY = comp.y + 32 + idx * 17;
-      const pinX = isOutput ? comp.x + w : comp.x;
-      return { x: pinX, y: pinY };
     }
+    return hardwarePinPos(comp, pinName, isOutput);
   }, [displayMode, getDims]);
 
   // Wire path helper
@@ -825,7 +777,7 @@ export function LogicCanvas({
 
     ctx.fillStyle = '#111827';
     ctx.font = '700 11px "JetBrains Mono", monospace';
-    ctx.fillText('FOX 14.31818 MHz', comp.x + 14, comp.y + 28);
+    ctx.fillText(`FOX ${crystalFrequency(comp)} MHz`, comp.x + 14, comp.y + 28);
     ctx.font = '600 8px "JetBrains Mono", monospace';
     ctx.fillText('HC-49/U QUARTZ CRYSTAL', comp.x + 14, comp.y + 44);
 
@@ -1061,12 +1013,9 @@ export function LogicCanvas({
   function drawPhysicalNV1PCICard(ctx) {
     ctx.save();
     
-    // Physical PCI Board Boundary
-    const cardX = 110;
-    const cardY = 30;
-    const cardW = 690;
-    const cardH = 530;
-    
+    // Physical PCI Board Boundary (shared with the 3D model)
+    const { x: cardX, y: cardY, w: cardW, h: cardH } = NV1_CARD;
+
     // Emerald Green FR-4 Soldermask Substrate
     const pcbGrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
     pcbGrad.addColorStop(0, '#093B1E');
@@ -1074,18 +1023,10 @@ export function LogicCanvas({
     pcbGrad.addColorStop(0.7, '#08371B');
     pcbGrad.addColorStop(1, '#052613');
     ctx.fillStyle = pcbGrad;
-    
-    // Realistic PCI Outline (Chamfered Corner & Tab Extension)
+
+    // Realistic PCI Outline (Chamfered Corner & Edge-Connector Tab)
     ctx.beginPath();
-    ctx.moveTo(cardX, cardY);
-    ctx.lineTo(cardX + cardW - 35, cardY);
-    ctx.lineTo(cardX + cardW, cardY + 35); // 45 deg chamfer
-    ctx.lineTo(cardX + cardW, cardY + cardH);
-    ctx.lineTo(cardX + 440, cardY + cardH);
-    ctx.lineTo(cardX + 440, cardY + cardH + 34); // PCI connector tab
-    ctx.lineTo(cardX + 130, cardY + cardH + 34);
-    ctx.lineTo(cardX + 130, cardY + cardH);
-    ctx.lineTo(cardX, cardY + cardH);
+    nv1CardOutline().forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
     ctx.closePath();
     ctx.fill();
 
@@ -1127,28 +1068,29 @@ export function LogicCanvas({
       ctx.fill();
     }
 
-    // Authentic Silkscreen White Printing
+    // Authentic Silkscreen White Printing (top band is kept free of parts)
     ctx.fillStyle = '#F8FAFC';
     ctx.font = '900 13px "Outfit", sans-serif';
-    ctx.fillText('DIAMOND MULTIMEDIA // EDGE 3D 2000 SERIES', cardX + 35, cardY + 45);
+    ctx.fillText('DIAMOND MULTIMEDIA // EDGE 3D 2000 SERIES', cardX + 50, cardY + 24);
 
     ctx.fillStyle = '#94A3B8';
     ctx.font = '700 9px "JetBrains Mono", monospace';
-    ctx.fillText('NVIDIA NV1 / SGS-THOMSON STG-2000X 3D ACCELERATOR (1995)', cardX + 35, cardY + 58);
-    ctx.fillText('PCI BUS 2.1 // 64-BIT VRAM // SEGA SATURN I/O // 32-VOICE AUDIO', cardX + 35, cardY + 70);
+    ctx.fillText('NVIDIA NV1 / SGS-THOMSON STG-2000X 3D ACCELERATOR (1995)', cardX + 50, cardY + 38);
+    ctx.fillText('PCI BUS 2.1 // 64-BIT VRAM // SEGA SATURN I/O // 32-VOICE AUDIO', cardX + 50, cardY + 50);
 
-    // Bottom silkscreen
+    // Bottom-left silkscreen (between the gamepad header and the PCI edge)
     ctx.fillStyle = '#64748B';
     ctx.font = '600 8px "JetBrains Mono", monospace';
-    ctx.fillText('FCC ID: FTUPCI-EDGE3D  ASSY 2000-01-A  REV 1.0  MADE IN USA', cardX + 35, cardY + cardH - 12);
-    ctx.fillText('(C) 1995 NVIDIA CORP. // ALL RIGHTS RESERVED', cardX + 380, cardY + cardH - 12);
+    ctx.fillText('FCC ID: FTUPCI-EDGE3D', cardX + 30, cardY + 470);
+    ctx.fillText('ASSY 2000-01-A REV 1.0', cardX + 30, cardY + 480);
+    ctx.fillText('(C) 1995 NVIDIA CORP.', cardX + 430, cardY + 24);
 
     // Jumper Headers
     ctx.strokeStyle = '#CBD5E1';
-    ctx.strokeRect(cardX + 35, cardY + 390, 50, 20);
+    ctx.strokeRect(cardX + 30, cardY + 432, 50, 20);
     ctx.fillStyle = '#E2E8F0';
     ctx.font = '600 7px "JetBrains Mono", monospace';
-    ctx.fillText('JP1: PAL/NTSC', cardX + 35, cardY + 386);
+    ctx.fillText('JP1: PAL/NTSC', cardX + 30, cardY + 428);
 
     ctx.restore();
   }
@@ -2321,7 +2263,7 @@ export function LogicCanvas({
                           : 'text-gray-400 hover:text-cyan-200 hover:bg-white/5'
                       }`}
                     >
-                      <span className="text-[10px] text-cyan-500/80 font-semibold">L{idx + 1}:</span>
+                      <span className="text-[10px] text-cyan-500/80 font-semibold">L{lvl.level || idx + 1}:</span>
                       <span className="whitespace-nowrap">
                         {lvl.title.length > 25 ? lvl.title.slice(0, 23) + '…' : lvl.title}
                       </span>
@@ -2335,7 +2277,7 @@ export function LogicCanvas({
 
             {/* Depth Badge */}
             <span className="text-[10px] font-mono font-semibold text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-md border border-cyan-700/50 whitespace-nowrap">
-              ÚROVEŇ {hierarchyStack.length} / 8
+              ÚROVEŇ {hierarchyStack[hierarchyStack.length - 1].level || hierarchyStack.length} / 8
             </span>
           </div>
 

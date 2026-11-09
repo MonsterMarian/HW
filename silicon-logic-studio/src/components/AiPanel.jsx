@@ -3,7 +3,7 @@ import { Sparkles, ShieldCheck, ArrowRight, Zap, Cpu, Check, Terminal } from 'lu
 import { AiCopilot } from '../engine/aiCopilot';
 import { audioEngine } from '../engine/audioEngine';
 
-export function AiPanel({ engine, onClose }) {
+export function AiPanel({ engine, onClose, onCircuitReplaced = () => {} }) {
   const [prompt, setPrompt] = useState('Postav kompletní 8bitový Mini PC počítač s procesorem, pamětí ROM, ALU a CRT monitorem');
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [synthesizedCircuit, setSynthesizedCircuit] = useState(null);
@@ -43,18 +43,8 @@ export function AiPanel({ engine, onClose }) {
     audioEngine.playRelayClick(0.9);
 
     // Deploy to engine
-    engine.clear();
-
-    circuit.components.forEach((c) => {
-      engine.addComponent(JSON.parse(JSON.stringify(c)));
-    });
-
-    circuit.wires.forEach((w) => {
-      engine.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin);
-    });
-
-    engine.propagate();
-    engine.notify();
+    engine.loadCircuit(circuit);
+    onCircuitReplaced(circuit.name);
     onClose();
   };
 

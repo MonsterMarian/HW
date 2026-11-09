@@ -6,6 +6,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   // LEVEL 2: INSIDE NVIDIA NV1 / SGS-THOMSON STG-2000X PROCESSOR
   // =========================================================================
   nv1_core: {
+    level: 2,
     name: 'STG2000X / NVIDIA NV1 SILICON DIE MICRO-ARCHITECTURE',
     subtitle: '0.5µm 3-Metal CMOS Monolithic Silicon Die (1,000,000 Transistors)',
     components: [
@@ -40,6 +41,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   // LEVEL 3: INSIDE 3D QUADRATIC ENGINE (QTM) / ARITHMETIC PIPELINE
   // =========================================================================
   qtm_3d: {
+    level: 3,
     name: '3D QUADRATIC FORWARD-DIFFERENCING PIPELINE',
     subtitle: 'Evaluation of X(u,v) = A u² + B uv + C v² + D u + E v + F (Curved Surfaces)',
     components: [
@@ -70,6 +72,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   // LEVEL 4: INSIDE FULL ADDER (OR ARITHMETIC UNIT)
   // =========================================================================
   adder_pipe: {
+    level: 4,
     name: '1-BIT FULL ADDER GATE-LEVEL SCHEMATIC',
     subtitle: 'Sum = A ⊕ B ⊕ Cin  |  Cout = (A · B) + (Cin · (A ⊕ B))',
     components: [
@@ -104,6 +107,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   // LEVEL 5: INSIDE XOR GATE (4-NAND LOGIC GATE SCHEMATIC)
   // =========================================================================
   fa_xor1: {
+    level: 5,
     name: 'XOR GATE INTERNAL 4-NAND EQUIVALENT SCHEMATIC',
     subtitle: 'A ⊕ B = NAND( NAND(A, NAND(A,B)), NAND(B, NAND(A,B)) )',
     components: [
@@ -132,6 +136,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   // LEVEL 6: INSIDE A LOGIC GATE -> CMOS SILICON TRANSISTOR LEVEL
   // =========================================================================
   nand_center: {
+    level: 6,
     name: 'CMOS TRANZISTOROVÉ SCHÉMA (SILICON MOSFET LEVEL)',
     subtitle: 'NAND Gate: 2× PMOS (Parallel Pull-Up) + 2× NMOS (Series Pull-Down)',
     components: [
@@ -157,6 +162,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   // LEVEL 7: PHYSICAL SILICON DIE MOSFET TRANSISTOR CROSS-SECTION
   // =========================================================================
   pmos_1: {
+    level: 7,
     name: 'CMOS P-CHANNEL MOSFET (SILICON CROSS-SECTION & BANDGAP)',
     subtitle: 'Source (P+) | Polysilicon Gate (3.5nm SiO2) | Drain (P+) | N-Well Substrate',
     components: [
@@ -178,6 +184,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   nmos_1: {
+    level: 7,
     name: 'CMOS N-CHANNEL MOSFET (SILICON CROSS-SECTION & BANDGAP)',
     subtitle: 'Source (N+) | Polysilicon Gate (3.5nm SiO2) | Drain (N+) | P-Substrate (GND)',
     components: [
@@ -197,9 +204,10 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   // =========================================================================
-  // LEVEL 8: ATOMIC SILICON LATTICE & DIELECTRIC QUANTUM INTERFACE
+  // LEVEL 8: ATOMIC SILICON LATTICE & DIELECTRIC QUANTUM INTERFACE (TERMINAL)
   // =========================================================================
   sio2_dielectric: {
+    level: 8,
     name: 'SILICON DIOXIDE (SiO2) DIELECTRIC & ATOMIC CRYSTAL LATTICE',
     subtitle: 'Si-O Tetrahedral Bond Length 1.62 Å | Energy Bandgap 8.9 eV | 3.5nm Gate Thickness',
     components: [
@@ -220,6 +228,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   // STANDARD LOGIC GATES & CHIPS (INTERACTIVE SUB-CIRCUITS)
   // =========================================================================
   AND: {
+    level: 5,
     name: 'SN74LS08 QUAD 2-INPUT AND GATE (INTERNAL SCHEMATIC)',
     subtitle: '2-Input NAND Stage + Inverter Buffer (6 Transistors)',
     components: [
@@ -238,6 +247,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   OR: {
+    level: 5,
     name: 'SN74LS32 QUAD 2-INPUT OR GATE (INTERNAL SCHEMATIC)',
     subtitle: '2-Input NOR Stage + Inverter Buffer (6 Transistors)',
     components: [
@@ -256,6 +266,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   XOR: {
+    level: 5,
     name: 'SN74LS86 QUAD 2-INPUT XOR GATE (4-NAND MATRIX)',
     subtitle: 'A ⊕ B = (A + B) · (A · B)̄ (12 Transistors)',
     components: [
@@ -281,6 +292,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   NOT: {
+    level: 5,
     name: 'SN74LS04 HEX INVERTER (CMOS COMPLEMENTARY PAIR)',
     subtitle: '1× PMOS Pull-Up + 1× NMOS Pull-Down (2 Transistors)',
     components: [
@@ -297,6 +309,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   NAND: {
+    level: 5,
     name: 'SN74LS00 QUAD 2-INPUT NAND GATE',
     subtitle: '2× PMOS Parallel + 2× NMOS Series (4 Transistors)',
     components: [
@@ -315,6 +328,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   NOR: {
+    level: 5,
     name: 'SN74LS02 QUAD 2-INPUT NOR GATE',
     subtitle: '2× PMOS Series + 2× NMOS Parallel (4 Transistors)',
     components: [
@@ -333,6 +347,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   D_FF: {
+    level: 4,
     name: 'SN74LS74AN DUAL D-TYPE POSITIVE-EDGE FLIP-FLOP',
     subtitle: 'Master-Slave Cross-Coupled NAND Latch Matrix (6 Gates / 24 Transistors)',
     components: [
@@ -359,6 +374,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   REGISTER_8BIT: {
+    level: 3,
     name: 'SN74LS374 OCTAL D-TYPE FLIP-FLOP REGISTER SCHEMATIC',
     subtitle: '8× High-Speed Edge-Triggered D-FF Cells + Tristate 3-State Output Bus Drivers',
     components: [
@@ -382,6 +398,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   MUX: {
+    level: 3,
     name: 'SN74LS157 QUAD 2-TO-1 DATA SELECTOR / MULTIPLEXER',
     subtitle: 'Y = (A · S̄) + (B · S) (AND-OR-INVERT Logic Matrix)',
     components: [
@@ -407,6 +424,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   SEVEN_SEGMENT: {
+    level: 4,
     name: 'MAN-72A / TIL311 7-SEGMENT LED DISPLAY SCHEMATIC',
     subtitle: 'BCD-to-7Segment Decoder Matrix + 7× Constant Current Drivers + GaAsP LEDs',
     components: [
@@ -434,6 +452,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   VRAM_BANK: {
+    level: 3,
     name: 'TOSHIBA TC51V16160FT 16Mb EDO DRAM INTERNAL MATRIX',
     subtitle: '1024 Rows × 1024 Columns × 16-Bit Capacitor Matrix + Sense Amplifiers',
     components: [
@@ -453,6 +472,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   RAMDAC: {
+    level: 3,
     name: 'ATT20C409 / NV1 135MHz TrueColor VIDEO DAC ARCHITECTURE',
     subtitle: '256×18 Color LUT + Triple 8-Bit DACs (Red, Green, Blue) with 75Ω Drivers',
     components: [
@@ -476,6 +496,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   AUDIO_DSP: {
+    level: 3,
     name: 'STG-2000 32-VOICE WAVETABLE SYNTHESIZER SCHEMATIC',
     subtitle: '32 Polyphonic Voices + Wavetable Interpolator + 16-Bit Stereo Audio DAC',
     components: [
@@ -496,6 +517,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   PCI_BUS: {
+    level: 3,
     name: '32-BIT 33MHz PCI 2.1 BUS INTERFACE SCHEMATIC',
     subtitle: 'Multiplexed Address/Data Bus (AD[31:0]) + Frame/IRDY/TRDY Handshake Protocol',
     components: [
@@ -517,6 +539,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   VGA_BRACKET: {
+    level: 3,
     name: 'ANALOG VGA DB-15 & SEGA SATURN MULTI-IO SCHEMATIC',
     subtitle: 'RGB Video 75Ω Termination Filters + Dual 3.5mm Stereo Audio + Sega DB-9 Ports',
     components: [
@@ -540,6 +563,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   SATURN_PAD: {
+    level: 3,
     name: 'SEGA SATURN CONTROL PAD MATRIX ENCODER',
     subtitle: 'SMPC Controller Multiplexer (Select 0: Up/Down/L/R | Select 1: A/B/C/X/Y/Z)',
     components: [
@@ -558,6 +582,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   VIRTUAL_SCREEN: {
+    level: 3,
     name: 'CRT RASTER MONITOR & DEFLECTION MATRIX',
     subtitle: 'Dual-Port Video Memory + Horizontal/Vertical Sweep DACs + RGB Shadow Mask Triads',
     components: [
@@ -575,6 +600,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   RAM: {
+    level: 4,
     name: 'HM62256B 32K×8 HIGH-SPEED STATIC RAM ARRAY',
     subtitle: 'Row Decoder (8-to-256) + 6-Transistor (6T) SRAM Memory Cells + Sense Amplifiers',
     components: [
@@ -594,6 +620,7 @@ export const HIERARCHICAL_SUBCIRCUITS = {
   },
 
   ROM: {
+    level: 4,
     name: 'AT28C64B 64K PARALLEL EEPROM SCHEMATIC',
     subtitle: 'Non-Volatile Floating-Gate Tunnel-Oxide (FLOTOX) Storage Array + High-Voltage Charge Pump',
     components: [
@@ -639,99 +666,194 @@ HIERARCHICAL_SUBCIRCUITS.nand3 = HIERARCHICAL_SUBCIRCUITS.nand_center;
 HIERARCHICAL_SUBCIRCUITS.nand4 = HIERARCHICAL_SUBCIRCUITS.nand_center;
 
 /**
- * Finds the corresponding internal subcircuit schematic for any component.
+ * Finds the corresponding internal subcircuit schematic for any component,
+ * strictly guaranteeing no cycling or infinite loops by enforcing monotonic depth
+ * and preventing any ancestor from being re-entered.
+ *
+ * @param {object} comp - Component being clicked
+ * @param {Array} currentStack - Active hierarchy stack
+ * @returns {object|null} Next subcircuit, or null if terminal / invalid
  */
-export function findSubcircuit(comp) {
+export function findSubcircuit(comp, currentStack = null) {
   if (!comp) return null;
 
-  // 1. Direct ID match
-  if (HIERARCHICAL_SUBCIRCUITS[comp.id]) {
-    return HIERARCHICAL_SUBCIRCUITS[comp.id];
+  // 1. Primitive terminal components that cannot be drilled down
+  const TERMINAL_TYPES = ['INPUT', 'OUTPUT', 'PROBE', 'CONSTANT', 'CLOCK'];
+  if (TERMINAL_TYPES.includes(comp.type)) {
+    return null;
   }
 
-  // 2. Direct Type match
-  if (HIERARCHICAL_SUBCIRCUITS[comp.type]) {
-    return HIERARCHICAL_SUBCIRCUITS[comp.type];
+  // 2. Determine current level number and ancestor set from stack
+  let currentLevelNum = 1;
+  const ancestorIds = new Set();
+  const ancestorNames = new Set();
+
+  if (Array.isArray(currentStack) && currentStack.length > 0) {
+    currentLevelNum = currentStack.length;
+    for (const entry of currentStack) {
+      if (entry.id) ancestorIds.add(entry.id);
+      if (entry.title) ancestorNames.add(entry.title);
+      if (entry.level) currentLevelNum = Math.max(currentLevelNum, entry.level);
+    }
   }
 
-  // 3. Normalized string matching
+  // 3. Absolute Physical Boundary: Level 8 is the Silicon/Oxygen atomic lattice.
+  //    Nothing physically deeper exists in the system.
+  if (currentLevelNum >= 8) {
+    return null;
+  }
+
+  // Helper function to validate candidate subcircuit
+  const validateCandidate = (candidate, candidateKey) => {
+    if (!candidate || !candidate.components) return null;
+    const targetLevel = candidate.level || (currentLevelNum + 1);
+
+    // Monotonic level progression: target must be strictly deeper than current
+    if (targetLevel <= currentLevelNum) {
+      return null;
+    }
+
+    // Never re-enter any ancestor already present in current stack
+    if (ancestorIds.has(candidateKey) || ancestorNames.has(candidate.name)) {
+      return null;
+    }
+
+    return candidate;
+  };
+
   const idLower = (comp.id || '').toLowerCase();
   const typeUpper = (comp.type || '').toUpperCase();
 
+  // 4. LEVEL-SPECIFIC ROUTING (Prevents generic fallbacks from causing cycles):
+
+  // Level 7 (MOSFET Cross-Section): Only the Gate Oxide Dielectric can drill down to Level 8 (Atoms)
+  if (currentLevelNum === 7) {
+    if (idLower.includes('sio2') || idLower.includes('oxide') || idLower.includes('dielectric')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.sio2_dielectric, 'sio2_dielectric');
+    }
+    // Channels, voltages, depletion regions, and drain current probes are terminal!
+    return null;
+  }
+
+  // Level 6 (CMOS Transistors): PMOS and NMOS drill down to Level 7 (Cross-Section)
+  if (currentLevelNum === 6) {
+    if (idLower.includes('pmos')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.pmos_1, 'pmos_1');
+    }
+    if (idLower.includes('nmos')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.nmos_1, 'nmos_1');
+    }
+    return null;
+  }
+
+  // Level 5 (Logic Gates / 4-NAND Matrix): NAND stages drill down to Level 6 (CMOS Transistors)
+  if (currentLevelNum === 5) {
+    if (typeUpper.includes('NAND') || idLower.includes('nand') || idLower.includes('stage_nand')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.nand_center, 'nand_center');
+    }
+    if (idLower.includes('pmos')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.pmos_1, 'pmos_1');
+    }
+    if (idLower.includes('nmos')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.nmos_1, 'nmos_1');
+    }
+    return null;
+  }
+
+  // Level 4 (Full Adder / Arithmetic Unit): Logic gates drill down to Level 5
+  if (currentLevelNum === 4) {
+    if (idLower.includes('xor') || typeUpper.includes('XOR')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.fa_xor1, 'fa_xor1');
+    }
+    if (idLower.includes('and') || typeUpper.includes('AND')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.AND, 'AND');
+    }
+    if (idLower.includes('or') || typeUpper.includes('OR')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.OR, 'OR');
+    }
+    return null;
+  }
+
+  // Level 3 (QTM Pipeline / Subsystems): Arithmetic pipeline units drill down to Level 4
+  if (currentLevelNum === 3) {
+    if (idLower.includes('adder') || idLower.includes('pipe') || idLower.includes('add')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.adder_pipe, 'adder_pipe');
+    }
+    if (idLower.includes('cmp') || idLower.includes('xor') || typeUpper.includes('XOR')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.fa_xor1, 'fa_xor1');
+    }
+    if (typeUpper.includes('D_FF') || idLower.includes('dff')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.D_FF, 'D_FF');
+    }
+    if (typeUpper.includes('RAM') || typeUpper.includes('ROM')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS[comp.type] || HIERARCHICAL_SUBCIRCUITS.RAM, comp.type);
+    }
+    if (typeUpper.includes('MUX') || idLower.includes('sampler')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.MUX, 'MUX');
+    }
+    return null;
+  }
+
+  // Level 2 (STG2000X / NV1 Silicon Die): Functional blocks drill down to Level 3
+  if (currentLevelNum === 2) {
+    if (idLower.includes('qtm') || comp.id === 'qtm_3d') {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.qtm_3d, 'qtm_3d');
+    }
+    if (typeUpper.includes('VRAM') || idLower.includes('vram')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VRAM_BANK, 'VRAM_BANK');
+    }
+    if (typeUpper.includes('RAMDAC') || idLower.includes('ramdac')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.RAMDAC, 'RAMDAC');
+    }
+    if (typeUpper.includes('AUDIO') || idLower.includes('audio')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.AUDIO_DSP, 'AUDIO_DSP');
+    }
+    if (typeUpper.includes('PCI') || idLower.includes('pci')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.PCI_BUS, 'PCI_BUS');
+    }
+    if (typeUpper.includes('SATURN') || idLower.includes('saturn')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.SATURN_PAD, 'SATURN_PAD');
+    }
+    if (typeUpper.includes('SCREEN') || idLower.includes('screen')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VIRTUAL_SCREEN, 'VIRTUAL_SCREEN');
+    }
+    if (typeUpper.includes('REGISTER') || idLower.includes('bitblt')) {
+      return validateCandidate(HIERARCHICAL_SUBCIRCUITS.REGISTER_8BIT, 'REGISTER_8BIT');
+    }
+    return null;
+  }
+
+  // Level 1 (Root PCI Board): Board components drill down to Level 2 (or direct subsystem)
+  if (HIERARCHICAL_SUBCIRCUITS[comp.id]) {
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS[comp.id], comp.id);
+  }
+  if (HIERARCHICAL_SUBCIRCUITS[comp.type]) {
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS[comp.type], comp.type);
+  }
+
   if (idLower.includes('nv1') || typeUpper.includes('NV1')) {
-    return HIERARCHICAL_SUBCIRCUITS.nv1_core;
-  }
-  if (idLower.includes('qtm')) {
-    return HIERARCHICAL_SUBCIRCUITS.qtm_3d;
-  }
-  if (idLower.includes('adder') || idLower.includes('add')) {
-    return HIERARCHICAL_SUBCIRCUITS.adder_pipe;
-  }
-  if (idLower.includes('xor') || typeUpper.includes('XOR')) {
-    return HIERARCHICAL_SUBCIRCUITS.fa_xor1;
-  }
-  if (idLower.includes('nand') || typeUpper.includes('NAND')) {
-    return HIERARCHICAL_SUBCIRCUITS.nand_center;
-  }
-  if (idLower.includes('pmos')) {
-    return HIERARCHICAL_SUBCIRCUITS.pmos_1;
-  }
-  if (idLower.includes('nmos')) {
-    return HIERARCHICAL_SUBCIRCUITS.nmos_1;
-  }
-  if (idLower.includes('sio2') || idLower.includes('oxide')) {
-    return HIERARCHICAL_SUBCIRCUITS.sio2_dielectric;
-  }
-  if (typeUpper.includes('AND')) {
-    return HIERARCHICAL_SUBCIRCUITS.AND;
-  }
-  if (typeUpper.includes('NOR')) {
-    return HIERARCHICAL_SUBCIRCUITS.NOR;
-  }
-  if (typeUpper.includes('OR')) {
-    return HIERARCHICAL_SUBCIRCUITS.OR;
-  }
-  if (typeUpper.includes('NOT')) {
-    return HIERARCHICAL_SUBCIRCUITS.NOT;
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.nv1_core, 'nv1_core');
   }
   if (typeUpper.includes('VRAM') || typeUpper.includes('DRAM')) {
-    return HIERARCHICAL_SUBCIRCUITS.VRAM_BANK;
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VRAM_BANK, 'VRAM_BANK');
   }
   if (typeUpper.includes('RAMDAC')) {
-    return HIERARCHICAL_SUBCIRCUITS.RAMDAC;
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.RAMDAC, 'RAMDAC');
   }
   if (typeUpper.includes('AUDIO') || typeUpper.includes('DSP')) {
-    return HIERARCHICAL_SUBCIRCUITS.AUDIO_DSP;
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.AUDIO_DSP, 'AUDIO_DSP');
   }
   if (typeUpper.includes('PCI')) {
-    return HIERARCHICAL_SUBCIRCUITS.PCI_BUS;
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.PCI_BUS, 'PCI_BUS');
   }
   if (typeUpper.includes('VGA') || typeUpper.includes('BRACKET')) {
-    return HIERARCHICAL_SUBCIRCUITS.VGA_BRACKET;
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VGA_BRACKET, 'VGA_BRACKET');
   }
   if (typeUpper.includes('SATURN') || typeUpper.includes('PAD')) {
-    return HIERARCHICAL_SUBCIRCUITS.SATURN_PAD;
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.SATURN_PAD, 'SATURN_PAD');
   }
   if (typeUpper.includes('SCREEN')) {
-    return HIERARCHICAL_SUBCIRCUITS.VIRTUAL_SCREEN;
-  }
-  if (typeUpper.includes('D_FF') || typeUpper.includes('FLIP')) {
-    return HIERARCHICAL_SUBCIRCUITS.D_FF;
-  }
-  if (typeUpper.includes('REGISTER') || typeUpper.includes('REG')) {
-    return HIERARCHICAL_SUBCIRCUITS.REGISTER_8BIT;
-  }
-  if (typeUpper.includes('MUX')) {
-    return HIERARCHICAL_SUBCIRCUITS.MUX;
-  }
-  if (typeUpper.includes('SEVEN_SEGMENT') || typeUpper.includes('SEG')) {
-    return HIERARCHICAL_SUBCIRCUITS.SEVEN_SEGMENT;
-  }
-  if (typeUpper.includes('RAM')) {
-    return HIERARCHICAL_SUBCIRCUITS.RAM;
-  }
-  if (typeUpper.includes('ROM')) {
-    return HIERARCHICAL_SUBCIRCUITS.ROM;
+    return validateCandidate(HIERARCHICAL_SUBCIRCUITS.VIRTUAL_SCREEN, 'VIRTUAL_SCREEN');
   }
 
   return null;

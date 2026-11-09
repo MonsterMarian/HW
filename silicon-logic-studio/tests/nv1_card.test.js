@@ -383,6 +383,93 @@ describe('Hierarchical Subcircuits - Deep Multi-Level Verification (Levels 2 to 
     const barrier = engine.components.get('bandgap_barrier');
     assert.strictEqual(barrier.inputs.in, 1, 'Potential barrier of SiO2 dielectric must be active');
   });
+
+  it('CYCLE IMMUNITY: Complete 8-level drill-down path must be strictly monotonic without loops', () => {
+    // Level 1: Root NV1 Card
+    const stack = [{ id: 'root', title: 'NVIDIA NV1 (1995)', level: 1 }];
+
+    // Drill 1 -> 2: nv1_core
+    const subL2 = findSubcircuit({ id: 'nv1_core', type: 'NV1_CORE' }, stack);
+    assert.ok(subL2, 'Must drill into Level 2 nv1_core');
+    assert.strictEqual(subL2.level, 2);
+    stack.push({ id: 'nv1_core', title: subL2.name, level: 2 });
+
+    // Drill 2 -> 3: qtm_3d
+    const subL3 = findSubcircuit({ id: 'qtm_3d', type: 'NV1_CORE' }, stack);
+    assert.ok(subL3, 'Must drill into Level 3 qtm_3d');
+    assert.strictEqual(subL3.level, 3);
+    stack.push({ id: 'qtm_3d', title: subL3.name, level: 3 });
+
+    // Drill 3 -> 4: adder_pipe
+    const subL4 = findSubcircuit({ id: 'adder_pipe', type: 'AND' }, stack);
+    assert.ok(subL4, 'Must drill into Level 4 adder_pipe');
+    assert.strictEqual(subL4.level, 4);
+    stack.push({ id: 'adder_pipe', title: subL4.name, level: 4 });
+
+    // Drill 4 -> 5: fa_xor1
+    const subL5 = findSubcircuit({ id: 'fa_xor1', type: 'XOR' }, stack);
+    assert.ok(subL5, 'Must drill into Level 5 fa_xor1');
+    assert.strictEqual(subL5.level, 5);
+    stack.push({ id: 'fa_xor1', title: subL5.name, level: 5 });
+
+    // Drill 5 -> 6: nand_center
+    const subL6 = findSubcircuit({ id: 'nand_center', type: 'NAND' }, stack);
+    assert.ok(subL6, 'Must drill into Level 6 nand_center');
+    assert.strictEqual(subL6.level, 6);
+    stack.push({ id: 'nand_center', title: subL6.name, level: 6 });
+
+    // Drill 6 -> 7: pmos_1
+    const subL7 = findSubcircuit({ id: 'pmos_1', type: 'NOT' }, stack);
+    assert.ok(subL7, 'Must drill into Level 7 pmos_1');
+    assert.strictEqual(subL7.level, 7);
+    stack.push({ id: 'pmos_1', title: subL7.name, level: 7 });
+
+    // Drill 7 -> 8: sio2_dielectric
+    const subL8 = findSubcircuit({ id: 'sio2_dielectric', type: 'NOT' }, stack);
+    assert.ok(subL8, 'Must drill into Level 8 sio2_dielectric');
+    assert.strictEqual(subL8.level, 8);
+    stack.push({ id: 'sio2_dielectric', title: subL8.name, level: 8 });
+
+    // Level 8: ATOMIC LIMIT - No components may drill down or loop back up!
+    const cycleAttempt1 = findSubcircuit({ id: 'covalent_sp3', type: 'AND' }, stack);
+    assert.strictEqual(cycleAttempt1, null, 'covalent_sp3 at Level 8 must NOT loop back to AND (must be null)');
+
+    const cycleAttempt2 = findSubcircuit({ id: 'si_atom', type: 'INPUT' }, stack);
+    assert.strictEqual(cycleAttempt2, null, 'Silicon atom at Level 8 must be terminal (null)');
+
+    const cycleAttempt3 = findSubcircuit({ id: 'bandgap_barrier', type: 'PROBE' }, stack);
+    assert.strictEqual(cycleAttempt3, null, 'Bandgap barrier probe at Level 8 must be terminal (null)');
+  });
+
+  it('CYCLE IMMUNITY: Non-dielectric components at Level 7 (PMOS/NMOS) must NOT cycle back to gates', () => {
+    const stackL7 = [
+      { id: 'root', level: 1 },
+      { id: 'nv1_core', level: 2 },
+      { id: 'qtm_3d', level: 3 },
+      { id: 'adder_pipe', level: 4 },
+      { id: 'fa_xor1', level: 5 },
+      { id: 'nand_center', level: 6 },
+      { id: 'pmos_1', level: 7 },
+    ];
+
+    // In PMOS: hole_channel has type 'AND'. Previously it returned Level 5 AND and caused infinite cycling!
+    const holeCycle = findSubcircuit({ id: 'hole_channel', type: 'AND' }, stackL7);
+    assert.strictEqual(holeCycle, null, 'hole_channel at Level 7 must return null and never loop to AND gate');
+
+    const drainCycle = findSubcircuit({ id: 'drain_current', type: 'PROBE' }, stackL7);
+    assert.strictEqual(drainCycle, null, 'drain_current probe must return null');
+
+    const vGateCycle = findSubcircuit({ id: 'gate_voltage', type: 'INPUT' }, stackL7);
+    assert.strictEqual(vGateCycle, null, 'gate_voltage input must return null');
+  });
+
+  it('CYCLE IMMUNITY: Primitive terminal components (INPUT, PROBE, CLOCK) never drill down at any level', () => {
+    const stack = [{ id: 'root', level: 1 }];
+    assert.strictEqual(findSubcircuit({ id: 'clk', type: 'CLOCK' }, stack), null);
+    assert.strictEqual(findSubcircuit({ id: 'inp', type: 'INPUT' }, stack), null);
+    assert.strictEqual(findSubcircuit({ id: 'prb', type: 'PROBE' }, stack), null);
+    assert.strictEqual(findSubcircuit({ id: 'cst', type: 'CONSTANT' }, stack), null);
+  });
 });
 
 describe('Speed & Performance Benchmarks - Timing, Throughput & 60 FPS Verification', () => {

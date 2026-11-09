@@ -51,7 +51,7 @@ export default function App() {
 
   // Drill down into internal subcircuit schematic on double click
   const handleDrillDown = useCallback((component) => {
-    const subcircuit = findSubcircuit(component);
+    const subcircuit = findSubcircuit(component, hierarchyStack);
     if (!subcircuit) {
       console.log(`Žádné hlubší podsystémové schéma pro: ${component.label || component.id}`);
       return;
@@ -78,7 +78,8 @@ export default function App() {
       // Play audio confirmation
       audioEngine.playRelayClick(1.6);
 
-      // Subcircuits look great in schematic view
+      // Subcircuits look great in schematic view when in hardware mode
+      // If in 3D physics view, stay in 3D physics view!
       if (viewMode === 'hardware' && updated.length >= 1) {
         setViewMode('schematic');
       }
@@ -89,14 +90,15 @@ export default function App() {
           id: component.id,
           title: subcircuit.name,
           subtitle: subcircuit.subtitle,
+          level: subcircuit.level || (updated.length + 1),
           state: null,
-          viewMode: 'schematic',
+          viewMode: viewMode,
         }
       ];
     });
 
     setSelectedComponentId(null);
-  }, [engine, viewMode]);
+  }, [engine, viewMode, hierarchyStack]);
 
   // Navigate up through hierarchy stack
   const handleNavigateUp = useCallback((targetIndex) => {
@@ -170,7 +172,12 @@ export default function App() {
         {/* Central Viewport: Schematic vs Hardware PCB vs Physics 3D Die */}
         <div className="flex-1 h-full relative">
           {viewMode === 'physics' ? (
-            <PhysicsView engine={engine} />
+            <PhysicsView
+              engine={engine}
+              hierarchyStack={hierarchyStack}
+              onNavigateUp={handleNavigateUp}
+              onDrillDown={handleDrillDown}
+            />
           ) : (
             <LogicCanvas
               engine={engine}

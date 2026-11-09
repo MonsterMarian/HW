@@ -50,11 +50,13 @@ export function LogicCanvas({
       if (comp.type === 'XOR') return { w: 94, h: 56 };
       if (comp.type === 'D_FF') return { w: 86, h: 74 };
       if (comp.type === 'MUX') return { w: 78, h: 70 };
+      if (comp.type === 'SEVEN_SEGMENT') return { w: 88, h: 108 };
       if (['RAM', 'ROM', 'REGISTER_8BIT'].includes(comp.type)) return { w: 140, h: 96 };
       return { w: 90, h: 60 };
     } else {
       // Hardware PCB IC dimensions
       if (comp.type === 'VIRTUAL_SCREEN') return { w: 190, h: 200 };
+      if (comp.type === 'SEVEN_SEGMENT') return { w: 92, h: 112 };
       if (comp.type === 'INPUT') return { w: 110, h: 94 };
       if (comp.type === 'CLOCK') return { w: 130, h: 84 };
       if (comp.type === 'PROBE') return { w: 110, h: 78 };
@@ -93,6 +95,12 @@ export function LogicCanvas({
       if (comp.type === 'PROBE') {
         return { x: comp.x, y: comp.y + h / 2 };
       }
+      if (comp.type === 'SEVEN_SEGMENT') {
+        const segPins = ['b0', 'b1', 'b2', 'b3'];
+        const idx = segPins.indexOf(pinName);
+        if (idx !== -1) return { x: comp.x, y: comp.y + 24 + idx * 18 };
+        return { x: comp.x, y: comp.y + h / 2 };
+      }
 
       const pins = isOutput ? Object.keys(comp.outputs || {}) : Object.keys(comp.inputs || {});
       const idx = Math.max(0, pins.indexOf(pinName));
@@ -103,6 +111,12 @@ export function LogicCanvas({
       };
     } else {
       // Hardware mode coordinates
+      if (comp.type === 'SEVEN_SEGMENT') {
+        const segPins = ['b0', 'b1', 'b2', 'b3'];
+        const idx = segPins.indexOf(pinName);
+        if (idx !== -1) return { x: comp.x, y: comp.y + 26 + idx * 18 };
+        return { x: comp.x, y: comp.y + h / 2 };
+      }
       const pins = isOutput ? Object.keys(comp.outputs || {}) : Object.keys(comp.inputs || {});
       const idx = Math.max(0, pins.indexOf(pinName));
       const pinY = comp.y + 32 + idx * 17;
@@ -487,6 +501,11 @@ export function LogicCanvas({
       ctx.restore();
       return;
     }
+    if (comp.type === 'SEVEN_SEGMENT') {
+      drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, true);
+      ctx.restore();
+      return;
+    }
 
     // DIP Integrated Circuit Package (e.g. 74LS08, 74LS86, etc.)
     drawPhotorealisticDIPChip(ctx, comp, w, h, isSelected);
@@ -803,6 +822,103 @@ export function LogicCanvas({
     ctx.fillText(strVal, comp.x + 46, comp.y + 51);
 
     drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+  }
+
+  function drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, isHardware) {
+    const val = comp.outputs?.val !== undefined ? comp.outputs.val : (Number(comp.inputs?.in) || 0) & 0x0F;
+    const hexChar = Number(val).toString(16).toUpperCase();
+
+    ctx.save();
+    // Chassis Body
+    ctx.fillStyle = isHardware ? '#0E121A' : '#070A12';
+    roundRect(ctx, comp.x, comp.y, w, h, 6);
+    ctx.fill();
+
+    ctx.strokeStyle = isSelected ? '#00F0FF' : isHardware ? '#2B3548' : '#334155';
+    ctx.lineWidth = isSelected ? 2 : 1.2;
+    roundRect(ctx, comp.x, comp.y, w, h, 6);
+    ctx.stroke();
+
+    // Module Title
+    ctx.fillStyle = '#64748B';
+    ctx.font = '700 8px "JetBrains Mono", monospace';
+    ctx.fillText('7-SEG DISPLAY', comp.x + 8, comp.y + 14);
+
+    // Bezel Display Window
+    const boxX = comp.x + 18;
+    const boxY = comp.y + 20;
+    const boxW = 54;
+    const boxH = 70;
+
+    ctx.fillStyle = '#040203';
+    roundRect(ctx, boxX, boxY, boxW, boxH, 4);
+    ctx.fill();
+
+    // Segment Bitmask (0-F)
+    const SEG_MAP = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71];
+    const mask = SEG_MAP[val & 0x0F] || 0;
+    const activeColor = '#FF0055'; // Glowing Ruby Red LED
+    const dimColor = 'rgba(60, 10, 25, 0.35)';
+
+    const sx = boxX + 14;
+    const sy = boxY + 10;
+    const segW = 20;
+    const segH = 20;
+    const t = 3.2;
+
+    function drawH(x, y, on) {
+      ctx.save();
+      ctx.fillStyle = on ? activeColor : dimColor;
+      if (on) {
+        ctx.shadowColor = activeColor;
+        ctx.shadowBlur = 8;
+      }
+      ctx.fillRect(x, y, segW, t);
+      ctx.restore();
+    }
+
+    function drawV(x, y, on) {
+      ctx.save();
+      ctx.fillStyle = on ? activeColor : dimColor;
+      if (on) {
+        ctx.shadowColor = activeColor;
+        ctx.shadowBlur = 8;
+      }
+      ctx.fillRect(x, y, t, segH);
+      ctx.restore();
+    }
+
+    // Segments: a, b, c, d, e, f, g
+    drawH(sx, sy, (mask & 0x01) !== 0); // a
+    drawV(sx + segW, sy + t, (mask & 0x02) !== 0); // b
+    drawV(sx + segW, sy + segH + t * 2, (mask & 0x04) !== 0); // c
+    drawH(sx, sy + segH * 2 + t * 2, (mask & 0x08) !== 0); // d
+    drawV(sx - t, sy + segH + t * 2, (mask & 0x10) !== 0); // e
+    drawV(sx - t, sy + t, (mask & 0x20) !== 0); // f
+    drawH(sx, sy + segH + t, (mask & 0x40) !== 0); // g
+
+    // Decimal Point DP
+    ctx.save();
+    ctx.fillStyle = activeColor;
+    ctx.shadowColor = activeColor;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(boxX + boxW - 8, boxY + boxH - 8, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Value read-out label at bottom
+    ctx.fillStyle = '#00F0FF';
+    ctx.font = '700 9px "JetBrains Mono", monospace';
+    ctx.fillText(`HEX: ${hexChar} (DEC: ${val})`, comp.x + 8, comp.y + h - 4);
+
+    if (isHardware) {
+      drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+    } else {
+      drawSchematicLeads(ctx, comp, w, h, isSelected ? '#00F0FF' : '#5E7A9E');
+    }
+
+    ctx.restore();
   }
 
   // ==========================================
@@ -1132,6 +1248,8 @@ export function LogicCanvas({
       }
 
       drawSchematicLeads(ctx, comp, w, h, strokeColor);
+    } else if (comp.type === 'SEVEN_SEGMENT') {
+      drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, false);
     } else {
       ctx.strokeRect(comp.x, comp.y, w, h);
       ctx.fillRect(comp.x, comp.y, w, h);

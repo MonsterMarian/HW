@@ -386,9 +386,18 @@ export class LogicEngine {
         out.val = inp.in;
         break;
 
-      case 'SEVEN_SEGMENT':
-        out.val = inp.in;
+      case 'SEVEN_SEGMENT': {
+        if (inp.b0 !== undefined || inp.b1 !== undefined || inp.b2 !== undefined || inp.b3 !== undefined) {
+          const bit0 = inp.b0 === 1 ? 1 : 0;
+          const bit1 = inp.b1 === 1 ? 2 : 0;
+          const bit2 = inp.b2 === 1 ? 4 : 0;
+          const bit3 = inp.b3 === 1 ? 8 : 0;
+          out.val = bit0 | bit1 | bit2 | bit3;
+        } else {
+          out.val = (Number(inp.in) || 0) & 0x0F;
+        }
         break;
+      }
 
       case 'CUSTOM_CHIP':
         // Evaluate compiled subcircuit function or netlist

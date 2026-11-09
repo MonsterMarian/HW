@@ -47,6 +47,111 @@ export const PRESET_CIRCUITS = {
     ]
   },
 
+  calculator: {
+    name: '4-Bit Digital Calculator (Add / Sub + 7-Segment LED)',
+    prompt: 'Postav 4bitovou hardwarovou kalkulačku se sčítáním, odčítáním dvojkovým doplňkem a číslicovým 7segmentovým LED displejem',
+    components: [
+      { id: 'mode_sub', type: 'INPUT', label: 'MODE (0:ADD, 1:SUB)', x: 60, y: 50, inputs: {}, outputs: { out: 0 } },
+      { id: 'a0', type: 'INPUT', label: 'A0 (1)', x: 60, y: 130, inputs: {}, outputs: { out: 1 } },
+      { id: 'a1', type: 'INPUT', label: 'A1 (2)', x: 60, y: 210, inputs: {}, outputs: { out: 1 } },
+      { id: 'a2', type: 'INPUT', label: 'A2 (4)', x: 60, y: 290, inputs: {}, outputs: { out: 0 } },
+      { id: 'a3', type: 'INPUT', label: 'A3 (8)', x: 60, y: 370, inputs: {}, outputs: { out: 0 } },
+      { id: 'b0', type: 'INPUT', label: 'B0 (1)', x: 60, y: 470, inputs: {}, outputs: { out: 1 } },
+      { id: 'b1', type: 'INPUT', label: 'B1 (2)', x: 60, y: 550, inputs: {}, outputs: { out: 0 } },
+      { id: 'b2', type: 'INPUT', label: 'B2 (4)', x: 60, y: 630, inputs: {}, outputs: { out: 1 } },
+      { id: 'b3', type: 'INPUT', label: 'B3 (8)', x: 60, y: 710, inputs: {}, outputs: { out: 0 } },
+      { id: 'xor_b0', type: 'XOR', label: 'INV B0', x: 220, y: 470, inputs: { a: 0, b: 0 }, outputs: { out: 1 } },
+      { id: 'xor_b1', type: 'XOR', label: 'INV B1', x: 220, y: 550, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'xor_b2', type: 'XOR', label: 'INV B2', x: 220, y: 630, inputs: { a: 0, b: 0 }, outputs: { out: 1 } },
+      { id: 'xor_b3', type: 'XOR', label: 'INV B3', x: 220, y: 710, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa0_xor1', type: 'XOR', label: 'FA0 XOR1', x: 380, y: 130, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa0_xor2', type: 'XOR', label: 'FA0 SUM', x: 530, y: 130, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa0_and1', type: 'AND', label: 'FA0 AND1', x: 380, y: 200, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa0_and2', type: 'AND', label: 'FA0 AND2', x: 530, y: 200, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa0_or', type: 'OR', label: 'FA0 CARRY', x: 670, y: 200, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa1_xor1', type: 'XOR', label: 'FA1 XOR1', x: 380, y: 280, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa1_xor2', type: 'XOR', label: 'FA1 SUM', x: 530, y: 280, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa1_and1', type: 'AND', label: 'FA1 AND1', x: 380, y: 350, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa1_and2', type: 'AND', label: 'FA1 AND2', x: 530, y: 350, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa1_or', type: 'OR', label: 'FA1 CARRY', x: 670, y: 350, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa2_xor1', type: 'XOR', label: 'FA2 XOR1', x: 380, y: 430, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa2_xor2', type: 'XOR', label: 'FA2 SUM', x: 530, y: 430, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa2_and1', type: 'AND', label: 'FA2 AND1', x: 380, y: 500, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa2_and2', type: 'AND', label: 'FA2 AND2', x: 530, y: 500, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa2_or', type: 'OR', label: 'FA2 CARRY', x: 670, y: 500, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa3_xor1', type: 'XOR', label: 'FA3 XOR1', x: 380, y: 580, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa3_xor2', type: 'XOR', label: 'FA3 SUM', x: 530, y: 580, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa3_and1', type: 'AND', label: 'FA3 AND1', x: 380, y: 650, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa3_and2', type: 'AND', label: 'FA3 AND2', x: 530, y: 650, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'fa3_or', type: 'OR', label: 'FA3 CARRY', x: 670, y: 650, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
+      { id: 'res0', type: 'PROBE', label: 'R0 (1)', x: 740, y: 130, inputs: { in: 0 }, outputs: { val: 0 } },
+      { id: 'res1', type: 'PROBE', label: 'R1 (2)', x: 740, y: 280, inputs: { in: 0 }, outputs: { val: 0 } },
+      { id: 'res2', type: 'PROBE', label: 'R2 (4)', x: 740, y: 430, inputs: { in: 0 }, outputs: { val: 0 } },
+      { id: 'res3', type: 'PROBE', label: 'R3 (8)', x: 740, y: 580, inputs: { in: 0 }, outputs: { val: 0 } },
+      { id: 'carry_out', type: 'PROBE', label: 'OVERFLOW C4', x: 800, y: 650, inputs: { in: 0 }, outputs: { val: 0 } },
+      { id: 'display', type: 'SEVEN_SEGMENT', label: 'RESULT DISPLAY', x: 860, y: 240, inputs: { b0: 0, b1: 0, b2: 0, b3: 0 }, outputs: { val: 0 } },
+    ],
+    wires: [
+      { from: { id: 'mode_sub', pin: 'out' }, to: { id: 'xor_b0', pin: 'b' } },
+      { from: { id: 'mode_sub', pin: 'out' }, to: { id: 'xor_b1', pin: 'b' } },
+      { from: { id: 'mode_sub', pin: 'out' }, to: { id: 'xor_b2', pin: 'b' } },
+      { from: { id: 'mode_sub', pin: 'out' }, to: { id: 'xor_b3', pin: 'b' } },
+      { from: { id: 'mode_sub', pin: 'out' }, to: { id: 'fa0_xor2', pin: 'b' } },
+      { from: { id: 'mode_sub', pin: 'out' }, to: { id: 'fa0_and2', pin: 'b' } },
+      { from: { id: 'b0', pin: 'out' }, to: { id: 'xor_b0', pin: 'a' } },
+      { from: { id: 'b1', pin: 'out' }, to: { id: 'xor_b1', pin: 'a' } },
+      { from: { id: 'b2', pin: 'out' }, to: { id: 'xor_b2', pin: 'a' } },
+      { from: { id: 'b3', pin: 'out' }, to: { id: 'xor_b3', pin: 'a' } },
+      { from: { id: 'a0', pin: 'out' }, to: { id: 'fa0_xor1', pin: 'a' } },
+      { from: { id: 'xor_b0', pin: 'out' }, to: { id: 'fa0_xor1', pin: 'b' } },
+      { from: { id: 'a0', pin: 'out' }, to: { id: 'fa0_and1', pin: 'a' } },
+      { from: { id: 'xor_b0', pin: 'out' }, to: { id: 'fa0_and1', pin: 'b' } },
+      { from: { id: 'fa0_xor1', pin: 'out' }, to: { id: 'fa0_xor2', pin: 'a' } },
+      { from: { id: 'fa0_xor1', pin: 'out' }, to: { id: 'fa0_and2', pin: 'a' } },
+      { from: { id: 'fa0_and1', pin: 'out' }, to: { id: 'fa0_or', pin: 'a' } },
+      { from: { id: 'fa0_and2', pin: 'out' }, to: { id: 'fa0_or', pin: 'b' } },
+      { from: { id: 'fa0_xor2', pin: 'out' }, to: { id: 'res0', pin: 'in' } },
+      { from: { id: 'fa0_xor2', pin: 'out' }, to: { id: 'display', pin: 'b0' } },
+      { from: { id: 'fa0_or', pin: 'out' }, to: { id: 'fa1_xor2', pin: 'b' } },
+      { from: { id: 'fa0_or', pin: 'out' }, to: { id: 'fa1_and2', pin: 'b' } },
+      { from: { id: 'a1', pin: 'out' }, to: { id: 'fa1_xor1', pin: 'a' } },
+      { from: { id: 'xor_b1', pin: 'out' }, to: { id: 'fa1_xor1', pin: 'b' } },
+      { from: { id: 'a1', pin: 'out' }, to: { id: 'fa1_and1', pin: 'a' } },
+      { from: { id: 'xor_b1', pin: 'out' }, to: { id: 'fa1_and1', pin: 'b' } },
+      { from: { id: 'fa1_xor1', pin: 'out' }, to: { id: 'fa1_xor2', pin: 'a' } },
+      { from: { id: 'fa1_xor1', pin: 'out' }, to: { id: 'fa1_and2', pin: 'a' } },
+      { from: { id: 'fa1_and1', pin: 'out' }, to: { id: 'fa1_or', pin: 'a' } },
+      { from: { id: 'fa1_and2', pin: 'out' }, to: { id: 'fa1_or', pin: 'b' } },
+      { from: { id: 'fa1_xor2', pin: 'out' }, to: { id: 'res1', pin: 'in' } },
+      { from: { id: 'fa1_xor2', pin: 'out' }, to: { id: 'display', pin: 'b1' } },
+      { from: { id: 'fa1_or', pin: 'out' }, to: { id: 'fa2_xor2', pin: 'b' } },
+      { from: { id: 'fa1_or', pin: 'out' }, to: { id: 'fa2_and2', pin: 'b' } },
+      { from: { id: 'a2', pin: 'out' }, to: { id: 'fa2_xor1', pin: 'a' } },
+      { from: { id: 'xor_b2', pin: 'out' }, to: { id: 'fa2_xor1', pin: 'b' } },
+      { from: { id: 'a2', pin: 'out' }, to: { id: 'fa2_and1', pin: 'a' } },
+      { from: { id: 'xor_b2', pin: 'out' }, to: { id: 'fa2_and1', pin: 'b' } },
+      { from: { id: 'fa2_xor1', pin: 'out' }, to: { id: 'fa2_xor2', pin: 'a' } },
+      { from: { id: 'fa2_xor1', pin: 'out' }, to: { id: 'fa2_and2', pin: 'a' } },
+      { from: { id: 'fa2_and1', pin: 'out' }, to: { id: 'fa2_or', pin: 'a' } },
+      { from: { id: 'fa2_and2', pin: 'out' }, to: { id: 'fa2_or', pin: 'b' } },
+      { from: { id: 'fa2_xor2', pin: 'out' }, to: { id: 'res2', pin: 'in' } },
+      { from: { id: 'fa2_xor2', pin: 'out' }, to: { id: 'display', pin: 'b2' } },
+      { from: { id: 'fa2_or', pin: 'out' }, to: { id: 'fa3_xor2', pin: 'b' } },
+      { from: { id: 'fa2_or', pin: 'out' }, to: { id: 'fa3_and2', pin: 'b' } },
+      { from: { id: 'a3', pin: 'out' }, to: { id: 'fa3_xor1', pin: 'a' } },
+      { from: { id: 'xor_b3', pin: 'out' }, to: { id: 'fa3_xor1', pin: 'b' } },
+      { from: { id: 'a3', pin: 'out' }, to: { id: 'fa3_and1', pin: 'a' } },
+      { from: { id: 'xor_b3', pin: 'out' }, to: { id: 'fa3_and1', pin: 'b' } },
+      { from: { id: 'fa3_xor1', pin: 'out' }, to: { id: 'fa3_xor2', pin: 'a' } },
+      { from: { id: 'fa3_xor1', pin: 'out' }, to: { id: 'fa3_and2', pin: 'a' } },
+      { from: { id: 'fa3_and1', pin: 'out' }, to: { id: 'fa3_or', pin: 'a' } },
+      { from: { id: 'fa3_and2', pin: 'out' }, to: { id: 'fa3_or', pin: 'b' } },
+      { from: { id: 'fa3_xor2', pin: 'out' }, to: { id: 'res3', pin: 'in' } },
+      { from: { id: 'fa3_xor2', pin: 'out' }, to: { id: 'display', pin: 'b3' } },
+      { from: { id: 'fa3_or', pin: 'out' }, to: { id: 'carry_out', pin: 'in' } },
+    ]
+  },
+
   half_adder: {
     name: '1-Bit Half Adder',
     prompt: 'Vytvoř 1bitovou polosčítačku (Half Adder) z hradel XOR a AND',
@@ -177,6 +282,17 @@ export class AiCopilot {
   // Synthesizes circuit from user prompt with broad intelligent NLP matching
   async synthesizeCircuit(promptText) {
     const lower = (promptText || '').toLowerCase().trim();
+
+    // 0. Calculator / Aritmetická kalkulačka
+    if (
+      lower.includes('kalkul') ||
+      lower.includes('calc') ||
+      lower.includes('kalkulačka') ||
+      lower.includes('kalkulacka') ||
+      lower.includes('adder sub')
+    ) {
+      return PRESET_CIRCUITS.calculator;
+    }
 
     // 1. Mini PC / Processor / CPU
     if (

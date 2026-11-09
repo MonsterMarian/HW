@@ -142,6 +142,12 @@ export function Toolbar({
     } else if (type === 'PROBE') {
       comp.inputs.in = 0;
       comp.outputs.val = 0;
+    } else if (type === 'SEVEN_SEGMENT') {
+      comp.inputs.b0 = 0;
+      comp.inputs.b1 = 0;
+      comp.inputs.b2 = 0;
+      comp.inputs.b3 = 0;
+      comp.outputs.val = 0;
     }
 
     engine.addComponent(comp);
@@ -176,6 +182,7 @@ export function Toolbar({
         { type: 'CLOCK', label: 'Oscillator', desc: 'Square Wave Pulse' },
         { type: 'MUX', label: '2:1 Multiplexer', desc: 'Data Path Selector' },
         { type: 'PROBE', label: 'Logic Probe', desc: 'Signal Level Meter' },
+        { type: 'SEVEN_SEGMENT', label: '7-Segment Display', desc: 'Hex/Dec LED Digit Display' },
         { type: 'VIRTUAL_SCREEN', label: 'CRT Display', desc: '64x64 Dual-Port VRAM' },
       ],
     },

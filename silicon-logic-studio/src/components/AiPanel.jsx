@@ -117,6 +117,17 @@ export function AiPanel({ engine, onClose }) {
             </button>
 
             <button
+              onClick={() => handleSynthesizeAndDeploy('Postav 4bitovou hardwarovou kalkulačku se sčítáním, odčítáním dvojkovým doplňkem a číslicovým 7segmentovým LED displejem')}
+              className="w-full text-left p-2 rounded-lg bg-amber-950/20 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-semibold transition-all flex items-center justify-between group"
+            >
+              <div className="flex items-center space-x-2">
+                <Zap size={13} className="text-amber-400" />
+                <span>★ 4-BIT HARDWARE CALCULATOR</span>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-mono">ADD/SUB+LED</span>
+            </button>
+
+            <button
               onClick={() => handleSynthesizeAndDeploy('Vytvoř 1bitovou úplnou sčítačku se vstupem Carry-In')}
               className="w-full text-left px-2.5 py-1.5 rounded bg-[#0A0E18] hover:bg-[#121826] border border-[#161D2B] text-gray-300 text-[11px] transition-colors flex items-center justify-between"
             >

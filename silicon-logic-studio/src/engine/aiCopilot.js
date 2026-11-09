@@ -2,6 +2,46 @@
 // Synthesizes verified logic netlists from natural language prompts.
 
 export const PRESET_CIRCUITS = {
+  nvidia_nv1: {
+    name: "Nvidia's First Product: NV1 (1995) - 3D Multimedia PCI Card",
+    prompt: "Postav Nvidia's First Product: NV1 (1995) - Diamond Edge 3D PCI kartu s čipem SGS-Thomson STG2000, EDO VRAM pamětí, 135MHz RAMDAC, 32hlasým zvukovým čipem, konektory Sega Saturn a VGA výstupem",
+    components: [
+      { id: 'vga_bracket', type: 'VGA_BRACKET', label: 'PCI I/O BRACKET (VGA+AUDIO+SATURN)', x: 40, y: 90, inputs: { vga_in: 0, audio_in: 0 }, outputs: { display_ready: 1 } },
+      { id: 'y1_crystal', type: 'CLOCK', label: 'Y1 14.318 MHz (PCI/GPU)', x: 200, y: 90, inputs: {}, outputs: { out: 0 } },
+      { id: 'y2_crystal', type: 'CLOCK', label: 'Y2 24.576 MHz (AUDIO/MIDI)', x: 200, y: 190, inputs: {}, outputs: { out: 0 } },
+      { id: 'saturn_pad', type: 'SATURN_PAD', label: 'SEGA SATURN GAMEPAD', x: 200, y: 310, inputs: {}, outputs: { dpad: 1, btn_a: 0, btn_b: 1 } },
+      { id: 'audio_dsp', type: 'AUDIO_DSP', label: '32-VOICE AUDIO DSP (STG2000)', x: 370, y: 70, inputs: { clk: 0, synth_en: 1 }, outputs: { audio_l: 128, audio_r: 128 } },
+      { id: 'nv1_core', type: 'NV1_CORE', label: 'SGS-THOMSON STG-2000X / NVIDIA NV1', x: 370, y: 210, inputs: { pci_clk: 0, pci_data: 0, saturn_in: 1 }, outputs: { vram_addr: 0, vram_data: 0, pixel_clk: 0, rgb_data: 0, audio_sample: 0, status: 1 } },
+      { id: 'pci_bus', type: 'PCI_BUS', label: 'PCI 2.1 32-BIT 33MHz GOLD EDGE', x: 260, y: 520, inputs: { clk: 0 }, outputs: { pci_data: 0x12D2, pci_frame: 1 } },
+      { id: 'vram_bank0', type: 'VRAM_BANK', label: 'TOSHIBA EDO DRAM 2MB (BANK 0)', x: 620, y: 90, inputs: { addr: 0, din: 0, we: 1 }, outputs: { dout: 0x55 } },
+      { id: 'vram_bank1', type: 'VRAM_BANK', label: 'TOSHIBA EDO DRAM 2MB (BANK 1)', x: 620, y: 200, inputs: { addr: 0, din: 0, we: 1 }, outputs: { dout: 0xAA } },
+      { id: 'ramdac', type: 'RAMDAC', label: '135MHz TrueColor RAMDAC (ATT20C409)', x: 620, y: 320, inputs: { pixel_clk: 0, rgb_in: 0 }, outputs: { vga_rgb: 0xFF, hsync: 1, vsync: 1 } },
+      { id: 'bios_rom', type: 'ROM', label: 'NV1 BIOS v1.08 (C)1995 NVIDIA', x: 620, y: 440, inputs: { addr: 0 }, outputs: { dout: 0x12 } },
+      { id: 'screen', type: 'VIRTUAL_SCREEN', label: '640x480 TrueColor CRT (3D DEMO)', x: 860, y: 120, inputs: { x: 0, y: 0, color: 0x1F, we: 1, clk: 0 }, outputs: {} },
+      { id: 'audio_out', type: 'PROBE', label: 'LINE OUT (16-BIT 44.1kHz)', x: 860, y: 380, inputs: { in: 0 }, outputs: { val: 0 } },
+    ],
+    wires: [
+      { from: { id: 'y1_crystal', pin: 'out' }, to: { id: 'nv1_core', pin: 'pci_clk' } },
+      { from: { id: 'y1_crystal', pin: 'out' }, to: { id: 'pci_bus', pin: 'clk' } },
+      { from: { id: 'y2_crystal', pin: 'out' }, to: { id: 'audio_dsp', pin: 'clk' } },
+      { from: { id: 'pci_bus', pin: 'pci_data' }, to: { id: 'nv1_core', pin: 'pci_data' } },
+      { from: { id: 'saturn_pad', pin: 'btn_a' }, to: { id: 'nv1_core', pin: 'saturn_in' } },
+      { from: { id: 'nv1_core', pin: 'vram_addr' }, to: { id: 'vram_bank0', pin: 'addr' } },
+      { from: { id: 'nv1_core', pin: 'vram_addr' }, to: { id: 'vram_bank1', pin: 'addr' } },
+      { from: { id: 'nv1_core', pin: 'pixel_clk' }, to: { id: 'ramdac', pin: 'pixel_clk' } },
+      { from: { id: 'nv1_core', pin: 'rgb_data' }, to: { id: 'ramdac', pin: 'rgb_in' } },
+      { from: { id: 'nv1_core', pin: 'pixel_clk' }, to: { id: 'screen', pin: 'clk' } },
+      { from: { id: 'ramdac', pin: 'vga_rgb' }, to: { id: 'screen', pin: 'color' } },
+      { from: { id: 'ramdac', pin: 'vga_rgb' }, to: { id: 'vga_bracket', pin: 'vga_in' } },
+      { from: { id: 'audio_dsp', pin: 'audio_l' }, to: { id: 'audio_out', pin: 'in' } },
+      { from: { id: 'audio_dsp', pin: 'audio_l' }, to: { id: 'vga_bracket', pin: 'audio_in' } },
+    ],
+    testbench: [
+      { inputs: { pci_clk: 1 }, expected: { pixel_clk: 1, status: 1 } },
+      { inputs: { pci_clk: 0 }, expected: { pixel_clk: 0, status: 1 } },
+    ]
+  },
+
   mini_pc: {
     name: 'Mini 8-Bit Computer (CPU + ROM + ALU + CRT)',
     prompt: 'Postav kompletní 8bitový Mini PC počítač s procesorem, pamětí ROM, registry, ALU a výstupem na CRT monitor',
@@ -283,7 +323,20 @@ export class AiCopilot {
   async synthesizeCircuit(promptText) {
     const lower = (promptText || '').toLowerCase().trim();
 
-    // 0. Calculator / Aritmetická kalkulačka
+    // 0. Nvidia's First Product: NV1 (1995)
+    if (
+      lower.includes('nv1') ||
+      lower.includes('nvidia') ||
+      lower.includes('diamond') ||
+      lower.includes('edge 3d') ||
+      lower.includes('stg2000') ||
+      lower.includes('stg-2000') ||
+      lower.includes('1995')
+    ) {
+      return PRESET_CIRCUITS.nvidia_nv1;
+    }
+
+    // 1. Calculator / Aritmetická kalkulačka
     if (
       lower.includes('kalkul') ||
       lower.includes('calc') ||

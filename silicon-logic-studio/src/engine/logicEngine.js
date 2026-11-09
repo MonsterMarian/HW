@@ -399,6 +399,56 @@ export class LogicEngine {
         break;
       }
 
+      case 'NV1_CORE': {
+        comp.frame = (comp.frame || 0) + 1;
+        out.pixel_clk = comp.frame % 2;
+        out.vram_addr = (comp.frame * 7) & 0x3FFF;
+        out.vram_data = (Math.sin(comp.frame * 0.1) * 127 + 128) & 0xFF;
+        out.rgb_data = ((comp.frame * 3) & 0x1F) | (((comp.frame * 5) & 0x1F) << 5);
+        out.audio_sample = Math.floor(Math.sin(comp.frame * 0.25) * 50 + 128);
+        out.status = 1; // 3D Rasterizer ACTIVE
+        break;
+      }
+
+      case 'RAMDAC': {
+        out.vga_rgb = inp.rgb_in !== undefined ? inp.rgb_in : 0xFF;
+        out.hsync = 1;
+        out.vsync = 1;
+        break;
+      }
+
+      case 'AUDIO_DSP': {
+        comp.tick = (comp.tick || 0) + 1;
+        out.audio_l = Math.floor(Math.sin(comp.tick * 0.3) * 60 + 128);
+        out.audio_r = Math.floor(Math.cos(comp.tick * 0.3) * 60 + 128);
+        break;
+      }
+
+      case 'PCI_BUS': {
+        comp.cycle = (comp.cycle || 0) + 1;
+        out.pci_data = (comp.cycle * 13) & 0xFFFF;
+        out.pci_frame = comp.cycle % 4 === 0 ? 0 : 1;
+        break;
+      }
+
+      case 'VGA_BRACKET': {
+        out.display_ready = 1;
+        break;
+      }
+
+      case 'VRAM_BANK': {
+        const addr = (Number(inp.addr) || 0) & 0xFF;
+        out.dout = (addr * 3 + 17) & 0xFF;
+        break;
+      }
+
+      case 'SATURN_PAD': {
+        out.dpad = 1;
+        out.btn_a = 0;
+        out.btn_b = 1;
+        break;
+      }
+
       case 'CUSTOM_CHIP':
         // Evaluate compiled subcircuit function or netlist
         if (typeof comp.evalFn === 'function') {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -148,6 +148,44 @@ export function Toolbar({
       comp.inputs.b2 = 0;
       comp.inputs.b3 = 0;
       comp.outputs.val = 0;
+    } else if (type === 'NV1_CORE') {
+      comp.inputs.pci_clk = 0;
+      comp.inputs.pci_data = 0;
+      comp.inputs.saturn_in = 1;
+      comp.outputs.vram_addr = 0;
+      comp.outputs.vram_data = 0;
+      comp.outputs.pixel_clk = 0;
+      comp.outputs.rgb_data = 0;
+      comp.outputs.audio_sample = 0;
+      comp.outputs.status = 1;
+    } else if (type === 'VRAM_BANK') {
+      comp.inputs.addr = 0;
+      comp.inputs.din = 0;
+      comp.inputs.we = 1;
+      comp.outputs.dout = 0x55;
+    } else if (type === 'RAMDAC') {
+      comp.inputs.pixel_clk = 0;
+      comp.inputs.rgb_in = 0;
+      comp.outputs.vga_rgb = 0xFF;
+      comp.outputs.hsync = 1;
+      comp.outputs.vsync = 1;
+    } else if (type === 'AUDIO_DSP') {
+      comp.inputs.clk = 0;
+      comp.inputs.synth_en = 1;
+      comp.outputs.audio_l = 128;
+      comp.outputs.audio_r = 128;
+    } else if (type === 'PCI_BUS') {
+      comp.inputs.clk = 0;
+      comp.outputs.pci_data = 0x12D2;
+      comp.outputs.pci_frame = 1;
+    } else if (type === 'VGA_BRACKET') {
+      comp.inputs.vga_in = 0;
+      comp.inputs.audio_in = 0;
+      comp.outputs.display_ready = 1;
+    } else if (type === 'SATURN_PAD') {
+      comp.outputs.dpad = 1;
+      comp.outputs.btn_a = 0;
+      comp.outputs.btn_b = 1;
     }
 
     engine.addComponent(comp);
@@ -184,6 +222,18 @@ export function Toolbar({
         { type: 'PROBE', label: 'Logic Probe', desc: 'Signal Level Meter' },
         { type: 'SEVEN_SEGMENT', label: '7-Segment Display', desc: 'Hex/Dec LED Digit Display' },
         { type: 'VIRTUAL_SCREEN', label: 'CRT Display', desc: '64x64 Dual-Port VRAM' },
+      ],
+    },
+    {
+      name: 'NVIDIA NV1 (1995) VINTAGE CHIPS',
+      items: [
+        { type: 'NV1_CORE', label: 'SGS STG2000 / NV1', desc: 'QFP-208 3D & 2D Multimedia GPU' },
+        { type: 'VRAM_BANK', label: 'Toshiba EDO DRAM', desc: 'SOJ-42 60ns High Speed VRAM' },
+        { type: 'RAMDAC', label: '135MHz TrueColor DAC', desc: 'Triple 8-Bit Analog Video DAC' },
+        { type: 'AUDIO_DSP', label: '32-Voice Audio DSP', desc: 'Hardware Wavetable MIDI Synthesizer' },
+        { type: 'PCI_BUS', label: 'PCI 2.1 32-Bit Edge', desc: '33.3 MHz Gold Finger Host Bus' },
+        { type: 'VGA_BRACKET', label: 'PCI I/O Bracket', desc: 'VGA DB-15 + Audio + Sega Saturn Port' },
+        { type: 'SATURN_PAD', label: 'Sega Saturn Pad', desc: 'Official 9-Pin Digital Gamepad' },
       ],
     },
   ];

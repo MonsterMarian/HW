@@ -16,6 +16,13 @@ const CHIP_PROFILES = {
   MUX: { code: 'SN74LS157N', desc: 'QUAD 2-TO-1 MUX', family: 'FAST-TTL', mfr: 'TI' },
   TRI_STATE: { code: 'SN74LS244N', desc: 'OCTAL BUS BUFFER', family: 'BUS-DRV', mfr: 'TI' },
   PROBE: { code: 'DM7447A', desc: 'DIGITAL LOGIC PROBE', family: 'INDICATOR', mfr: 'NSC' },
+  NV1_CORE: { code: 'STG2000X', desc: 'NVIDIA NV1 3D MULTIMEDIA', family: '0.5um-CMOS', mfr: 'SGS/NVIDIA' },
+  VRAM_BANK: { code: 'TC51V16160FT', desc: '16Mb EDO DRAM 60ns', family: 'DRAM', mfr: 'TOSHIBA' },
+  RAMDAC: { code: 'ATT20C409', desc: '135MHz TrueColor DAC', family: 'BiCMOS', mfr: 'AT&T/NV' },
+  AUDIO_DSP: { code: 'STG-AUDIO', desc: '32-VOICE WAVETABLE DSP', family: 'AUDIO-DSP', mfr: 'SGS-THOMSON' },
+  PCI_BUS: { code: 'PCI-32', desc: '32-BIT 33MHz HOST BUS', family: 'PCI 2.1', mfr: 'PCI-SIG' },
+  VGA_BRACKET: { code: 'BRACKET-IO', desc: 'VGA DB15+AUDIO+SATURN', family: 'METAL-IO', mfr: 'DIAMOND' },
+  SATURN_PAD: { code: 'SATURN-DB9', desc: 'SEGA GAMEPAD INTERFACE', family: 'GAMEPAD', mfr: 'SEGA' },
 };
 
 export function LogicCanvas({
@@ -51,12 +58,26 @@ export function LogicCanvas({
       if (comp.type === 'D_FF') return { w: 86, h: 74 };
       if (comp.type === 'MUX') return { w: 78, h: 70 };
       if (comp.type === 'SEVEN_SEGMENT') return { w: 88, h: 108 };
+      if (comp.type === 'NV1_CORE') return { w: 190, h: 170 };
+      if (comp.type === 'PCI_BUS') return { w: 170, h: 80 };
+      if (comp.type === 'VGA_BRACKET') return { w: 160, h: 100 };
+      if (comp.type === 'VRAM_BANK') return { w: 150, h: 80 };
+      if (comp.type === 'RAMDAC') return { w: 150, h: 80 };
+      if (comp.type === 'AUDIO_DSP') return { w: 150, h: 80 };
+      if (comp.type === 'SATURN_PAD') return { w: 140, h: 76 };
       if (['RAM', 'ROM', 'REGISTER_8BIT'].includes(comp.type)) return { w: 140, h: 96 };
       return { w: 90, h: 60 };
     } else {
       // Hardware PCB IC dimensions
       if (comp.type === 'VIRTUAL_SCREEN') return { w: 190, h: 200 };
       if (comp.type === 'SEVEN_SEGMENT') return { w: 92, h: 112 };
+      if (comp.type === 'NV1_CORE') return { w: 180, h: 180 };
+      if (comp.type === 'PCI_BUS') return { w: 260, h: 60 };
+      if (comp.type === 'VGA_BRACKET') return { w: 84, h: 360 };
+      if (comp.type === 'VRAM_BANK') return { w: 140, h: 66 };
+      if (comp.type === 'RAMDAC') return { w: 110, h: 110 };
+      if (comp.type === 'AUDIO_DSP') return { w: 110, h: 110 };
+      if (comp.type === 'SATURN_PAD') return { w: 130, h: 86 };
       if (comp.type === 'INPUT') return { w: 110, h: 94 };
       if (comp.type === 'CLOCK') return { w: 130, h: 84 };
       if (comp.type === 'PROBE') return { w: 110, h: 78 };
@@ -269,6 +290,11 @@ export function LogicCanvas({
           ctx.arc(x, y, 1.4, 0, Math.PI * 2);
           ctx.fill();
         }
+      }
+
+      // If Nvidia NV1 circuit is present, draw the physical PCI card board profile
+      if (engine.components.has('nv1_core')) {
+        drawPhysicalNV1PCICard(ctx);
       }
     }
 
@@ -503,6 +529,41 @@ export function LogicCanvas({
     }
     if (comp.type === 'SEVEN_SEGMENT') {
       drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, true);
+      ctx.restore();
+      return;
+    }
+    if (comp.type === 'NV1_CORE') {
+      drawPhotorealisticNV1QFP(ctx, comp, w, h, isSelected, time);
+      ctx.restore();
+      return;
+    }
+    if (comp.type === 'PCI_BUS') {
+      drawPhotorealisticPCIFingers(ctx, comp, w, h, isSelected);
+      ctx.restore();
+      return;
+    }
+    if (comp.type === 'VGA_BRACKET') {
+      drawPhotorealisticPCIBracket(ctx, comp, w, h, isSelected);
+      ctx.restore();
+      return;
+    }
+    if (comp.type === 'VRAM_BANK') {
+      drawPhotorealisticSOJMemory(ctx, comp, w, h, isSelected);
+      ctx.restore();
+      return;
+    }
+    if (comp.type === 'RAMDAC') {
+      drawPhotorealisticRAMDAC(ctx, comp, w, h, isSelected);
+      ctx.restore();
+      return;
+    }
+    if (comp.type === 'AUDIO_DSP') {
+      drawPhotorealisticAudioDSP(ctx, comp, w, h, isSelected);
+      ctx.restore();
+      return;
+    }
+    if (comp.type === 'SATURN_PAD') {
+      drawPhotorealisticSaturnPad(ctx, comp, w, h, isSelected);
       ctx.restore();
       return;
     }
@@ -779,7 +840,53 @@ export function LogicCanvas({
     roundRect(ctx, scrX, scrY, 128, 128, 4);
     ctx.fill();
 
-    if (comp.vram) {
+    if (comp.label?.includes('NV1') || comp.label?.includes('3D') || engine.components.has('nv1_core')) {
+      // Live 1995 NV1 3D Quadratic Curved Mesh Demo
+      const cx = scrX + 64;
+      const cy = scrY + 54;
+      const t = (time || 0) * 0.0018;
+
+      ctx.save();
+      ctx.strokeStyle = '#00F0FF';
+      ctx.lineWidth = 1.4;
+      ctx.shadowColor = '#00F0FF';
+      ctx.shadowBlur = 8;
+
+      const numLines = 5;
+      for (let i = -numLines; i <= numLines; i++) {
+        const u = i / numLines;
+        ctx.beginPath();
+        for (let j = -numLines; j <= numLines; j++) {
+          const v = j / numLines;
+          // Quadratic curved surface (saddle hyperboloid)
+          const x3d = u * 36;
+          const y3d = v * 36;
+          const z3d = (u * u - v * v) * 20;
+
+          const cosY = Math.cos(t);
+          const sinY = Math.sin(t);
+          const rx = x3d * cosY + z3d * sinY;
+          const rz = -x3d * sinY + z3d * cosY;
+          const ry = y3d * Math.cos(0.5) - rz * Math.sin(0.5);
+
+          const projX = cx + rx;
+          const projY = cy + ry;
+
+          if (j === -numLines) ctx.moveTo(projX, projY);
+          else ctx.lineTo(projX, projY);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Retro 1995 3D Demo Overlay
+      ctx.fillStyle = '#00F0FF';
+      ctx.font = '800 8px "JetBrains Mono", monospace';
+      ctx.fillText('NVIDIA NV1 (1995)', scrX + 6, scrY + 112);
+      ctx.fillStyle = '#10B981';
+      ctx.font = '600 7px "JetBrains Mono", monospace';
+      ctx.fillText('QTM 3D ENGINE: 60 FPS', scrX + 6, scrY + 122);
+    } else if (comp.vram) {
       for (let y = 0; y < 64; y++) {
         for (let x = 0; x < 64; x++) {
           const pixel = comp.vram[y * 64 + x];
@@ -917,6 +1024,602 @@ export function LogicCanvas({
     } else {
       drawSchematicLeads(ctx, comp, w, h, isSelected ? '#00F0FF' : '#5E7A9E');
     }
+
+    ctx.restore();
+  }
+
+  // ==========================================
+  // PHYSICAL NVIDIA NV1 (1995) PCI CARD RENDERERS
+  // ==========================================
+  function drawPhysicalNV1PCICard(ctx) {
+    ctx.save();
+    
+    // Physical PCI Board Boundary
+    const cardX = 110;
+    const cardY = 30;
+    const cardW = 690;
+    const cardH = 530;
+    
+    // Emerald Green FR-4 Soldermask Substrate
+    const pcbGrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
+    pcbGrad.addColorStop(0, '#093B1E');
+    pcbGrad.addColorStop(0.3, '#0C4724');
+    pcbGrad.addColorStop(0.7, '#08371B');
+    pcbGrad.addColorStop(1, '#052613');
+    ctx.fillStyle = pcbGrad;
+    
+    // Realistic PCI Outline (Chamfered Corner & Tab Extension)
+    ctx.beginPath();
+    ctx.moveTo(cardX, cardY);
+    ctx.lineTo(cardX + cardW - 35, cardY);
+    ctx.lineTo(cardX + cardW, cardY + 35); // 45 deg chamfer
+    ctx.lineTo(cardX + cardW, cardY + cardH);
+    ctx.lineTo(cardX + 440, cardY + cardH);
+    ctx.lineTo(cardX + 440, cardY + cardH + 34); // PCI connector tab
+    ctx.lineTo(cardX + 130, cardY + cardH + 34);
+    ctx.lineTo(cardX + 130, cardY + cardH);
+    ctx.lineTo(cardX, cardY + cardH);
+    ctx.closePath();
+    ctx.fill();
+
+    // Solder mask edge bevel
+    ctx.strokeStyle = '#15572E';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Copper Ground Hatch Lines
+    ctx.strokeStyle = 'rgba(24, 75, 41, 0.4)';
+    ctx.lineWidth = 1;
+    for (let lx = cardX + 25; lx < cardX + cardW - 20; lx += 45) {
+      ctx.beginPath();
+      ctx.moveTo(lx, cardY + 20);
+      ctx.lineTo(lx, cardY + cardH - 20);
+      ctx.stroke();
+    }
+
+    // 4 Corner Gold Mounting Ground Holes
+    const holes = [
+      { x: cardX + 30, y: cardY + 30 },
+      { x: cardX + cardW - 45, y: cardY + 45 },
+      { x: cardX + 40, y: cardY + cardH - 30 },
+      { x: cardX + cardW - 40, y: cardY + cardH - 30 },
+    ];
+    for (const h of holes) {
+      ctx.fillStyle = '#D4AF37';
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#E5C158';
+      for (let a = 0; a < 8; a++) {
+        const rad = (a * Math.PI) / 4;
+        ctx.fillRect(h.x + Math.cos(rad) * 9 - 1, h.y + Math.sin(rad) * 9 - 1, 2, 2);
+      }
+      ctx.fillStyle = '#040806';
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Authentic Silkscreen White Printing
+    ctx.fillStyle = '#F8FAFC';
+    ctx.font = '900 13px "Outfit", sans-serif';
+    ctx.fillText('DIAMOND MULTIMEDIA // EDGE 3D 2000 SERIES', cardX + 35, cardY + 45);
+
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '700 9px "JetBrains Mono", monospace';
+    ctx.fillText('NVIDIA NV1 / SGS-THOMSON STG-2000X 3D ACCELERATOR (1995)', cardX + 35, cardY + 58);
+    ctx.fillText('PCI BUS 2.1 // 64-BIT VRAM // SEGA SATURN I/O // 32-VOICE AUDIO', cardX + 35, cardY + 70);
+
+    // Bottom silkscreen
+    ctx.fillStyle = '#64748B';
+    ctx.font = '600 8px "JetBrains Mono", monospace';
+    ctx.fillText('FCC ID: FTUPCI-EDGE3D  ASSY 2000-01-A  REV 1.0  MADE IN USA', cardX + 35, cardY + cardH - 12);
+    ctx.fillText('(C) 1995 NVIDIA CORP. // ALL RIGHTS RESERVED', cardX + 380, cardY + cardH - 12);
+
+    // Jumper Headers
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.strokeRect(cardX + 35, cardY + 390, 50, 20);
+    ctx.fillStyle = '#E2E8F0';
+    ctx.font = '600 7px "JetBrains Mono", monospace';
+    ctx.fillText('JP1: PAL/NTSC', cardX + 35, cardY + 386);
+
+    ctx.restore();
+  }
+
+  function drawPhotorealisticNV1QFP(ctx, comp, w, h, isSelected, time) {
+    const temp = engine.thermalMap.get(comp.id) || 54.2;
+    const pinsPerSide = 20;
+    const leadLen = 14;
+    const padLen = 10;
+
+    ctx.save();
+
+    // Top & Bottom pins
+    for (let i = 0; i < pinsPerSide; i++) {
+      const px = comp.x + 20 + (i * (w - 40)) / (pinsPerSide - 1);
+      ctx.fillStyle = '#C59B27';
+      ctx.fillRect(px - 1.5, comp.y - padLen, 3, padLen);
+      ctx.fillStyle = '#E2E8F0';
+      ctx.fillRect(px - 1, comp.y - leadLen, 2, leadLen);
+
+      ctx.fillStyle = '#C59B27';
+      ctx.fillRect(px - 1.5, comp.y + h, 3, padLen);
+      ctx.fillStyle = '#E2E8F0';
+      ctx.fillRect(px - 1, comp.y + h, 2, leadLen);
+    }
+
+    // Left & Right pins
+    for (let i = 0; i < pinsPerSide; i++) {
+      const py = comp.y + 20 + (i * (h - 40)) / (pinsPerSide - 1);
+      ctx.fillStyle = '#C59B27';
+      ctx.fillRect(comp.x - padLen, py - 1.5, padLen, 3);
+      ctx.fillStyle = '#E2E8F0';
+      ctx.fillRect(comp.x - leadLen, py - 1, leadLen, 2);
+
+      ctx.fillStyle = '#C59B27';
+      ctx.fillRect(comp.x + w, py - 1.5, padLen, 3);
+      ctx.fillStyle = '#E2E8F0';
+      ctx.fillRect(comp.x + w, py - 1, leadLen, 2);
+    }
+
+    // Drop shadow under QFP body
+    ctx.shadowColor = isSelected ? 'rgba(0, 240, 255, 0.6)' : 'rgba(0, 0, 0, 0.95)';
+    ctx.shadowBlur = isSelected ? 22 : 16;
+    ctx.shadowOffsetY = 8;
+
+    const bodyGrad = ctx.createRadialGradient(
+      comp.x + w / 2, comp.y + h / 2, 10,
+      comp.x + w / 2, comp.y + h / 2, w / 2
+    );
+    bodyGrad.addColorStop(0, '#1E232E');
+    bodyGrad.addColorStop(0.5, '#12151C');
+    bodyGrad.addColorStop(1, '#080A0E');
+    ctx.fillStyle = bodyGrad;
+    roundRect(ctx, comp.x, comp.y, w, h, 6);
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+
+    ctx.strokeStyle = isSelected ? '#00F0FF' : '#2A3344';
+    ctx.lineWidth = isSelected ? 2.5 : 1.2;
+    roundRect(ctx, comp.x, comp.y, w, h, 6);
+    ctx.stroke();
+
+    // Center Recessed Heat Spreader
+    const cavityMargin = 22;
+    const cavW = w - cavityMargin * 2;
+    const cavH = h - cavityMargin * 2;
+    const cavGrad = ctx.createLinearGradient(comp.x + cavityMargin, comp.y + cavityMargin, comp.x + w - cavityMargin, comp.y + h - cavityMargin);
+    cavGrad.addColorStop(0, '#141820');
+    cavGrad.addColorStop(1, '#0C0E14');
+    ctx.fillStyle = cavGrad;
+    ctx.strokeStyle = '#222B3A';
+    ctx.lineWidth = 1;
+    roundRect(ctx, comp.x + cavityMargin, comp.y + cavityMargin, cavW, cavH, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    // Pin 1 Orientation Dot
+    ctx.fillStyle = '#06080B';
+    ctx.beginPath();
+    ctx.arc(comp.x + 14, comp.y + 14, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // SGS-THOMSON logo mark
+    const logoX = comp.x + w / 2 - 40;
+    const logoY = comp.y + 44;
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(logoX, logoY, 7, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(logoX - 2, logoY, 3, -Math.PI / 2, Math.PI / 2);
+    ctx.arc(logoX + 2, logoY, 3, Math.PI / 2, -Math.PI / 2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#F8FAFC';
+    ctx.font = '800 11px "Outfit", sans-serif';
+    ctx.fillText('SGS-THOMSON', logoX + 12, logoY + 4);
+
+    ctx.fillStyle = '#00F0FF';
+    ctx.font = '900 13px "JetBrains Mono", monospace';
+    ctx.fillText('STG2000X', comp.x + w / 2 - 36, comp.y + 70);
+
+    ctx.fillStyle = '#E2E8F0';
+    ctx.font = '700 11px "Outfit", sans-serif';
+    ctx.fillText('NVIDIA NV1 3D', comp.x + w / 2 - 42, comp.y + 88);
+
+    ctx.fillStyle = '#64748B';
+    ctx.font = '600 8px "JetBrains Mono", monospace';
+    ctx.fillText('MULTIMEDIA PROCESSOR', comp.x + w / 2 - 48, comp.y + 102);
+    ctx.fillText('TAIWAN 9534  QFP-208', comp.x + w / 2 - 44, comp.y + 116);
+    ctx.fillText('0.5um 3M CMOS // 60MHz', comp.x + w / 2 - 46, comp.y + 128);
+
+    // Dynamic Status & Thermal Readout
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    roundRect(ctx, comp.x + 24, comp.y + h - 34, w - 48, 18, 3);
+    ctx.fill();
+
+    const heatColor = temp > 70 ? '#EF4444' : temp > 50 ? '#F59E0B' : '#10B981';
+    ctx.fillStyle = heatColor;
+    ctx.font = '700 8px "JetBrains Mono", monospace';
+    ctx.fillText(`CORE: ${temp.toFixed(1)}°C  |  QTM 3D: ACTIVE`, comp.x + 30, comp.y + h - 22);
+
+    ctx.restore();
+  }
+
+  function drawPhotorealisticPCIBracket(ctx, comp, w, h, isSelected) {
+    ctx.save();
+
+    // Brushed Stainless Steel Finish
+    const steelGrad = ctx.createLinearGradient(comp.x, comp.y, comp.x + w, comp.y);
+    steelGrad.addColorStop(0, '#CBD5E1');
+    steelGrad.addColorStop(0.2, '#94A3B8');
+    steelGrad.addColorStop(0.5, '#E2E8F0');
+    steelGrad.addColorStop(0.8, '#64748B');
+    steelGrad.addColorStop(1, '#475569');
+    ctx.fillStyle = steelGrad;
+
+    roundRect(ctx, comp.x, comp.y, w, h, 3);
+    ctx.fill();
+
+    ctx.strokeStyle = isSelected ? '#00F0FF' : '#334155';
+    ctx.lineWidth = isSelected ? 2 : 1;
+    roundRect(ctx, comp.x, comp.y, w, h, 3);
+    ctx.stroke();
+
+    // Screws
+    const drawScrew = (sx, sy) => {
+      ctx.fillStyle = '#64748B';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(sx - 3.5, sy);
+      ctx.lineTo(sx + 3.5, sy);
+      ctx.moveTo(sx, sy - 3.5);
+      ctx.lineTo(sx, sy + 3.5);
+      ctx.stroke();
+    };
+    drawScrew(comp.x + w / 2, comp.y + 14);
+    drawScrew(comp.x + w / 2, comp.y + h - 14);
+
+    // 15-Pin D-Sub VGA Port
+    const vgaX = comp.x + 10;
+    const vgaY = comp.y + 35;
+    const vgaW = w - 20;
+    const vgaH = 75;
+
+    ctx.fillStyle = '#475569';
+    roundRect(ctx, vgaX - 2, vgaY - 2, vgaW + 4, vgaH + 4, 4);
+    ctx.fill();
+
+    // Blue Plastic Insert
+    ctx.fillStyle = '#1D4ED8';
+    roundRect(ctx, vgaX + 4, vgaY + 14, vgaW - 8, vgaH - 28, 6);
+    ctx.fill();
+
+    // 15 Gold Pins
+    ctx.fillStyle = '#D4AF37';
+    for (let row = 0; row < 3; row++) {
+      const offsetX = row === 1 ? 4 : 0;
+      for (let col = 0; col < 5; col++) {
+        const px = vgaX + 11 + col * 8 + offsetX;
+        const py = vgaY + 22 + row * 9;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.fillStyle = '#0F172A';
+    ctx.font = '700 8px "JetBrains Mono", monospace';
+    ctx.fillText('VGA OUT', vgaX + 8, vgaY + vgaH + 10);
+
+    // Dual 3.5mm Audio Jacks
+    const audioY = comp.y + 155;
+    ctx.fillStyle = '#0F172A';
+    ctx.beginPath();
+    ctx.arc(comp.x + w / 2, audioY, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#22C55E';
+    ctx.beginPath();
+    ctx.arc(comp.x + w / 2, audioY, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(comp.x + w / 2, audioY, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#0F172A';
+    ctx.font = '600 7px "JetBrains Mono", monospace';
+    ctx.fillText('LINE OUT', comp.x + 18, audioY + 18);
+
+    const audio2Y = audioY + 36;
+    ctx.fillStyle = '#0F172A';
+    ctx.beginPath();
+    ctx.arc(comp.x + w / 2, audio2Y, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0EA5E9';
+    ctx.beginPath();
+    ctx.arc(comp.x + w / 2, audio2Y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(comp.x + w / 2, audio2Y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#0F172A';
+    ctx.font = '600 7px "JetBrains Mono", monospace';
+    ctx.fillText('LINE IN', comp.x + 20, audio2Y + 18);
+
+    // Sega Saturn 9-Pin Controller Port
+    const satY = comp.y + 245;
+    ctx.fillStyle = '#1E293B';
+    roundRect(ctx, comp.x + 8, satY, w - 16, 56, 4);
+    ctx.fill();
+
+    ctx.fillStyle = '#F59E0B';
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.arc(comp.x + 18 + i * 8, satY + 18, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(comp.x + 22 + i * 8, satY + 32, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#0F172A';
+    ctx.font = '700 7px "JetBrains Mono", monospace';
+    ctx.fillText('SEGA SATURN', comp.x + 12, satY + 48);
+
+    ctx.restore();
+  }
+
+  function drawPhotorealisticPCIFingers(ctx, comp, w, h, isSelected) {
+    ctx.save();
+
+    ctx.fillStyle = '#0B4222';
+    roundRect(ctx, comp.x, comp.y, w, h, 2);
+    ctx.fill();
+
+    ctx.strokeStyle = isSelected ? '#00F0FF' : '#15572E';
+    ctx.lineWidth = isSelected ? 2 : 1;
+    ctx.stroke();
+
+    const numPins = 46;
+    const pinW = 3.4;
+    const gap = (w - 24) / numPins;
+    const notchIndex = 14;
+
+    for (let i = 0; i < numPins; i++) {
+      if (i >= notchIndex && i <= notchIndex + 2) continue;
+      const px = comp.x + 12 + i * gap;
+
+      const goldGrad = ctx.createLinearGradient(px, comp.y + 10, px, comp.y + h);
+      goldGrad.addColorStop(0, '#F59E0B');
+      goldGrad.addColorStop(0.3, '#FDE047');
+      goldGrad.addColorStop(0.7, '#D97706');
+      goldGrad.addColorStop(1, '#B45309');
+      ctx.fillStyle = goldGrad;
+
+      ctx.fillRect(px, comp.y + 12, pinW, h - 16);
+
+      ctx.fillStyle = '#C59B27';
+      ctx.beginPath();
+      ctx.arc(px + pinW / 2, comp.y + 6, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#040806';
+      ctx.beginPath();
+      ctx.arc(px + pinW / 2, comp.y + 6, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Key Notch Cutout
+    ctx.fillStyle = '#070F0A';
+    ctx.fillRect(comp.x + 12 + notchIndex * gap - 2, comp.y + 8, gap * 3 + 4, h);
+
+    ctx.fillStyle = '#E2E8F0';
+    ctx.font = '700 8px "JetBrains Mono", monospace';
+    ctx.fillText('PCI LOCAL BUS 2.1 // 32-BIT 33.3 MHz // 133 MB/s', comp.x + 14, comp.y + h - 6);
+
+    ctx.restore();
+  }
+
+  function drawPhotorealisticSOJMemory(ctx, comp, w, h, isSelected) {
+    ctx.save();
+
+    const numLeads = 14;
+    const leadGap = (w - 20) / (numLeads - 1);
+    for (let i = 0; i < numLeads; i++) {
+      const lx = comp.x + 10 + i * leadGap;
+      ctx.fillStyle = '#C59B27';
+      ctx.fillRect(lx - 2, comp.y - 6, 4, 6);
+      ctx.fillStyle = '#CBD5E1';
+      ctx.fillRect(lx - 1.2, comp.y - 4, 2.4, 6);
+
+      ctx.fillStyle = '#C59B27';
+      ctx.fillRect(lx - 2, comp.y + h, 4, 6);
+      ctx.fillStyle = '#CBD5E1';
+      ctx.fillRect(lx - 1.2, comp.y + h - 2, 2.4, 6);
+    }
+
+    ctx.shadowColor = isSelected ? 'rgba(0, 240, 255, 0.55)' : 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = isSelected ? 16 : 10;
+    ctx.shadowOffsetY = 4;
+
+    const chipGrad = ctx.createLinearGradient(comp.x, comp.y, comp.x, comp.y + h);
+    chipGrad.addColorStop(0, '#1E232B');
+    chipGrad.addColorStop(0.3, '#12141A');
+    chipGrad.addColorStop(0.8, '#0A0C10');
+    chipGrad.addColorStop(1, '#050709');
+    ctx.fillStyle = chipGrad;
+    roundRect(ctx, comp.x, comp.y, w, h, 3);
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+
+    ctx.strokeStyle = isSelected ? '#00F0FF' : '#2A3342';
+    ctx.lineWidth = isSelected ? 2 : 1;
+    roundRect(ctx, comp.x, comp.y, w, h, 3);
+    ctx.stroke();
+
+    // Notch
+    ctx.fillStyle = '#06080A';
+    ctx.beginPath();
+    ctx.arc(comp.x, comp.y + h / 2, 4.5, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#F8FAFC';
+    ctx.font = '700 9px "Outfit", sans-serif';
+    ctx.fillText('TOSHIBA', comp.x + 14, comp.y + 18);
+
+    ctx.fillStyle = '#E2E8F0';
+    ctx.font = '700 9px "JetBrains Mono", monospace';
+    ctx.fillText('TC51V16160FT-60', comp.x + 14, comp.y + 32);
+
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '500 7px "JetBrains Mono", monospace';
+    ctx.fillText('16Mb EDO DRAM 60ns // JAPAN', comp.x + 14, comp.y + 45);
+
+    ctx.fillStyle = '#10B981';
+    ctx.font = '700 7px "JetBrains Mono", monospace';
+    ctx.fillText('64-BIT VRAM BANK', comp.x + 14, comp.y + 57);
+
+    ctx.restore();
+  }
+
+  function drawPhotorealisticRAMDAC(ctx, comp, w, h, isSelected) {
+    ctx.save();
+    drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+
+    ctx.shadowColor = isSelected ? 'rgba(0, 240, 255, 0.55)' : 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = isSelected ? 16 : 10;
+    ctx.shadowOffsetY = 4;
+
+    const chipGrad = ctx.createLinearGradient(comp.x, comp.y, comp.x + w, comp.y + h);
+    chipGrad.addColorStop(0, '#1E232B');
+    chipGrad.addColorStop(1, '#080A0E');
+    ctx.fillStyle = chipGrad;
+    roundRect(ctx, comp.x, comp.y, w, h, 4);
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+
+    ctx.strokeStyle = isSelected ? '#00F0FF' : '#2A3342';
+    ctx.lineWidth = isSelected ? 2 : 1;
+    roundRect(ctx, comp.x, comp.y, w, h, 4);
+    ctx.stroke();
+
+    ctx.fillStyle = '#00F0FF';
+    ctx.font = '700 10px "JetBrains Mono", monospace';
+    ctx.fillText('ATT20C409', comp.x + 12, comp.y + 24);
+
+    ctx.fillStyle = '#F8FAFC';
+    ctx.font = '600 8px "Outfit", sans-serif';
+    ctx.fillText('NV1 TrueColor RAMDAC', comp.x + 12, comp.y + 40);
+
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '500 7px "JetBrains Mono", monospace';
+    ctx.fillText('135MHz TRIPLE 8-BIT', comp.x + 12, comp.y + 56);
+    ctx.fillText('RGB ANALOG 75-OHM', comp.x + 12, comp.y + 70);
+
+    // RGB Analog Color Bar Indicator
+    ctx.fillStyle = '#EF4444';
+    ctx.fillRect(comp.x + 12, comp.y + 82, 24, 6);
+    ctx.fillStyle = '#22C55E';
+    ctx.fillRect(comp.x + 36, comp.y + 82, 24, 6);
+    ctx.fillStyle = '#3B82F6';
+    ctx.fillRect(comp.x + 60, comp.y + 82, 24, 6);
+
+    ctx.restore();
+  }
+
+  function drawPhotorealisticAudioDSP(ctx, comp, w, h, isSelected) {
+    ctx.save();
+    drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+
+    ctx.shadowColor = isSelected ? 'rgba(0, 240, 255, 0.55)' : 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = isSelected ? 16 : 10;
+    ctx.shadowOffsetY = 4;
+
+    const chipGrad = ctx.createLinearGradient(comp.x, comp.y, comp.x + w, comp.y + h);
+    chipGrad.addColorStop(0, '#1E232B');
+    chipGrad.addColorStop(1, '#080A0E');
+    ctx.fillStyle = chipGrad;
+    roundRect(ctx, comp.x, comp.y, w, h, 4);
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+
+    ctx.strokeStyle = isSelected ? '#00F0FF' : '#2A3342';
+    ctx.lineWidth = isSelected ? 2 : 1;
+    roundRect(ctx, comp.x, comp.y, w, h, 4);
+    ctx.stroke();
+
+    ctx.fillStyle = '#F59E0B';
+    ctx.font = '700 10px "JetBrains Mono", monospace';
+    ctx.fillText('STG-AUDIO DSP', comp.x + 12, comp.y + 24);
+
+    ctx.fillStyle = '#F8FAFC';
+    ctx.font = '600 8px "Outfit", sans-serif';
+    ctx.fillText('32-Voice Wavetable Synth', comp.x + 12, comp.y + 40);
+
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '500 7px "JetBrains Mono", monospace';
+    ctx.fillText('16-BIT 44.1kHz STEREO', comp.x + 12, comp.y + 56);
+    ctx.fillText('MPU-401 & SB16 COMPAT', comp.x + 12, comp.y + 70);
+
+    // Audio VU meter bars
+    ctx.fillStyle = '#10B981';
+    for (let b = 0; b < 7; b++) {
+      const bh = Math.sin((animTimeRef.current * 0.005 + b) * 1.5) * 6 + 8;
+      ctx.fillRect(comp.x + 14 + b * 11, comp.y + 96 - bh, 7, bh);
+    }
+
+    ctx.restore();
+  }
+
+  function drawPhotorealisticSaturnPad(ctx, comp, w, h, isSelected) {
+    ctx.save();
+    drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+
+    ctx.fillStyle = '#0F131A';
+    roundRect(ctx, comp.x, comp.y, w, h, 12);
+    ctx.fill();
+
+    ctx.strokeStyle = isSelected ? '#00F0FF' : '#2B3548';
+    ctx.lineWidth = isSelected ? 2 : 1;
+    roundRect(ctx, comp.x, comp.y, w, h, 12);
+    ctx.stroke();
+
+    // D-Pad Cross
+    ctx.fillStyle = '#1E2638';
+    ctx.fillRect(comp.x + 14, comp.y + 26, 28, 10);
+    ctx.fillRect(comp.x + 23, comp.y + 17, 10, 28);
+
+    // 6 Action Buttons
+    const btnColors = ['#E2E8F0', '#94A3B8', '#3B82F6', '#EF4444', '#F59E0B', '#10B981'];
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = btnColors[i];
+      ctx.beginPath();
+      ctx.arc(comp.x + 72 + i * 16, comp.y + 24, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = btnColors[i + 3];
+      ctx.beginPath();
+      ctx.arc(comp.x + 68 + i * 16, comp.y + 42, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#F8FAFC';
+    ctx.font = '700 8px "Outfit", sans-serif';
+    ctx.fillText('SEGA SATURN PAD', comp.x + 16, comp.y + 70);
 
     ctx.restore();
   }
@@ -1250,6 +1953,48 @@ export function LogicCanvas({
       drawSchematicLeads(ctx, comp, w, h, strokeColor);
     } else if (comp.type === 'SEVEN_SEGMENT') {
       drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, false);
+    } else if (comp.type === 'NV1_CORE') {
+      ctx.strokeRect(comp.x, comp.y, w, h);
+      ctx.fillRect(comp.x, comp.y, w, h);
+
+      // Header Bar
+      ctx.fillStyle = isSelected ? 'rgba(0, 240, 255, 0.2)' : 'rgba(15, 23, 42, 0.8)';
+      ctx.fillRect(comp.x, comp.y, w, 26);
+      ctx.strokeStyle = strokeColor;
+      ctx.strokeRect(comp.x, comp.y, w, 26);
+
+      ctx.fillStyle = isSelected ? '#00F0FF' : '#F8FAFC';
+      ctx.font = '700 10px "JetBrains Mono", monospace';
+      ctx.fillText('STG2000X / NVIDIA NV1', comp.x + 8, comp.y + 16);
+
+      // Sub-units
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.05)';
+      roundRect(ctx, comp.x + 8, comp.y + 34, w - 16, 26, 3);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#00F0FF';
+      ctx.font = '600 8px "JetBrains Mono", monospace';
+      ctx.fillText('QUADRATIC 3D ENGINE (QTM)', comp.x + 14, comp.y + 50);
+
+      roundRect(ctx, comp.x + 8, comp.y + 66, w - 16, 26, 3);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#10B981';
+      ctx.fillText('64-BIT VRAM ARBITER (60M)', comp.x + 14, comp.y + 82);
+
+      roundRect(ctx, comp.x + 8, comp.y + 98, w - 16, 26, 3);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#F59E0B';
+      ctx.fillText('2D GUI / BITBLT ACCELERATOR', comp.x + 14, comp.y + 114);
+
+      roundRect(ctx, comp.x + 8, comp.y + 130, w - 16, 26, 3);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#94A3B8';
+      ctx.fillText('PCI 2.1 32-BIT DMA FIFO', comp.x + 14, comp.y + 146);
+
+      drawSchematicLeads(ctx, comp, w, h, strokeColor);
     } else {
       ctx.strokeRect(comp.x, comp.y, w, h);
       ctx.fillRect(comp.x, comp.y, w, h);

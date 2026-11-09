@@ -106,6 +106,17 @@ export function AiPanel({ engine, onClose }) {
           <span className="text-[9px] text-gray-500 uppercase tracking-wider font-bold">Rychlé šablony:</span>
           <div className="flex flex-col space-y-1.5">
             <button
+              onClick={() => handleSynthesizeAndDeploy("Postav Nvidia's First Product: NV1 (1995) - Diamond Edge 3D PCI kartu")}
+              className="w-full text-left p-2 rounded-lg bg-emerald-950/30 hover:bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold transition-all flex items-center justify-between group shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+            >
+              <div className="flex items-center space-x-2">
+                <Sparkles size={13} className="text-emerald-400" />
+                <span>★ NVIDIA NV1 (1995) PCI GPU</span>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-mono">3D+AUDIO</span>
+            </button>
+
+            <button
               onClick={() => handleSynthesizeAndDeploy('Postav kompletní 8bitový Mini PC počítač s procesorem, pamětí ROM, ALU a CRT monitorem')}
               className="w-full text-left p-2 rounded-lg bg-cyan-950/20 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-semibold transition-all flex items-center justify-between group"
             >

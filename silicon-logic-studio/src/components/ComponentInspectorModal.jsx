@@ -286,7 +286,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
               {/* Power & Timing Specs */}
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
-                  <span className="text-gray-500 block text-[10px] mb-1">Dynamická spotřeba ($P_{dyn}$):</span>
+                  <span className="text-gray-500 block text-[10px] mb-1">Dynamická spotřeba (P_dyn):</span>
                   <span className="text-gray-200 font-bold">{details.powerConsumption}</span>
                 </div>
                 <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">

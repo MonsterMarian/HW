@@ -1,13 +1,22 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const logFile = path.join(__dirname, '../electron-debug.log');
+
+function log(msg) {
+  try {
+    fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
+  } catch (e) {}
+}
 
 let mainWindow = null;
 
 function createWindow() {
+  log('Creating BrowserWindow...');
   mainWindow = new BrowserWindow({
     width: 1540,
     height: 960,
@@ -23,17 +32,28 @@ function createWindow() {
     },
   });
 
-  // Load compiled production dist directly for instant native desktop execution
-  const isDev = process.argv.includes('--dev');
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173').catch(() => {
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    log(`CONSOLE [lvl ${level}] ${message} (${sourceId}:${line})`);
+  });
+
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    log(`FAIL LOAD: ${errorCode} ${errorDescription} URL: ${validatedURL}`);
+  });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    log('FINISH LOAD SUCCESS');
+  });
+
+  // Try localhost:5173 first if active (for instant HMR/updates), fallback to dist/index.html
+  fetch('http://localhost:5173')
+    .then(() => {
+      log('Loading URL http://localhost:5173');
+      mainWindow.loadURL('http://localhost:5173');
+    })
+    .catch(() => {
+      log('Localhost not reachable, loading dist/index.html');
       mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
     });
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html')).catch(() => {
-      mainWindow.loadURL('http://localhost:5173');
-    });
-  }
 
   // Window control IPC
   ipcMain.on('window-minimize', () => {

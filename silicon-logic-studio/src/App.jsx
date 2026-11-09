@@ -14,7 +14,7 @@ import { ComponentInspectorModal } from './components/ComponentInspectorModal';
 export default function App() {
   const engine = useMemo(() => new LogicEngine(), []);
   // 3 distinct schematic views: 'schematic' (IEEE Gate Symbols) | 'hardware' (PCB DIP Chips) | 'physics' (3D Silicon Die)
-  const [viewMode, setViewMode] = useState('schematic');
+  const [viewMode, setViewMode] = useState('hardware');
   const [showGallery, setShowGallery] = useState(false);
   const [showAsm, setShowAsm] = useState(false);
   const [showWaveform, setShowWaveform] = useState(false);
@@ -23,9 +23,9 @@ export default function App() {
   const [selectedComponentId, setSelectedComponentId] = useState(null);
   const [inspectingComponent, setInspectingComponent] = useState(null);
 
-  // Initialize with Mini PC architecture demo circuit
+  // Initialize with Nvidia NV1 (1995) PCI architecture demo circuit
   useEffect(() => {
-    const demo = PRESET_CIRCUITS.mini_pc;
+    const demo = PRESET_CIRCUITS.nvidia_nv1 || PRESET_CIRCUITS.mini_pc;
     demo.components.forEach((c) => {
       engine.addComponent(JSON.parse(JSON.stringify(c)));
     });

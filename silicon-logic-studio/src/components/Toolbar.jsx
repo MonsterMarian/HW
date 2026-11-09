@@ -14,6 +14,7 @@ import {
   Grid,
   ChevronDown,
   FolderOpen,
+  ShieldCheck,
 } from 'lucide-react';
 import { audioEngine } from '../engine/audioEngine';
 
@@ -29,6 +30,8 @@ export function Toolbar({
   setShowWaveform,
   showAi,
   setShowAi,
+  showDiagnostic,
+  setShowDiagnostic,
   isMuted,
   setIsMuted,
 }) {
@@ -430,6 +433,19 @@ export function Toolbar({
         >
           <Activity size={12} />
           <span>WAVEFORM</span>
+        </button>
+
+        <button
+          onClick={() => setShowDiagnostic(true)}
+          className={`flex items-center space-x-1 px-2.5 py-1 rounded border text-[11px] transition-all ${
+            showDiagnostic
+              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.2)]'
+              : 'bg-[#0A0E17] text-emerald-400/90 border-emerald-500/30 hover:text-white hover:bg-[#121824]'
+          }`}
+          title="Hardware Diagnostic & Speed Testbench (Mock Inputs & Speed Benchmark)"
+        >
+          <ShieldCheck size={12} className="text-emerald-400" />
+          <span>DIAGNOSTIKA</span>
         </button>
 
         <button

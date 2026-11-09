@@ -192,9 +192,28 @@ export class LogicEngine {
 
       // 3. Evaluate each component's logic function
       for (const comp of this.components.values()) {
-        const oldOutputs = JSON.stringify(comp.outputs);
+        const out = comp.outputs;
+        const oldOut = Object.assign({}, out);
+
         this.evaluateComponent(comp);
-        if (JSON.stringify(comp.outputs) !== oldOutputs) {
+
+        let compChanged = false;
+        for (const k in out) {
+          if (out[k] !== oldOut[k]) {
+            compChanged = true;
+            break;
+          }
+        }
+        if (!compChanged) {
+          for (const k in oldOut) {
+            if (!(k in out)) {
+              compChanged = true;
+              break;
+            }
+          }
+        }
+
+        if (compChanged) {
           changed = true;
           // Increment switching count for thermal heatmap
           const heat = this.thermalMap.get(comp.id) || 25.0;
@@ -215,7 +234,7 @@ export class LogicEngine {
         break;
 
       case 'CLOCK':
-        out.out = this.clockState;
+        out.out = comp.manualState !== undefined ? comp.manualState : this.clockState;
         break;
 
       case 'NOT':
@@ -400,12 +419,30 @@ export class LogicEngine {
       }
 
       case 'NV1_CORE': {
-        comp.frame = (comp.frame || 0) + 1;
-        out.pixel_clk = comp.frame % 2;
-        out.vram_addr = (comp.frame * 7) & 0x3FFF;
-        out.vram_data = (Math.sin(comp.frame * 0.1) * 127 + 128) & 0xFF;
-        out.rgb_data = ((comp.frame * 3) & 0x1F) | (((comp.frame * 5) & 0x1F) << 5);
-        out.audio_sample = Math.floor(Math.sin(comp.frame * 0.25) * 50 + 128);
+        const prevClk = comp.prevClk || 0;
+        const currentClk = inp.pci_clk || 0;
+        const isRising = prevClk === 0 && currentClk === 1;
+        comp.prevClk = currentClk;
+
+        if (isRising) {
+          comp.frame = (comp.frame || 0) + 1;
+        } else if (comp.frame === undefined) {
+          comp.frame = 0;
+        }
+
+        // Response to PCI host bus transactions
+        if (inp.pci_data !== undefined && inp.pci_data !== WireState.HIGH_Z) {
+          comp.receivedPciData = inp.pci_data;
+        }
+
+        // Response to Sega Saturn gamepad
+        comp.saturnActive = inp.saturn_in === 1;
+
+        out.pixel_clk = comp.manualPixelClk !== undefined ? comp.manualPixelClk : ((comp.frame || 0) % 2);
+        out.vram_addr = comp.manualVramAddr !== undefined ? comp.manualVramAddr : (((comp.frame || 0) * 7) & 0x3FFF);
+        out.vram_data = (Math.sin((comp.frame || 0) * 0.1) * 127 + 128) & 0xFF;
+        out.rgb_data = comp.manualRgbData !== undefined ? comp.manualRgbData : ((((comp.frame || 0) * 3) & 0x1F) | ((((comp.frame || 0) * 5) & 0x1F) << 5));
+        out.audio_sample = Math.floor(Math.sin((comp.frame || 0) * 0.25) * 50 + 128);
         out.status = 1; // 3D Rasterizer ACTIVE
         break;
       }
@@ -418,16 +455,39 @@ export class LogicEngine {
       }
 
       case 'AUDIO_DSP': {
-        comp.tick = (comp.tick || 0) + 1;
-        out.audio_l = Math.floor(Math.sin(comp.tick * 0.3) * 60 + 128);
-        out.audio_r = Math.floor(Math.cos(comp.tick * 0.3) * 60 + 128);
+        const prevClk = comp.prevClk || 0;
+        const currentClk = inp.clk || 0;
+        const isRising = prevClk === 0 && currentClk === 1;
+        comp.prevClk = currentClk;
+
+        if (comp.manualTick !== undefined) {
+          comp.tick = comp.manualTick;
+        } else if (isRising) {
+          comp.tick = (comp.tick || 0) + 1;
+        } else if (comp.tick === undefined) {
+          comp.tick = 0;
+        }
+        out.audio_l = Math.floor(Math.sin((comp.tick || 0) * 0.3) * 60 + 128);
+        out.audio_r = Math.floor(Math.cos((comp.tick || 0) * 0.3) * 60 + 128);
         break;
       }
 
       case 'PCI_BUS': {
-        comp.cycle = (comp.cycle || 0) + 1;
-        out.pci_data = (comp.cycle * 13) & 0xFFFF;
-        out.pci_frame = comp.cycle % 4 === 0 ? 0 : 1;
+        const prevClk = comp.prevClk || 0;
+        const currentClk = inp.clk || 0;
+        const isRising = prevClk === 0 && currentClk === 1;
+        comp.prevClk = currentClk;
+
+        if (comp.manualData !== undefined) {
+          out.pci_data = comp.manualData;
+        } else if (isRising) {
+          comp.cycle = (comp.cycle || 0) + 1;
+          out.pci_data = (comp.cycle * 13) & 0xFFFF;
+        } else if (comp.cycle === undefined) {
+          comp.cycle = 0;
+          out.pci_data = 0x12D2;
+        }
+        out.pci_frame = comp.manualFrame !== undefined ? comp.manualFrame : (comp.cycle % 4 === 0 ? 0 : 1);
         break;
       }
 
@@ -443,9 +503,9 @@ export class LogicEngine {
       }
 
       case 'SATURN_PAD': {
-        out.dpad = 1;
-        out.btn_a = 0;
-        out.btn_b = 1;
+        out.dpad = comp.manualDpad !== undefined ? comp.manualDpad : 1;
+        out.btn_a = comp.manualBtnA !== undefined ? comp.manualBtnA : (comp.outputs.btn_a ?? 0);
+        out.btn_b = comp.manualBtnB !== undefined ? comp.manualBtnB : (comp.outputs.btn_b ?? 1);
         break;
       }
 

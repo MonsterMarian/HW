@@ -11,6 +11,7 @@ import { WaveformViewer } from './components/WaveformViewer';
 import { AsmEditor } from './components/AsmEditor';
 import { AiPanel } from './components/AiPanel';
 import { GalleryDrawer } from './components/GalleryDrawer';
+import { Nv1DiagnosticModal } from './components/Nv1DiagnosticModal';
 
 export default function App() {
   const engine = useMemo(() => new LogicEngine(), []);
@@ -20,6 +21,7 @@ export default function App() {
   const [showAsm, setShowAsm] = useState(false);
   const [showWaveform, setShowWaveform] = useState(false);
   const [showAi, setShowAi] = useState(false);
+  const [showDiagnostic, setShowDiagnostic] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [selectedComponentId, setSelectedComponentId] = useState(null);
 
@@ -150,6 +152,8 @@ export default function App() {
         setShowWaveform={setShowWaveform}
         showAi={showAi}
         setShowAi={setShowAi}
+        showDiagnostic={showDiagnostic}
+        setShowDiagnostic={setShowDiagnostic}
         isMuted={isMuted}
         setIsMuted={setIsMuted}
       />
@@ -196,6 +200,14 @@ export default function App() {
         <WaveformViewer
           engine={engine}
           onClose={() => setShowWaveform(false)}
+        />
+      )}
+
+      {/* Hardware Diagnostic & Speed Benchmark Modal */}
+      {showDiagnostic && (
+        <Nv1DiagnosticModal
+          isOpen={showDiagnostic}
+          onClose={() => setShowDiagnostic(false)}
         />
       )}
     </div>

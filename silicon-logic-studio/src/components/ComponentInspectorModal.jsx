@@ -10,12 +10,16 @@ import {
   Check,
   ChevronRight,
   Info,
+  Grid,
+  Sliders,
 } from 'lucide-react';
 import { COMPONENT_DETAILS } from '../engine/componentDetails';
 import { WireState } from '../engine/logicEngine';
+import { ComponentSchematicCanvas } from './ComponentSchematicCanvas';
 
 export function ComponentInspectorModal({ component, engine, onClose }) {
-  const [activeTab, setActiveTab] = useState('blueprint'); // 'blueprint' | 'table' | 'pinout'
+  const [activeTab, setActiveTab] = useState('schematic'); // 'schematic' | 'blueprint' | 'table' | 'pinout'
+  const [schematicViewType, setSchematicViewType] = useState('gate'); // 'gate' | 'transistor'
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -47,14 +51,16 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
   const inPins = Object.entries(component.inputs || {});
   const outPins = Object.entries(component.outputs || {});
 
+  const hasTransistorView = ['AND', 'OR', 'XOR', 'NOT', 'NAND', 'NOR'].includes(component.type);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none font-mono text-xs animate-fadeIn">
-      <div className="w-full max-w-2xl bg-[#080C14] border border-cyan-500/40 rounded-xl shadow-[0_0_50px_rgba(0,240,255,0.15)] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none font-mono text-xs animate-fadeIn">
+      <div className="w-full max-w-4xl bg-[#080C14] border border-cyan-500/40 rounded-xl shadow-[0_0_60px_rgba(0,240,255,0.2)] flex flex-col overflow-hidden max-h-[92vh]">
         {/* Top Header */}
-        <div className="px-5 py-3.5 bg-[#05070D] border-b border-[#161D2B] flex items-center justify-between">
+        <div className="px-5 py-3 bg-[#05070D] border-b border-[#161D2B] flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-7 h-7 rounded bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <Cpu size={16} />
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.2)]">
+              <Cpu size={18} />
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -83,46 +89,137 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center px-5 pt-3 bg-[#05070D] border-b border-[#161D2B] space-x-2">
-          <button
-            onClick={() => setActiveTab('blueprint')}
-            className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-semibold transition-all border-b-2 text-[11px] ${
-              activeTab === 'blueprint'
-                ? 'border-cyan-400 text-cyan-400 bg-cyan-500/10'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            <Layers size={13} />
-            <span>VNITŘNÍ STRUKTURA & TRANZISTORY</span>
-          </button>
+        <div className="flex items-center justify-between px-5 pt-2.5 bg-[#05070D] border-b border-[#161D2B]">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setActiveTab('schematic')}
+              className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-bold transition-all border-b-2 text-[11px] ${
+                activeTab === 'schematic'
+                  ? 'border-cyan-400 text-cyan-400 bg-cyan-500/15 shadow-[0_0_10px_rgba(0,240,255,0.15)]'
+                  : 'border-transparent text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <Grid size={13} />
+              <span>★ SCHÉMA ZAPOJENÍ (SCHEMATIC)</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('table')}
-            className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-semibold transition-all border-b-2 text-[11px] ${
-              activeTab === 'table'
-                ? 'border-cyan-400 text-cyan-400 bg-cyan-500/10'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            <Table size={13} />
-            <span>PRAVDIVOSTNÍ TABULKA & ČASOVÁNÍ</span>
-          </button>
+            <button
+              onClick={() => setActiveTab('blueprint')}
+              className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-semibold transition-all border-b-2 text-[11px] ${
+                activeTab === 'blueprint'
+                  ? 'border-cyan-400 text-cyan-400 bg-cyan-500/10'
+                  : 'border-transparent text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <Layers size={13} />
+              <span>VNITŘNÍ STRUKTURA & TRANZISTORY</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('pinout')}
-            className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-semibold transition-all border-b-2 text-[11px] ${
-              activeTab === 'pinout'
-                ? 'border-cyan-400 text-cyan-400 bg-cyan-500/10'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            <Zap size={13} />
-            <span>POUZDRO & PINOUT IC</span>
-          </button>
+            <button
+              onClick={() => setActiveTab('table')}
+              className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-semibold transition-all border-b-2 text-[11px] ${
+                activeTab === 'table'
+                  ? 'border-cyan-400 text-cyan-400 bg-cyan-500/10'
+                  : 'border-transparent text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <Table size={13} />
+              <span>PRAVDIVOSTNÍ TABULKA & ČASOVÁNÍ</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('pinout')}
+              className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-semibold transition-all border-b-2 text-[11px] ${
+                activeTab === 'pinout'
+                  ? 'border-cyan-400 text-cyan-400 bg-cyan-500/10'
+                  : 'border-transparent text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <Zap size={13} />
+              <span>POUZDRO & PINOUT IC</span>
+            </button>
+          </div>
+
+          {/* Sub-mode switch for schematic tab (Gate vs Transistor) */}
+          {activeTab === 'schematic' && hasTransistorView && (
+            <div className="flex items-center bg-[#090D17] border border-[#1A2333] p-0.5 rounded-lg mb-1">
+              <button
+                onClick={() => setSchematicViewType('gate')}
+                className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
+                  schematicViewType === 'gate'
+                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                HRADLOVÉ SCHÉMA (GATE)
+              </button>
+              <button
+                onClick={() => setSchematicViewType('transistor')}
+                className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
+                  schematicViewType === 'transistor'
+                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                TRANZISTOROVÉ CMOS (MOSFET)
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 overflow-y-auto max-h-[70vh] custom-scrollbar space-y-4">
+        <div className="p-4 overflow-y-auto max-h-[75vh] custom-scrollbar space-y-4">
+          {/* TAB 0: SCHEMATIC DIAGRAM (PRIMARY USER REQUEST) */}
+          {activeTab === 'schematic' && (
+            <div className="space-y-3">
+              {/* Interactive Visual Blueprint Canvas */}
+              <ComponentSchematicCanvas
+                component={component}
+                details={details}
+                engine={engine}
+                viewType={schematicViewType}
+              />
+
+              {/* Pin Voltage Bar below schematic */}
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2.5 rounded-lg bg-[#05070D] border border-[#161D2B] flex items-center justify-between">
+                  <span className="text-gray-500 text-[10px] uppercase font-bold">VSTUPNÍ SIGNÁLY:</span>
+                  <div className="flex items-center space-x-1.5 flex-wrap">
+                    {inPins.map(([p, v]) => (
+                      <span
+                        key={p}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                          v === 1
+                            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                            : 'bg-gray-800 text-gray-400'
+                        }`}
+                      >
+                        {p.toUpperCase()}: {v}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[#05070D] border border-[#161D2B] flex items-center justify-between">
+                  <span className="text-gray-500 text-[10px] uppercase font-bold">VÝSTUPNÍ SIGNÁLY:</span>
+                  <div className="flex items-center space-x-1.5 flex-wrap">
+                    {outPins.map(([p, v]) => (
+                      <span
+                        key={p}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                          v === 1
+                            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_8px_rgba(0,240,255,0.3)]'
+                            : 'bg-gray-800 text-gray-400'
+                        }`}
+                      >
+                        {p.toUpperCase()}: {v}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {/* TAB 1: BLUEPRINT */}
           {activeTab === 'blueprint' && (
             <div className="space-y-4">

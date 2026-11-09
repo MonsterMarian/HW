@@ -21,9 +21,9 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [selectedComponentId, setSelectedComponentId] = useState(null);
 
-  // Initialize with Full Adder demo circuit
+  // Initialize with Mini PC architecture demo circuit
   useEffect(() => {
-    const demo = PRESET_CIRCUITS.full_adder;
+    const demo = PRESET_CIRCUITS.mini_pc;
     demo.components.forEach((c) => {
       engine.addComponent(JSON.parse(JSON.stringify(c)));
     });

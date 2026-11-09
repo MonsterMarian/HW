@@ -9,6 +9,7 @@ import { WaveformViewer } from './components/WaveformViewer';
 import { AsmEditor } from './components/AsmEditor';
 import { AiPanel } from './components/AiPanel';
 import { GalleryDrawer } from './components/GalleryDrawer';
+import { ComponentInspectorModal } from './components/ComponentInspectorModal';
 
 export default function App() {
   const engine = useMemo(() => new LogicEngine(), []);
@@ -20,6 +21,7 @@ export default function App() {
   const [showAi, setShowAi] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [selectedComponentId, setSelectedComponentId] = useState(null);
+  const [inspectingComponent, setInspectingComponent] = useState(null);
 
   // Initialize with Mini PC architecture demo circuit
   useEffect(() => {
@@ -75,9 +77,19 @@ export default function App() {
               displayMode={viewMode} // 'schematic' or 'hardware'
               selectedComponentId={selectedComponentId}
               onSelectComponent={setSelectedComponentId}
+              onInspectComponent={(comp) => setInspectingComponent(comp)}
             />
           )}
         </div>
+
+        {/* Component Internal Inspector Modal (Triggered by Double-Click) */}
+        {inspectingComponent && (
+          <ComponentInspectorModal
+            component={inspectingComponent}
+            engine={engine}
+            onClose={() => setInspectingComponent(null)}
+          />
+        )}
 
         {/* Right Drawer: AI Copilot */}
         {showAi && (

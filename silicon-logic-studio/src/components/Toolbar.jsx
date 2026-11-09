@@ -32,20 +32,48 @@ export function Toolbar({
   isMuted,
   setIsMuted,
 }) {
-  const isRunning = engine.isRunning;
+  const [isRunning, setIsRunning] = useState(engine.isRunning);
   const [activeCategory, setActiveCategory] = useState(null);
 
+  // Synchronize running state with logic engine events
+  useEffect(() => {
+    const unsub = engine.subscribe(() => {
+      setIsRunning(engine.isRunning);
+    });
+    return () => unsub();
+  }, [engine]);
+
+  // Spacebar shortcut to Start/Stop simulation clock
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        handleToggleRun();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleToggleRun = () => {
-    if (isRunning) {
+    if (engine.isRunning) {
       engine.stop();
+      setIsRunning(false);
+      audioEngine.playRelayClick(0.8);
+      audioEngine.updateClockHum(engine.clockFrequency, false);
     } else {
       engine.start();
+      setIsRunning(true);
+      audioEngine.playRelayClick(1.4);
+      audioEngine.updateClockHum(engine.clockFrequency, true);
     }
-    audioEngine.playRelayClick(isRunning ? 0.9 : 1.3);
-    audioEngine.updateClockHum(engine.clockFrequency, !isRunning);
   };
 
   const handleStep = () => {
+    if (engine.isRunning) {
+      engine.stop();
+      setIsRunning(false);
+    }
     engine.stepClock();
     audioEngine.playRelayClick(1.1);
   };
@@ -266,21 +294,22 @@ export function Toolbar({
       <div className="flex items-center space-x-2 bg-[#04060A] border border-[#161D2B] px-2.5 py-1 rounded-md">
         <button
           onClick={handleToggleRun}
-          className={`flex items-center space-x-1 px-2.5 py-0.5 rounded font-semibold text-[11px] transition-all ${
+          className={`flex items-center space-x-1.5 px-3 py-1 rounded font-bold text-[11px] transition-all cursor-pointer ${
             isRunning
-              ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30 shadow-[0_0_8px_rgba(244,63,94,0.2)]'
-              : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
+              ? 'bg-rose-500/25 text-rose-300 border border-rose-500/60 shadow-[0_0_12px_rgba(244,63,94,0.35)] animate-pulse'
+              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-500/30'
           }`}
+          title="Spustit / Zastavit hodiny (Mezerník)"
         >
-          {isRunning ? <Pause size={11} /> : <Play size={11} />}
-          <span>{isRunning ? 'HALT' : 'CLOCK'}</span>
+          {isRunning ? <Pause size={12} className="text-rose-400" /> : <Play size={12} className="text-emerald-400" />}
+          <span>{isRunning ? 'HALT (STOP)' : 'RUN (START)'}</span>
         </button>
 
         <button
           onClick={handleStep}
           disabled={isRunning}
-          className="flex items-center space-x-1 px-2 py-0.5 bg-[#0C101A] hover:bg-[#141B2B] text-gray-300 rounded border border-[#1A2333] disabled:opacity-30 text-[11px]"
-          title="Step One Clock Cycle"
+          className="flex items-center space-x-1 px-2.5 py-1 bg-[#0C101A] hover:bg-[#141B2B] text-gray-300 rounded border border-[#1A2333] disabled:opacity-30 text-[11px] cursor-pointer"
+          title="Krokovat o 1 takt"
         >
           <SkipForward size={11} />
           <span>STEP</span>

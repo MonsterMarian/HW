@@ -23,6 +23,7 @@ export function LogicCanvas({
   onSelectComponent,
   selectedComponentId,
   displayMode = 'schematic', // 'schematic' | 'hardware'
+  onInspectComponent,
 }) {
   const canvasRef = useRef(null);
   const [viewState, setViewState] = useState({ x: 80, y: 70, zoom: 1.0 });
@@ -1369,6 +1370,24 @@ export function LogicCanvas({
     }));
   };
 
+  // Double-Click to inspect internal component architecture
+  const handleDoubleClick = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const cx = (e.clientX - rect.left - viewState.x) / viewState.zoom;
+    const cy = (e.clientY - rect.top - viewState.y) / viewState.zoom;
+
+    for (const comp of Array.from(engine.components.values()).reverse()) {
+      const { w, h } = getDims(comp);
+      if (cx >= comp.x && cx <= comp.x + w && cy >= comp.y && cy <= comp.y + h) {
+        if (onInspectComponent) {
+          audioEngine.playRelayClick(1.6);
+          onInspectComponent(comp);
+        }
+        return;
+      }
+    }
+  };
+
   return (
     <div className="relative w-full h-full overflow-hidden select-none bg-[#060911]">
       <canvas
@@ -1376,6 +1395,7 @@ export function LogicCanvas({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onDoubleClick={handleDoubleClick}
         onWheel={handleWheel}
         className="w-full h-full cursor-crosshair block"
       />

@@ -1,0 +1,343 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Cpu,
+  Layers,
+  Table,
+  Zap,
+  Activity,
+  X,
+  ShieldCheck,
+  Check,
+  ChevronRight,
+  Info,
+} from 'lucide-react';
+import { COMPONENT_DETAILS } from '../engine/componentDetails';
+import { WireState } from '../engine/logicEngine';
+
+export function ComponentInspectorModal({ component, engine, onClose }) {
+  const [activeTab, setActiveTab] = useState('blueprint'); // 'blueprint' | 'table' | 'pinout'
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  if (!component) return null;
+
+  const details = COMPONENT_DETAILS[component.type] || {
+    name: component.label || component.type,
+    icCode: component.type,
+    package: 'INTEGRATED BLOCK',
+    transistorCount: 8,
+    gateCount: 1,
+    technology: 'CMOS LSI',
+    propagationDelay: '10 ns',
+    powerConsumption: '5 mW',
+    description: `Digitální logická komponenta typu ${component.type}.`,
+    internalLogic: 'Y = f(INPUTS)',
+    subcomponents: [{ name: 'Core Logic Cell', type: component.type, desc: 'Základní logický blok' }],
+    truthTable: { headers: ['Inputs', 'Outputs'], rows: [] },
+    pinout: [],
+  };
+
+  const temp = engine?.thermalMap?.get(component.id) || 28.5;
+  const inPins = Object.entries(component.inputs || {});
+  const outPins = Object.entries(component.outputs || {});
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none font-mono text-xs animate-fadeIn">
+      <div className="w-full max-w-2xl bg-[#080C14] border border-cyan-500/40 rounded-xl shadow-[0_0_50px_rgba(0,240,255,0.15)] flex flex-col overflow-hidden">
+        {/* Top Header */}
+        <div className="px-5 py-3.5 bg-[#05070D] border-b border-[#161D2B] flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-7 h-7 rounded bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <Cpu size={16} />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="font-bold text-gray-100 text-sm">{details.icCode}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/80 text-cyan-300 font-semibold">
+                  {details.package}
+                </span>
+                <span className="text-[10px] text-gray-400">({details.technology})</span>
+              </div>
+              <span className="text-[11px] text-gray-400 font-sans font-medium">{details.name}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1.5 text-[10px] px-2.5 py-1 rounded bg-[#0E131F] border border-[#1A2333]">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-gray-300">{temp.toFixed(1)}°C DIE TEMP</span>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="flex items-center px-5 pt-3 bg-[#05070D] border-b border-[#161D2B] space-x-2">
+          <button
+            onClick={() => setActiveTab('blueprint')}
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-semibold transition-all border-b-2 text-[11px] ${
+              activeTab === 'blueprint'
+                ? 'border-cyan-400 text-cyan-400 bg-cyan-500/10'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Layers size={13} />
+            <span>VNITŘNÍ STRUKTURA & TRANZISTORY</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('table')}
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-semibold transition-all border-b-2 text-[11px] ${
+              activeTab === 'table'
+                ? 'border-cyan-400 text-cyan-400 bg-cyan-500/10'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Table size={13} />
+            <span>PRAVDIVOSTNÍ TABULKA & ČASOVÁNÍ</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('pinout')}
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-t-lg font-semibold transition-all border-b-2 text-[11px] ${
+              activeTab === 'pinout'
+                ? 'border-cyan-400 text-cyan-400 bg-cyan-500/10'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Zap size={13} />
+            <span>POUZDRO & PINOUT IC</span>
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-5 overflow-y-auto max-h-[70vh] custom-scrollbar space-y-4">
+          {/* TAB 1: BLUEPRINT */}
+          {activeTab === 'blueprint' && (
+            <div className="space-y-4">
+              {/* Description */}
+              <div className="p-3.5 rounded-lg bg-[#0C101A] border border-[#161E2E] text-gray-300 text-[11px] leading-relaxed font-sans">
+                {details.description}
+              </div>
+
+              {/* Internal Formula & Specs Banner */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                  <span className="text-[10px] text-gray-500 uppercase block mb-1">Logická funkce:</span>
+                  <span className="font-bold text-cyan-400 text-xs">{details.internalLogic}</span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                  <span className="text-[10px] text-gray-500 uppercase block mb-1">Počet tranzistorů:</span>
+                  <span className="font-bold text-emerald-400 text-xs">
+                    {details.transistorCount} MOSFETs ({details.gateCount} hradel)
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                  <span className="text-[10px] text-gray-500 uppercase block mb-1">Propagační zpoždění:</span>
+                  <span className="font-bold text-amber-400 text-xs">{details.propagationDelay}</span>
+                </div>
+              </div>
+
+              {/* Live Terminal Pin States */}
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">
+                  Aktuální živé stavy na pinech čipu:
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Inputs */}
+                  <div className="p-3 rounded-lg bg-[#0A0E18] border border-[#151D2C] space-y-1.5">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block mb-1">VSTUPNÍ PINY (INPUTS):</span>
+                    {inPins.length === 0 ? (
+                      <span className="text-gray-600 text-[10px]">Žádné přímé vstupy</span>
+                    ) : (
+                      inPins.map(([pin, val]) => (
+                        <div key={pin} className="flex items-center justify-between py-0.5 border-b border-[#141B28]">
+                          <span className="text-gray-300 font-semibold">{pin.toUpperCase()}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                              val === 1
+                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                                : val === WireState.HIGH_Z
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                : 'bg-gray-800 text-gray-400'
+                            }`}
+                          >
+                            {val === WireState.HIGH_Z ? 'HIGH-Z' : val === 1 ? '1 (HIGH)' : '0 (LOW)'}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Outputs */}
+                  <div className="p-3 rounded-lg bg-[#0A0E18] border border-[#151D2C] space-y-1.5">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block mb-1">VÝSTUPNÍ PINY (OUTPUTS):</span>
+                    {outPins.length === 0 ? (
+                      <span className="text-gray-600 text-[10px]">Žádné výstupy</span>
+                    ) : (
+                      outPins.map(([pin, val]) => (
+                        <div key={pin} className="flex items-center justify-between py-0.5 border-b border-[#141B28]">
+                          <span className="text-gray-300 font-semibold">{pin.toUpperCase()}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                              val === 1
+                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_8px_rgba(0,240,255,0.3)]'
+                                : val === WireState.HIGH_Z
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                : 'bg-gray-800 text-gray-400'
+                            }`}
+                          >
+                            {val === WireState.HIGH_Z ? 'HIGH-Z' : val === 1 ? '1 (HIGH)' : '0 (LOW)'}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sub-Components Breakdown */}
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">
+                  Vnitřní stavební bloky a zapojení:
+                </span>
+                <div className="space-y-1.5">
+                  {details.subcomponents.map((sub, i) => (
+                    <div
+                      key={i}
+                      className="p-2.5 rounded-lg bg-[#06080F] border border-[#161D2B] flex items-center justify-between"
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <span className="w-5 h-5 rounded bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-[10px] font-bold">
+                          {i + 1}
+                        </span>
+                        <div>
+                          <span className="font-bold text-gray-200 text-[11px]">{sub.name}</span>
+                          <p className="text-[10px] text-gray-500 font-sans">{sub.desc}</p>
+                        </div>
+                      </div>
+                      <span className="text-[9px] px-2 py-0.5 rounded bg-white/5 text-gray-400 border border-white/5 font-mono">
+                        {sub.type}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: TRUTH TABLE */}
+          {activeTab === 'table' && (
+            <div className="space-y-4">
+              <div className="overflow-hidden rounded-lg border border-[#161D2B]">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#05070D] border-b border-[#161D2B] text-gray-400 text-[10px]">
+                      {details.truthTable.headers.map((h, i) => (
+                        <th key={i} className="p-2.5 font-bold uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#141B28]">
+                    {details.truthTable.rows.map((row, idx) => {
+                      // Check if this row matches current inputs
+                      const isMatch =
+                        component.inputs &&
+                        ((row.inputs[0] === component.inputs.a && row.inputs[1] === component.inputs.b) ||
+                         (row.inputs[0] === component.inputs.in));
+
+                      return (
+                        <tr
+                          key={idx}
+                          className={`transition-colors font-mono ${
+                            isMatch
+                              ? 'bg-cyan-500/20 text-cyan-300 font-bold border-l-4 border-cyan-400'
+                              : 'bg-[#080C14] text-gray-300 hover:bg-[#0E131F]'
+                          }`}
+                        >
+                          {row.inputs.map((inp, i) => (
+                            <td key={i} className="p-2.5">
+                              {inp}
+                            </td>
+                          ))}
+                          <td className="p-2.5 text-cyan-400">
+                            {row.output} {row.sub ? `(${row.sub})` : ''}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Power & Timing Specs */}
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                  <span className="text-gray-500 block text-[10px] mb-1">Dynamická spotřeba ($P_{dyn}$):</span>
+                  <span className="text-gray-200 font-bold">{details.powerConsumption}</span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                  <span className="text-gray-500 block text-[10px] mb-1">Logická rodina:</span>
+                  <span className="text-gray-200 font-bold">{details.technology}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: PINOUT */}
+          {activeTab === 'pinout' && (
+            <div className="space-y-4">
+              <div className="text-[10px] text-gray-400">
+                Oficiální zapojení vývodů integrovaného obvodu ({details.package}):
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                {details.pinout.map((p) => (
+                  <div
+                    key={p.pin}
+                    className="p-2 rounded bg-[#06080F] border border-[#161D2B] flex items-center justify-between text-[10px]"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span className="w-5 h-5 rounded bg-[#10141D] text-cyan-400 font-bold flex items-center justify-center border border-[#1A2333]">
+                        {p.pin}
+                      </span>
+                      <span className="font-bold text-gray-200">{p.name}</span>
+                    </div>
+                    <span className="text-gray-500 font-mono text-[9px]">{p.type}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-3.5 bg-[#05070D] border-t border-[#161D2B] flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-[10px] text-gray-500">
+            <Info size={12} className="text-cyan-400" />
+            <span>Dvojklikem na libovolnou jinou součástku otevřete její vnitřní inspekci.</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 bg-[#0E131F] hover:bg-white/10 text-gray-200 rounded font-semibold text-[11px] border border-[#1A2333] transition-colors"
+          >
+            ZAVŘÍT
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

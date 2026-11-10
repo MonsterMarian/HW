@@ -12,7 +12,7 @@ export const PC_POWER = {
     c('pwr_btn', 'INPUT', 'VYPÍNAČ DELLU', 40, 70, { outputs: { out: 0 } }),
     c('dell', 'DELL_T5810', 'PC1 Dell Precision T5810', 190, 40, { drill: 't5810_platform' }),
     c('add2psu', 'ADD2PSU', 'A1 Add2PSU', 520, 40, { drill: 'add2psu_inside' }),
-    c('psu2', 'ATX_PSU', 'PS2 Seasonic Core GX-650', 520, 220, { drill: 'atx_psu_inside' }),
+    c('psu2', 'ATX_PSU', 'PS2 Seasonic Core GX-650 ATX 3', 520, 220, { drill: 'atx_psu_inside' }),
     c('eps1', 'EPS_ADAPTER', 'W1 030-0571-000', 860, 150, { drill: 'eps_adapter_wiring' }),
     c('eps2', 'EPS_ADAPTER', 'W2 030-0571-000', 860, 330, { drill: 'eps_adapter_wiring' }),
     c('gpu1', 'TESLA_P100', 'G1 Tesla P100 (slot 2)', 1180, 120, { drill: 'p100_board' }),

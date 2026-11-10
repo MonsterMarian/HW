@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-10 15:40
+Aktualizováno: 2026-11-10 16:05
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -70,9 +70,14 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   `engine/devices/pcBuild.js` (sítě ve voltech, netNames → plátno ukazuje V / % / ot/min), L2 `engine/pcSubcircuits.js`
   (registrované do H v hierarchicalSubcircuits.js). Typ `PC_BLOCK` = popisný blok z veřejného blokového schématu (terminál).
   Testy `tests/pc_power.test.js`. Rešerše pinoutů (scratchpad agenta): redukce 030-0571-000 podle PB-08248 obr. 4.
-- Zjištění: T5810 sloty 1 x8 Gen3, 2 a 4 x16 Gen3 (CPU), 3 x1 / 5 x4 Gen2 (PCH), 6 PCI. P100 do 2 a 4; dvouslotové
-  chladiče nejspíš zakryjí 3 a 5 → pro K620 i M.2 redukci zbývá jen slot 1 (pořadí slotů neověřeno). V ANATOMY jsou
-  K620 a redukce zatím na odhadnutých pozicích slotů 6/7 – nesedí s touto topologií.
+- OVĚŘENO (manuál Dell obr. System Board Components): sloty shora 1 (x8, half-length), 2, 3, 4, 5, 6 PCI + mechanický.
+  P100 ve 2 a 4 zakryjí 3 a 5 → K620 a M.2 redukce se nevejdou zároveň (jen slot 1). ANATOMY: K620 ve slotu 1, M.2 +
+  SSD vedle skříně s červenou značkou. ROZHODNUTÍ UŽIVATELE CHYBÍ (SATA SSD / K620 jen na nastavení / nechat).
+- Hloubka: `engine/pcDeepSubcircuits.js` (L3–L5: gp100_die, gp100_sm, xeon_die, haswell_core, rdimm_module, ddr4_chip,
+  m2_adapter_wiring, nv3_ssd; ddr4_cells = derivát dram_cell_array bez MUXu). Příklady FULL_ADDER / D_FF na L4 vedou
+  na existující L5–L8. PSU L3 (psu_primary/secondary/standby) = díly sourozence GX-750 ATX3 (Cybenetics), u GX-650 ATX 3
+  ověřeno jen full-bridge LLC, bulk 330 µF, filtr, OVP.
+- CEM 3.0: B1 je 45,65 mm od zadní hrany desky (modely karet opraveny). Dell PSU má jen 2× 6pin (přes extended card).
 - Zkrat při PCIe kabelu do EPS: X stáhne i druhou kartu (společná zem desky přes sloty) – fyzikálně správně.
 
 ## Další kroky / známé vady
@@ -112,3 +117,6 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - 2026-11-10 15:27 — „3D pohled pro anatomii, pak schémata dílů PC“ → ANATOMY 3D (modely v sestavě, rozložení,
   čísla), logo P100 čitelné po instalaci; schémata rozpracována (rešerše pinoutů běží).
 - 2026-11-10 15:40 — pokračování: schéma napájení PC L1 + 6 podobvodů L2 podle veřejných pinoutů, 138/138 testů.
+- 2026-11-10 16:05 — „řeš neověřené/rizikové, pak schémata do hloubky“ → 3 rešerše (sloty, teardowny, architektury),
+  opravy (CEM kontakty, sloty v ANATOMY, Add2PSU bez diody, TD404 = 555 odhad, PSU díly), L3–L5 GP100/Xeon/DDR4/M.2/SSD,
+  knoflík regulátoru klikem; 150/150 testů.

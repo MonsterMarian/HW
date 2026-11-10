@@ -21,7 +21,7 @@ const SCHEMATIC_DIMS = {
   DELL_T5810: [240, 120], ATX_PSU: [240, 200], ADD2PSU: [200, 100], EPS_ADAPTER: [240, 110], TESLA_P100: [240, 110],
   PWM_HUB: [220, 140], BLOWER_9733: [210, 90],
   CONN_PCIE8: [200, 160], CONN_EPS8: [200, 160], CONN_SATA: [210, 120], CONN_ATX24: [220, 110], CONN_FAN4: [200, 104],
-  RELAY: [210, 104], DIODE: [150, 70],
+  RELAY: [210, 104], DIODE: [150, 70], CONN_PCIE_X4: [220, 250], CONN_M2_M: [220, 240],
 };
 
 // Real package outlines (incl. leads) on the PCB, in world px

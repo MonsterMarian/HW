@@ -211,8 +211,8 @@ function tesla([L, H, T]) {
   miniFit(g, 18, 9.6, 19.6, L / 2 + 6, sz0 + 12, M.black(), 0);
   g.children[g.children.length - 1].position.y += 3.1;
   g.children[g.children.length - 2].position.y += 3.1;
-  // PCIe x16 (shortcut: 1. kontakt ~42 mm od záslepky je odhad, specifikaci CEM jsme neověřili)
-  edgeFingers(g, -L / 2 + 42, 82, 1, H / 2 - 4, 7.5, 3.15, 11);
+  // PCIe x16: B1 45,65 mm od zadní hrany desky (CEM 3.0: datum X 57,15 mm, B1 11,50 mm před ním), klíč po B11
+  edgeFingers(g, -L / 2 + 45.65, 82, 1, H / 2 - 4, 7.5, 3.15, 11);
   bracket(g, -L / 2 - 0.5, -H / 2 - 6, 120, 2 * 20.32, [(gg, x) => {
     const hole = new THREE.BoxGeometry(0.4, 3.2, 3.2);
     const m = [];
@@ -257,7 +257,7 @@ function k620([L, H, T]) {
   add(g, new THREE.CylinderGeometry(25, 25, 0.6, 40), M.hole(), 8, T - 2.6, -4);
   rotor(g, 23, 9, T - 1.4, 8, -4, std(0x3a3c40), 0.42, 0.08);
   decal(g, label([{ text: 'NVIDIA', font: 'bold 60px Arial', color: '#8fb33a' }, { text: 'QUADRO K620', font: 'bold 70px Arial', color: '#c9cdd2' }], 1024, 256), 40, 10, -46, T - 2.85, -4);
-  edgeFingers(g, -L / 2 + 42, 82, 1, H / 2 - 4, 7.5, 1.65, 11);
+  edgeFingers(g, -L / 2 + 45.65, 82, 1, H / 2 - 4, 7.5, 1.65, 11);
   bracket(g, -L / 2 - 0.5, -H / 2 - 5, 79.2, 18.4, [
     (gg, x) => { slab(gg, 9, 12, 39, M.white(), x + 4.5, 2, -H / 2 + 26); slab(gg, 0.4, 8, 31, M.hole(), x - 0.5, 4, -H / 2 + 26); }, // DVI-I
     (gg, x) => { slab(gg, 9, 5.4, 16, M.steel(), x + 4.5, 5.6, -H / 2 + 58); slab(gg, 0.4, 3.8, 13.5, M.hole(), x - 0.5, 6.4, -H / 2 + 58); }, // DisplayPort
@@ -325,7 +325,7 @@ function m2adapter([L, H]) {
   slab(g, L, 1.6, H, M.pcbBlack(), 0, 0, 0);
   slab(g, 8, 5.6, 22, M.black(), L / 2 - 12, 1.6, -6);
   add(g, new THREE.CylinderGeometry(2.5, 2.5, 4, 6), M.silver(), L / 2 - 12 - 80, 3.6, -6);
-  edgeFingers(g, -L / 2 + 42, 32, 1, H / 2 - 4, 7.5, 1.65, 11);
+  edgeFingers(g, -L / 2 + 45.65, 32, 1, H / 2 - 4, 7.5, 1.65, 11); // x4: B1–B32
   bracket(g, -L / 2 - 0.5, -H / 2 - 6, 120.02, 18.42);
   slab(g, 3, 1, 2, std(0x3fa65a, { emissive: 0x1a5a2a }), 0, 1.6, -H / 2 + 10);
   decal(g, label([{ text: 'AXAGON', font: 'bold 60px Arial', color: '#d8d8d8' }], 256, 80), 20, 6, -10, 1.62, H / 2 - 18);

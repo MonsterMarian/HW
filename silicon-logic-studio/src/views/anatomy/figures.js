@@ -36,8 +36,9 @@ export function pcParts() {
   P.push(part('cpu', 'cpu', [6, 228, 282, 4.8, 45, 52.5], [180, 0, 40], { orient: ['z', 'x', 'y'] }));
   [0, 1].forEach((i) => P.push(part('ram', `ram${i}`, [6, 182, 362 + i * 14, 31.25, 133.35, 4.2], [160 + i * 30, 0, 60 + i * 20], { orient: CARD })));
   [0, 1].forEach((i) => P.push(part('ram', `ram${i + 2}`, [6, 182, 232 + i * 14, 31.25, 133.35, 4.2], [160 + i * 30, 0, -20 - i * 20], { orient: CARD })));
-  // ---- karty: sloty po 21,5 mm (odhad ze zadního panelu), dvouslotové P100 visí pod svým slotem
-  const slotZ = (s) => 186 - (s - 1) * 21.5;
+  // ---- karty: pořadí slotů shora 1–6 ověřeno z manuálu Dell (obr. System Board Components), rozteč 20,32 mm (PCIe CEM);
+  // dvouslotové P100 ve slotech 2 a 4 visí chladičem dolů a zakryjí sloty 3 a 5
+  const slotZ = (s) => 186 - (s - 1) * 20.32;
   [2, 4].forEach((s, i) => {
     const z0 = slotZ(s) - 37;
     P.push(part('p100', `p100_${i}`, [12, 4, z0, 111.15, 267, 37], [260, 0, 80 - i * 60], { orient: CARD,
@@ -49,9 +50,10 @@ export function pcParts() {
       lines: (pr, o) => lineSvg(ringOn(o[0] + 50, o[1] + 50, 30, o[2] + 33, pr, 40), { tone: 'mid' }),
     }));
   });
-  P.push(part('k620', 'k620', [12, 4, slotZ(6) - 18, 68.9, 160, 18], [200, 0, -40], { orient: CARD }));
-  P.push(part('m2_adapter', 'm2a', [12, 4, slotZ(7) - 12, 60, 100, 12], [200, 0, -90], { orient: CARD }));
-  P.push(part('ssd', 'ssd', [40, 14, slotZ(7) - 14.3, 22, 80, 2.3], [260, 40, -140], { orient: FLAT_TURNED }));
+  // slot 1 (x8, half-length) je jediný volný: K620 v něm, M.2 redukce s SSD už nemá kam – leží vedle s červenou značkou
+  P.push(part('k620', 'k620', [12, 4, slotZ(1) - 18, 68.9, 160, 18], [200, 0, 60], { orient: CARD }));
+  P.push(part('m2_adapter', 'm2a', [200, 330, 0, 105, 49, 8], [80, 0, 0], { orient: FLAT, noSlot: true }));
+  P.push(part('ssd', 'ssd', [330, 340, 0, 80, 22, 2.3], [80, 0, 0], { orient: FLAT, noSlot: true }));
   // ---- za skříní: druhý zdroj, Add2PSU, regulátor; volné díly na stole
   P.push(part('psu2', 'psu2', [10, -190, 0, 150, 140, 86], [0, -60, 0], { tone: 'mid', orient: FLAT }));
   P.push(part('add2psu', 'add2psu', [30, -170, 86, 70, 30, 17], [0, -60, 40], { orient: FLAT }));
@@ -60,12 +62,13 @@ export function pcParts() {
   P.push(part('eps_cable', 'eps1', [260, -150, 0, 50, 140, 15.1], [120, -40, 0], { orient: FLAT_TURNED }));
   P.push(part('case_fan', 'fan0', [200, 20, 0, 120, 120, 25], [80, 0, 0], { round: true, orient: FLAT }));
   P.push(part('case_fan', 'fan1', [200, 160, 0, 120, 120, 25], [80, 0, 0], { round: true, orient: FLAT }));
-  P.push(part('paste', 'paste', [215, 300, 0, 15, 92, 15], [80, 0, 0], { round: 'x', orient: FLAT_TURNED }));
+  P.push(part('paste', 'paste', [345, 400, 0, 15, 92, 15], [80, 0, 0], { round: 'x', orient: FLAT_TURNED }));
   return {
     parts: P,
     shell: { W, D, H },
     // kolize: karta s krytem a ventilátorem (y 4 … 415) proti limitu plné délky
     clash: { y0: PCIE_FULL_LENGTH, y1: 415, note: `P100 + kryt + 9733 ≈ 411 mm > ${PCIE_FULL_LENGTH} mm (plná délka PCIe)` },
+    noSlotNote: 'M.2 redukce: bez volného slotu (slot 1 má K620)',
   };
 }
 
@@ -164,6 +167,15 @@ export function anatomyFigure(project, { explode = 0, focus = null } = {}) {
       }
       const t = c(170, y, 205);
       body.push(`<text class="an-warn" x="${t[0].toFixed(1)}" y="${(t[1] - 6).toFixed(1)}">${model.clash.note}</text>`);
+      // díly bez volného slotu (M.2 redukce + SSD): červený obrys a popis
+      const ns = model.parts.filter((q) => q.noSlot);
+      if (ns.length) {
+        const x0 = Math.min(...ns.map((q) => q.b[0])) - 6, y0 = Math.min(...ns.map((q) => q.b[1])) - 6;
+        const x1 = Math.max(...ns.map((q) => q.b[0] + q.b[3])) + 6, y1 = Math.max(...ns.map((q) => q.b[1] + q.b[4])) + 6;
+        body.push(lineSvg(pathOf([c(x0, y0, 0), c(x1, y0, 0), c(x1, y1, 0), c(x0, y1, 0)], true), { tone: 'red', dashed: true }));
+        const tt = c(x1, y1, 0);
+        body.push(`<text class="an-warn" x="${tt[0].toFixed(1)}" y="${(tt[1] + 14).toFixed(1)}">${model.noSlotNote}</text>`);
+      }
     }
   }
 

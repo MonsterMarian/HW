@@ -69,6 +69,17 @@ zem karty a slotu – stejně jako ve skutečnosti. Dvojklikem dovnitř (úrove�
 Co není veřejně doložené, je ve schématu označené „neověřeno“. Pinouty: Intel ATX 3.0 DG, PCI Express CEM, Intel
 4-Wire PWM Fan spec, SATA.
 
+Do hloubky (dvojklik dál):
+- Dell → Xeon E5-1650 v3 (6 jader, ring, IMC, PCIe porty) → jádro Haswell (front-end, ROB 192, porty P0–P7) →
+  příklad 1 bitu sčítačky ALU → hradla → CMOS → tranzistor → atomy.
+- Dell → RDIMM 8 GB (18× DDR4, RCD, SPD) → čip DDR4 4 Gb x4 (bank groups, dekodéry, sense amp) → simulované buňky 1T1C.
+- Dell → slot 1 → redukce PCIe x4 → M.2 pin po pinu → SSD Kingston NV3 (řadič, NAND, HMB).
+- P100 → GP100 (6 GPC, L2 4 MB, 8× řadič 512 bit) → SM (procesní bloky, registry, FP32/FP64) → příklad sčítačky
+  a registru → hradla → … atomy.
+- Zdroj → primár (APFC, full-bridge LLC), sekundár (SR, DC-DC, supervizor), +5VSB se skutečnými součástkami.
+Sloty T5810 (manuál Dell): shora 1 (x8, half-length), 2 a 4 x16 Gen3, 3, 5, 6 PCI. P100 ve 2 a 4 zakryjí 3 a 5,
+takže K620 a M.2 redukce se nevejdou současně.
+
 ## Proklikávání (dvojklik)
 L1 deska → L2 bloky uvnitř čipu → L3 RTL (CRTC, kvadratické dopředné diference, fázový akumulátor, PCI dekodér…)
 → L4 registry a sčítačky → L5 hradla → L6 CMOS z tranzistorů → L7 průřez tranzistorem 0,5 µm

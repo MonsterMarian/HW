@@ -1488,6 +1488,12 @@ export function LogicCanvas({
       } else if (comp.type === 'CLOCK') {
         engine.stepClock();
         audioEngine.playRelayClick(1.1);
+      } else if (typeof comp.knob === 'number') {
+        // otočný knoflík (regulátor ventilátorů): klik = o 10 % víc, po 100 % zpět na 0 %
+        comp.knob = comp.knob >= 100 ? 0 : Math.min(100, comp.knob + 10);
+        audioEngine.playRelayClick(1.0);
+        engine.propagate();
+        engine.notify();
       }
       setDraggingCompId(comp.id);
       setDragOffset({ x: cx - g.x, y: cy - g.y });

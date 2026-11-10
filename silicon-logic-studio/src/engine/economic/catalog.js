@@ -39,7 +39,7 @@ const P100_PC_ITEMS = [
   {
     id: 'k620', name: 'NVIDIA Quadro K620 2 GB', part: 'Low profile, single slot, DVI-I + DisplayPort, 45 W bez přídavného napájení',
     qty: 1, dims: [160, 68.9, 18], dimsSrc: 'ověřeno: NVIDIA datasheet 75509 (68,9 × 160 mm)', model: { kind: 'k620' },
-    note: 'Jen na obraz pro BIOS a plochu. Do Dellu nasaď full height záslepku (PNY ji přikládá).',
+    note: 'Jen na obraz pro BIOS a plochu. Do Dellu nasaď full height záslepku (PNY ji přikládá). Do T5810 jen do slotu 1 (x16 mechanicky, x8, half-length) – jediného volného, protože P100 ve slotech 2 a 4 zakryjí sloty 3 a 5 (pořadí slotů ověřeno z manuálu Dell). Tentýž slot potřebuje i druhá karta, obě najednou nejdou.',
   },
   {
     id: 'ssd', name: 'Kingston NV3 1 TB NVMe M.2 2280', part: 'SNV3S/1000G, jednostranný, bez DRAM (v Dellu poběží na PCIe 3.0 x4)',
@@ -47,8 +47,8 @@ const P100_PC_ITEMS = [
   },
   {
     id: 'm2_adapter', name: 'Redukce PCIe x4 → M.2 NVMe (Axagon PCEM2-N)', part: 'Slot M-key pro 2230–2280, full height i low profile záslepka',
-    qty: 1, dims: [100, 60, 12], dimsSrc: 'odhad: rozměr desky Axagon nezveřejňuje', model: { kind: 'm2adapter' },
-    note: 'Deska T5810 nemá slot M.2, NVMe disk se proto zapojuje přes tuto kartu.',
+    qty: 1, dims: [105, 49, 8], dimsSrc: 'ověřeno: AXAGON 105 × 49 × 8 mm (výrobce; zda s bracketem neuvádí)', model: { kind: 'm2adapter' },
+    note: 'Deska T5810 nemá slot M.2, NVMe disk se proto zapojuje přes tuto kartu. Do T5810 jen do slotu 1 (x16 mechanicky, x8, half-length) – jediného volného, protože P100 ve slotech 2 a 4 zakryjí sloty 3 a 5 (pořadí slotů ověřeno z manuálu Dell). Tentýž slot potřebuje i druhá karta, obě najednou nejdou.',
   },
   {
     id: 'psu2', name: 'Druhý zdroj Seasonic Core GX-650', part: '650 W 80+ Gold, plně modulární, 150 × 86 × 140 mm (nástupce Focus GX-650)',

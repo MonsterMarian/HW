@@ -530,7 +530,7 @@ export function drawSchematicDevice(ctx, comp, g, engine, { selected = false } =
   ctx.fillStyle = THEME.muted;
   ctx.font = `700 7.5px ${THEME.mono}`;
   const sub = !meta ? (comp.type === 'DIE_BLOCK' ? (comp.drill ? 'BLOK · DVOJKLIK ↓' : 'FUNKČNÍ BLOK') : comp.type === 'PC_BLOCK' ? (comp.note || 'BLOK Z VEŘEJNÉHO BLOKOVÉHO SCHÉMATU') : comp.type) : `${meta.part} · ${meta.pkg || ''}`;
-  ctx.fillText(fitText(ctx, sub, w - 12), x + 6, y + 11 + title.length * 12);
+  ctx.fillText(fitText(ctx, typeof comp.knob === 'number' ? `KNOFLÍK ${comp.knob} % · KLIK = +10 %` : sub, w - 12), x + 6, y + 11 + title.length * 12);
 
   // piny
   ctx.font = `700 ${SCH.font}px ${THEME.mono}`;

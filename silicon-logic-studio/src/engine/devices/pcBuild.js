@@ -2,6 +2,8 @@
 // +12 V = 12, zem = 0. Zkrat = síť buzená zároveň +12 V a zemí → engine ji vyhodnotí jako 'X'.
 // Piny konektorů nesou čísla podle norem (ATX12V / EPS12V, PCI Express CEM, SATA, Intel 4-wire PWM fan);
 // zdroje pinoutů jsou v PIN_SOURCES níže a v README.
+import { CONN_PINS } from '../pcDeepSubcircuits.js';
+
 const Z = 'Z';
 const num = (v) => typeof v === 'number';
 const is12 = (v) => v === 12;
@@ -160,6 +162,18 @@ export const PC_DEVICES = {
     meta: { ref: 'J', part: 'Ventilátor 4 pin (KF2510 / Molex 47053)', pkg: 'CONN', desc: '1 GND, 2 +12 V, 3 tacho (2 pulzy/ot.), 4 PWM 25 kHz – bez signálu běží ventilátor naplno.' },
     passive: true,
     pins: { inputs: {}, outputs: { '1 GND': Z, '2 +12V': Z, '3 SENSE': Z, '4 PWM': Z } },
+    eval() {},
+  },
+  CONN_PCIE_X4: {
+    meta: { ref: 'J', part: 'PCIe x4 hrana (A/B, 32 kontaktů na stranu)', pkg: 'EDGE', desc: 'PET = vysílač karty, PER = přijímač karty; klíč mezi piny 11 a 12.' },
+    passive: true,
+    pins: { inputs: {}, outputs: Object.fromEntries(Object.values(CONN_PINS.EDGE).map((n) => [n, Z])) },
+    eval() {},
+  },
+  CONN_M2_M: {
+    meta: { ref: 'J', part: 'M.2 Socket 3 Key M (PCIe x4)', pkg: 'CONN', desc: 'Piny podle congatec AN43; 59–66 klíč M.' },
+    passive: true,
+    pins: { inputs: {}, outputs: Object.fromEntries(Object.values(CONN_PINS.M2).map((n) => [n, Z])) },
     eval() {},
   },
   // Relé (Add2PSU: Golden GB-1C12L podle recenze, cívka 12 V): sepnutý kontakt přivede COM na NO

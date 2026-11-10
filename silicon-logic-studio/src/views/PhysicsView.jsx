@@ -359,6 +359,16 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
             <div className="flex items-center gap-1 px-2 overflow-x-auto scrollbar-none">
               {hierarchyStack.map((lvl, idx) => {
                 const isCurrent = idx === hierarchyStack.length - 1;
+                // hluboko zanořeno: jen první a poslední dvě úrovně, ostatní schované za „…“ (vejde se vedle HUD)
+                const hidden = hierarchyStack.length > 4 && idx > 0 && idx < hierarchyStack.length - 2;
+                if (hidden) {
+                  return idx === 1 ? (
+                    <React.Fragment key="ellipsis">
+                      <span className="text-gray-600">/</span>
+                      <button onClick={() => onNavigateUp?.(hierarchyStack.length - 3)} className="px-1.5 py-1 text-gray-500 hover:text-(--accent-amber)" title={hierarchyStack.slice(1, -2).map((l) => l.title).join(' / ')}>…</button>
+                    </React.Fragment>
+                  ) : null;
+                }
                 return (
                   <React.Fragment key={lvl.id + '-' + idx}>
                     {idx > 0 && <span className="text-gray-600">/</span>}
@@ -416,7 +426,7 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
       </div>
 
       {/* Info HUD */}
-      <div className="absolute top-3 left-3 bg-(--bg-dark)/90 border border-(--line) p-4 text-xs space-y-2 pointer-events-none max-w-xs z-20">
+      <div className={`absolute ${hierarchyStack.length > 1 ? 'top-28' : 'top-3'} left-3 bg-(--bg-dark)/90 border border-(--line) p-4 text-xs space-y-2 pointer-events-none max-w-xs z-20`}>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 bg-(--accent-amber) shrink-0" />
           <span className="panel-title">{entry.title}</span>

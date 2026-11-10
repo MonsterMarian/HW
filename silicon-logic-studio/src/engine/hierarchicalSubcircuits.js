@@ -53,8 +53,8 @@ def('nv1_die', {
     blk('pad_audio_game', 'PADY: AD1845 + SATURN', 60, 325, [], ['CODEC', 'TH/TR D'], 'io_pad'),
     blk('pad_mem_addr', 'PADY: MA RAS# CAS# WE#', 640, 60, ['MA/RAS/CAS'], [], 'io_pad'),
     blk('pad_mem_data', 'PADY: MD[63:0]', 790, 215, ['MD[63:0]'], [], 'io_pad'),
-    blk('pad_pci', 'PADY: PCI AD[31:0]', 340, 460, [], ['AD[31:0]', 'PCI CTL'], 'io_pad'),
-    blk('pad_rom', 'PADY: BIOS EPROM', 640, 460, ['ROM A/D'], [], 'io_pad'),
+    blk('pad_pci', 'PADY: PCI AD[31:0]', 340, 510, [], ['AD[31:0]', 'PCI CTL'], 'io_pad'),
+    blk('pad_rom', 'PADY: BIOS EPROM', 640, 510, ['ROM A/D'], [], 'io_pad'),
     // core
     blk('crtc', 'CRTC + SCAN-OUT FIFO', 190, 160, ['VGA', 'reg', 'fetch'], ['P[14:0]', 'SYNC'], 'crtc'),
     blk('vga', 'VGA KOMPAT. JÁDRO', 340, 160, [], ['časování'], 'vga_serializer'),

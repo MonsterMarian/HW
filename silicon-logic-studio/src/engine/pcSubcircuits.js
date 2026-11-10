@@ -19,7 +19,7 @@ const def = (key, sub) => { PC_SUBCIRCUITS[key] = { key, level: 2, ...sub }; };
 // ---------------------------------------------------------------- redukce NVIDIA 030-0571-000, pin po pinu
 def('eps_adapter_wiring', {
   name: 'NVIDIA 030-0571-000 — 2× PCIe 8 pin → EPS 8 pin',
-  subtitle: 'Výkres NVIDIA PB-08248 obr. 4. P2/P3 = PCIe ze zdroje, P1 = EPS do karty. +12 V z pinů 1–3 jde na EPS 5–8; zem 5–8 a Sense na EPS 1–4. Pozor: PCIe kabel přímo do EPS = +12 V na zem karty.',
+  subtitle: 'Výkres NVIDIA PB-08248 obr. 4. P2/P3 = PCIe ze zdroje, P1 = EPS do karty. +12 V z pinů 1–3 jde na EPS 5–8; zem 5–8 a Sense na EPS 1–4. Pozor: PCIe kabel přímo do EPS = +12 V na zem karty. Kabel 6 pin (Dell) obsadí pozice 1–3 a 5–7 – odvozeno, PB-08248 tab. 8 2× 6 pin povoluje.',
   components: [
     c('p2', 'CONN_PCIE8', 'P2 PCIe 8 pin (kabel zdroje 1)', 60, 50),
     c('p3', 'CONN_PCIE8', 'P3 PCIe 8 pin (kabel zdroje 2)', 60, 330),
@@ -165,23 +165,24 @@ def('p100_board', {
 // ---------------------------------------------------------------- platforma Dell T5810
 def('t5810_platform', {
   name: 'Dell Precision T5810 — platforma (CPU, C612, sloty)',
-  subtitle: 'Dell Owner Manual (obr. System Board Components, ověřeno): sloty shora 1–6, slot 1 x8 half-length, 2 a 4 x16 Gen3 z CPU, 3 a 5 z C612, 6 PCI. P100 ve slotech 2 a 4 zakryjí 3 a 5 – zbývá jen slot 1 (K620, nebo M.2). Původ linek odvozen (8 + 16 + 16 = 40).',
+  subtitle: 'Dell Owner Manual (obr. System Board Components, ověřeno): sloty shora 1–6, slot 1 x8 half-length, 2 a 4 x16 Gen3 z CPU, 3 a 5 z C612, 6 PCI. P100 ve slotech 2 a 4 zakryjí 3 a 5 – zbývá jen slot 1 – má ho K620; SSD je 2,5" SATA v šachtě (6× SATA 6 Gb/s z C612). Původ linek odvozen (8 + 16 + 16 = 40).',
   components: [
     blk('cpu', 'XEON E5-1650 v3 (LGA 2011-3)', 330, 40, ['DDR4'], ['PCIe 3.0 x8', 'PCIe 3.0 x16 A', 'PCIe 3.0 x16 B', 'DMI 2.0'], 'DVOJKLIK → ČIP', 200, 130, { drill: 'xeon_die' }),
     blk('mem', 'DDR4 ECC RDIMM · 4 KANÁLY', 50, 50, [], ['DDR4'], 'DVOJKLIK → MODUL 8 GB', 190, 80, { drill: 'rdimm_module' }),
     blk('pch', 'INTEL C612 (PCH)', 330, 330, ['DMI 2.0'], ['PCIe 2.0 x1', 'PCIe 2.0 x4', 'PCI', 'SATA/USB'], 'DMI 2.0 5 GT/s, PCIe 2.0 MAX 8 LINEK', 200, 130),
-    blk('s1', 'SLOT 1 · x8 · K620 NEBO M.2', 640, 40, ['PCIe 3.0 x8'], [], 'HALF-LENGTH · DVOJKLIK → M.2', 180, 70, { drill: 'm2_adapter_wiring' }),
+    blk('s1', 'SLOT 1 · x8 → QUADRO K620', 640, 40, ['PCIe 3.0 x8'], [], 'HALF-LENGTH · DVOJKLIK → K620', 180, 70, { drill: 'k620_board' }),
     blk('s2', 'SLOT 2 · x16 Gen3 → P100 G1', 640, 120, ['PCIe 3.0 x16 A'], [], 'Z CPU', 180, 70),
     blk('s4', 'SLOT 4 · x16 Gen3 → P100 G2', 640, 200, ['PCIe 3.0 x16 B'], [], 'Z CPU', 180, 70),
     blk('s3', 'SLOT 3 · x1 Gen2', 640, 300, ['PCIe 2.0 x1'], [], 'ZAKRYTÝ CHLADIČEM P100', 180, 60),
     blk('s5', 'SLOT 5 · x16 MECH, x4 Gen2', 640, 370, ['PCIe 2.0 x4'], [], 'ZAKRYTÝ CHLADIČEM P100', 180, 60),
     blk('s6', 'SLOT 6 · PCI 32 BIT', 640, 440, ['PCI'], [], 'MOST NEOVĚŘEN', 180, 60),
-    blk('io', 'SATA · USB · LAN · BIOS', 50, 380, ['SATA/USB'], [], 'Z PCH', 190, 80),
+    blk('ssd', 'SATA SSD 870 EVO (HDD0)', 50, 200, ['SATA'], [], 'DVOJKLIK → SSD', 190, 80, { drill: 'sata_ssd' }),
+    blk('io', 'USB · LAN · BIOS', 50, 380, ['SATA/USB'], [], 'Z PCH', 190, 80),
   ],
   wires: [
     w('mem.DDR4', 'cpu.DDR4'),
     w('cpu.PCIe 3.0 x8', 's1.PCIe 3.0 x8'), w('cpu.PCIe 3.0 x16 A', 's2.PCIe 3.0 x16 A'), w('cpu.PCIe 3.0 x16 B', 's4.PCIe 3.0 x16 B'),
     w('cpu.DMI 2.0', 'pch.DMI 2.0'),
-    w('pch.PCIe 2.0 x1', 's3.PCIe 2.0 x1'), w('pch.PCIe 2.0 x4', 's5.PCIe 2.0 x4'), w('pch.PCI', 's6.PCI'), w('pch.SATA/USB', 'io.SATA/USB'),
+    w('pch.PCIe 2.0 x1', 's3.PCIe 2.0 x1'), w('pch.PCIe 2.0 x4', 's5.PCIe 2.0 x4'), w('pch.PCI', 's6.PCI'), w('pch.SATA/USB', 'io.SATA/USB'), w('pch.SATA/USB', 'ssd.SATA'),
   ],
 });

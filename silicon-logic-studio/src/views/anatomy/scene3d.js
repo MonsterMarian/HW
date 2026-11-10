@@ -71,11 +71,6 @@ export function buildAnatomyScene(project) {
       const [x0, y0, z0, w, d, h] = p.b;
       if (y0 + d > model.clash.y0) clash.add(boxMesh([x0, Math.max(y0, model.clash.y0), z0, w, y0 + d - Math.max(y0, model.clash.y0), h], new THREE.MeshBasicMaterial({ color: 0xde3b3d, transparent: true, opacity: 0.28, depthWrite: false })));
     }
-    // M.2 redukce + SSD: v T5810 pro ně nezbývá slot
-    for (const p of model.parts.filter((q) => q.noSlot)) {
-      const [x0, y0, z0, w, d] = p.b;
-      clash.add(boxMesh([x0 - 4, y0 - 4, z0, w + 8, d + 8, 14], new THREE.MeshBasicMaterial({ color: 0xde3b3d, transparent: true, opacity: 0.22, depthWrite: false })));
-    }
     root.add(clash);
   } else {
     // deska karty NV1 z obrysu PCB pohledu

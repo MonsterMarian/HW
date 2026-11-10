@@ -50,10 +50,9 @@ export function pcParts() {
       lines: (pr, o) => lineSvg(ringOn(o[0] + 50, o[1] + 50, 30, o[2] + 33, pr, 40), { tone: 'mid' }),
     }));
   });
-  // slot 1 (x8, half-length) je jediný volný: K620 v něm, M.2 redukce s SSD už nemá kam – leží vedle s červenou značkou
+  // slot 1 (x8, half-length) je jediný volný – má ho K620; SSD je 2,5" SATA v šachtě disků vpředu (slot nepotřebuje)
   P.push(part('k620', 'k620', [12, 4, slotZ(1) - 18, 68.9, 160, 18], [200, 0, 60], { orient: CARD }));
-  P.push(part('m2_adapter', 'm2a', [200, 330, 0, 105, 49, 8], [80, 0, 0], { orient: FLAT, noSlot: true }));
-  P.push(part('ssd', 'ssd', [330, 340, 0, 80, 22, 2.3], [80, 0, 0], { orient: FLAT, noSlot: true }));
+  P.push(part('ssd', 'ssd', [40, 395, 153, 100, 69.85, 6.8], [160, 60, 40], { orient: FLAT }));
   // ---- za skříní: druhý zdroj, Add2PSU, regulátor; volné díly na stole
   P.push(part('psu2', 'psu2', [10, -190, 0, 150, 140, 86], [0, -60, 0], { tone: 'mid', orient: FLAT }));
   P.push(part('add2psu', 'add2psu', [30, -170, 86, 70, 30, 17], [0, -60, 40], { orient: FLAT }));
@@ -68,7 +67,6 @@ export function pcParts() {
     shell: { W, D, H },
     // kolize: karta s krytem a ventilátorem (y 4 … 415) proti limitu plné délky
     clash: { y0: PCIE_FULL_LENGTH, y1: 415, note: `P100 + kryt + 9733 ≈ 411 mm > ${PCIE_FULL_LENGTH} mm (plná délka PCIe)` },
-    noSlotNote: 'M.2 redukce: bez volného slotu (slot 1 má K620)',
   };
 }
 
@@ -167,15 +165,6 @@ export function anatomyFigure(project, { explode = 0, focus = null } = {}) {
       }
       const t = c(170, y, 205);
       body.push(`<text class="an-warn" x="${t[0].toFixed(1)}" y="${(t[1] - 6).toFixed(1)}">${model.clash.note}</text>`);
-      // díly bez volného slotu (M.2 redukce + SSD): červený obrys a popis
-      const ns = model.parts.filter((q) => q.noSlot);
-      if (ns.length) {
-        const x0 = Math.min(...ns.map((q) => q.b[0])) - 6, y0 = Math.min(...ns.map((q) => q.b[1])) - 6;
-        const x1 = Math.max(...ns.map((q) => q.b[0] + q.b[3])) + 6, y1 = Math.max(...ns.map((q) => q.b[1] + q.b[4])) + 6;
-        body.push(lineSvg(pathOf([c(x0, y0, 0), c(x1, y0, 0), c(x1, y1, 0), c(x0, y1, 0)], true), { tone: 'red', dashed: true }));
-        const tt = c(x1, y1, 0);
-        body.push(`<text class="an-warn" x="${tt[0].toFixed(1)}" y="${(tt[1] + 14).toFixed(1)}">${model.noSlotNote}</text>`);
-      }
     }
   }
 

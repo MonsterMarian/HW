@@ -7,9 +7,9 @@
 //  Dell T5810  – Owner's Manual (tabulka Physical, obr. 1 Front and Back View); polohy na čele odměřené z obrázku
 //  Tesla P100  – NVIDIA PB-08248-001 (EPS 8 pin na "East edge", nápis TESLA u záslepky, lišty se 4 šrouby)
 //  RDIMM       – Samsung M393A1G40EB1 datasheet (PCB 1,4 mm, 9 + 9 čipů, RCD uprostřed, klíč 64,6 mm)
-//  K620        – NVIDIA datasheet 75509 (68,9 × 160 mm), NV3 – Tom's Hardware (22 × 80 × 2,3 mm, jednostranný)
+//  K620        – NVIDIA datasheet 75509 (68,9 × 160 mm), 870 EVO – Samsung datasheet (100 × 69,85 × 6,8 mm); Xeon IHS – Intel TMSDG 330786
 //  P12         – arctic.de (5 lopatek, kabel 400 mm, PST), 030-0571-000 – gekko (10 cm), Mini-Fit Jr – RS 39-01-2080
-// Odhady (bez výkresu): rozmístění čela Dellu ±5 mm, IHS Xeonu, poloha kontaktů PCIe od záslepky, MX-6 stříkačka.
+// Odhady (bez výkresu): rozmístění čela Dellu ±5 mm, MX-6 stříkačka. Kontakty PCIe podle CEM 3.0.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { std, textTexture, instanced, mat4 } from '../physics/common.js';
@@ -265,11 +265,11 @@ function k620([L, H, T]) {
   return g;
 }
 
-/** Xeon FCLGA2011-3: substrát 52,5 × 45 mm, IHS (odhad 41 × 37 mm). */
+/** Xeon FCLGA2011-3 (Small): substrát 52,5 × 45 mm, plocha IHS 40,5 × 36,74 mm, výška ≈ 5,08 mm (Intel TMSDG 330786). */
 function cpu([L, W, H], { marking }) {
   const g = new THREE.Group();
   slab(g, L, 1.3, W, std(0x2f5a3b, { roughness: 0.5 }), 0, 0, 0);
-  rslab(g, 41, H - 1.3, 37, 1.5, M.silver(), 0, 1.3, 0);
+  rslab(g, 40.5, H - 1.3, 36.74, 1.5, M.silver(), 0, 1.3, 0); // plocha IHS 40,5 × 36,74 mm (Intel TMSDG 330786, Small)
   decal(g, label(marking.map((t, i) => ({ text: t, font: `${i === 1 ? 'bold 64' : '600 42'}px Arial`, color: '#3a3d42' })), 512, 384), 34, 25, 0, H, 0);
   const tri = new THREE.Shape(); tri.moveTo(0, 0); tri.lineTo(4, 0); tri.lineTo(0, 4); tri.closePath();
   add(g, new THREE.ShapeGeometry(tri).rotateX(-Math.PI / 2), M.gold(), -L / 2 + 1, 1.32, W / 2 - 1);
@@ -303,32 +303,15 @@ function rdimm([L, W, T]) {
   return g;
 }
 
-/** NVMe M.2 2280 jednostranný: řadič u konektoru, 2× NAND, černá nálepka. */
-function m2ssd([L, W, H]) {
+/** 2,5" SATA SSD (Samsung 870 EVO): černé pouzdro, štítek, konektor SATA data 7 pin + napájení 15 pin na kratší hraně. */
+function ssd25([L, W, H]) {
   const g = new THREE.Group();
-  slab(g, L, 0.8, W, M.pcbBlack(), 0, 0, 0);
-  slab(g, 12, 1.2, 12, M.chip(), L / 2 - 16, 0.8, 0);
-  slab(g, 12, 1.4, 18, M.chip(), -4, 0.8, 0);
-  slab(g, 12, 1.4, 18, M.chip(), -20, 0.8, 0);
-  decal(g, label([{ text: 'KINGSTON', font: 'bold 54px Arial', color: '#e8e8e8' }, { text: 'NV3 1TB  NVMe', font: '600 40px Arial', color: '#bbb' }], 512, 160, { bg: '#1c1d22' }), 62, 19, -6, H - 0.1, 0);
-  const pins = new THREE.BoxGeometry(3.5, 0.05, 0.35);
-  const m = [];
-  for (let i = 0; i < 29; i++) { const z = -W / 2 + 2 + i * 0.5 + (i > 23 ? 2 : 0); if (z < W / 2 - 1) m.push(mat4(L / 2 - 1.8, 0.82, z)); }
-  g.add(instanced(pins, M.gold(), m));
-  add(g, new THREE.CircleGeometry(1.75, 20, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2), M.hole(), -L / 2, 0.83, 0);
-  return g;
-}
-
-/** Redukce PCIe x4 → M.2 (Axagon PCEM2-N): PCB, slot M-key, sloupek pro 2280, full height záslepka. */
-function m2adapter([L, H]) {
-  const g = new THREE.Group();
-  slab(g, L, 1.6, H, M.pcbBlack(), 0, 0, 0);
-  slab(g, 8, 5.6, 22, M.black(), L / 2 - 12, 1.6, -6);
-  add(g, new THREE.CylinderGeometry(2.5, 2.5, 4, 6), M.silver(), L / 2 - 12 - 80, 3.6, -6);
-  edgeFingers(g, -L / 2 + 45.65, 32, 1, H / 2 - 4, 7.5, 1.65, 11); // x4: B1–B32
-  bracket(g, -L / 2 - 0.5, -H / 2 - 6, 120.02, 18.42);
-  slab(g, 3, 1, 2, std(0x3fa65a, { emissive: 0x1a5a2a }), 0, 1.6, -H / 2 + 10);
-  decal(g, label([{ text: 'AXAGON', font: 'bold 60px Arial', color: '#d8d8d8' }], 256, 80), 20, 6, -10, 1.62, H / 2 - 18);
+  rslab(g, L, H, W, 1.2, std(0x1a1b1e, { metalness: 0.4, roughness: 0.45 }), 0, 0, 0);
+  decal(g, label([{ text: 'SAMSUNG', font: 'bold 64px Arial', color: '#e8e8e8' }, { text: 'SSD 870 EVO', font: '600 50px Arial', color: '#c9cdd2' }, { text: '1TB · SATA III', font: '600 34px Arial', color: '#8d9197' }], 512, 320, { bg: '#2a2c30' }), L * 0.62, W * 0.62, -L * 0.08, H, 0);
+  // konektory na hraně +X (pohled zepředu: data 7 pin vlevo, napájení 15 pin vpravo); otvory pro šrouby po stranách
+  slab(g, 0.6, 3.2, 10.5, M.hole(), L / 2 + 0.05, 1.8, -W / 2 + 14);
+  slab(g, 0.6, 3.2, 22.5, M.hole(), L / 2 + 0.05, 1.8, W / 2 - 22);
+  for (const x of [-L / 2 + 14, L / 2 - 24]) for (const sz of [-1, 1]) add(g, new THREE.CylinderGeometry(1.5, 1.5, 0.4, 12).rotateX(Math.PI / 2), M.hole(), x, H / 2, sz * (W / 2 + 0.05));
   return g;
 }
 
@@ -465,7 +448,7 @@ function gamepad([W, D, H]) {
   return new THREE.Group().add(pad);
 }
 
-const BUILDERS = { tower, tesla, shroudAdapter, blower, k620, cpu, rdimm, m2ssd, m2adapter, psu, add2psu, epsCable, pwmController, syringe, fan120, chip, connector, crt, speakers, gamepad };
+const BUILDERS = { tower, tesla, shroudAdapter, blower, k620, cpu, rdimm, ssd25, psu, add2psu, epsCable, pwmController, syringe, fan120, chip, connector, crt, speakers, gamepad };
 export const MODEL_KINDS = Object.keys(BUILDERS);
 
 /** Model jednoho kusu položky kusovníku (mm). */

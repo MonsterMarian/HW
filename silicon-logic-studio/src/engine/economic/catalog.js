@@ -9,11 +9,11 @@ const P100_PC_ITEMS = [
   {
     id: 'dell_t5810', name: 'Dell Precision Tower 5810', part: 'Pracovní stanice: deska Intel C612 (LGA 2011-v3), zdroj 685 W, chladič CPU',
     qty: 1, dims: [471, 172.6, 414], dimsSrc: 'ověřeno: Dell Owner\'s Manual (bez nožiček, s nimi 416,9 mm)', model: { kind: 'tower' },
-    note: 'BIOS umí jen 16GB okno pro paměti PCIe karet, proto je potřeba přeflashovat VBIOS P100 (nvflash).',
+    note: 'BIOS umí jen 16GB okno pro paměti PCIe karet, proto je potřeba přeflashovat VBIOS P100 (nvflash). Zdroj Dellu má přes PSU extended card 2× PCIe 6 pin – ty napájí první P100 (jako ve videu); u kusu z bazaru ověř, že kabely 6 pin má (Dell KB 000140822).',
   },
   {
     id: 'cpu', name: 'Intel Xeon E5-1650 v3', part: '6 jader / 12 vláken, 3,5 GHz, LGA 2011-3, 40× PCIe 3.0, bez iGPU',
-    qty: 1, dims: [52.5, 45, 4.8], dimsSrc: 'ověřeno: pouzdro 52,5 × 45 mm; IHS a výška odhad', model: { kind: 'cpu', marking: ['INTEL® XEON®', 'E5-1650 v3', 'SR20J 3.50GHZ'] },
+    qty: 1, dims: [52.5, 45, 5.08], dimsSrc: 'ověřeno: Intel TMSDG 330786 (Small: substrát 52,5 × 45 mm, plocha IHS 40,5 × 36,74 mm, výška ≈ 5,08 mm)', model: { kind: 'cpu', marking: ['INTEL® XEON®', 'E5-1650 v3', 'SR20J 3.50GHZ'] },
     note: 'Nemá integrovanou grafiku, obraz proto dává Quadro K620.',
   },
   {
@@ -42,18 +42,14 @@ const P100_PC_ITEMS = [
     note: 'Jen na obraz pro BIOS a plochu. Do Dellu nasaď full height záslepku (PNY ji přikládá). Do T5810 jen do slotu 1 (x16 mechanicky, x8, half-length) – jediného volného, protože P100 ve slotech 2 a 4 zakryjí sloty 3 a 5 (pořadí slotů ověřeno z manuálu Dell). Tentýž slot potřebuje i druhá karta, obě najednou nejdou.',
   },
   {
-    id: 'ssd', name: 'Kingston NV3 1 TB NVMe M.2 2280', part: 'SNV3S/1000G, jednostranný, bez DRAM (v Dellu poběží na PCIe 3.0 x4)',
-    qty: 1, dims: [80, 22, 2.3], dimsSrc: 'ověřeno: Tom\'s Hardware (22 × 80 × 2,3 mm)', model: { kind: 'm2ssd' },
-  },
-  {
-    id: 'm2_adapter', name: 'Redukce PCIe x4 → M.2 NVMe (Axagon PCEM2-N)', part: 'Slot M-key pro 2230–2280, full height i low profile záslepka',
-    qty: 1, dims: [105, 49, 8], dimsSrc: 'ověřeno: AXAGON 105 × 49 × 8 mm (výrobce; zda s bracketem neuvádí)', model: { kind: 'm2adapter' },
-    note: 'Deska T5810 nemá slot M.2, NVMe disk se proto zapojuje přes tuto kartu. Do T5810 jen do slotu 1 (x16 mechanicky, x8, half-length) – jediného volného, protože P100 ve slotech 2 a 4 zakryjí sloty 3 a 5 (pořadí slotů ověřeno z manuálu Dell). Tentýž slot potřebuje i druhá karta, obě najednou nejdou.',
+    id: 'ssd', name: 'Samsung 870 EVO 1 TB (2,5" SATA)', part: 'MZ-77E1T0B: SATA 6 Gb/s, řadič Samsung MKX, 1 GB LPDDR4, V-NAND TLC, 560/530 MB/s',
+    qty: 1, dims: [100, 69.85, 6.8], dimsSrc: 'ověřeno: Samsung 870 EVO datasheet Rev 1.1', model: { kind: 'ssd25' },
+    note: 'Místo NVMe s redukcí: v T5810 pro redukci nezbývá slot (jediný volný slot 1 má K620) a ve videu NVMe není. Do 3,5" rámečku Dellu se 2,5" disk šroubuje přímo (manuál Dell), na desce je 6× SATA 6 Gb/s. Model 22 GB se načte asi za 40 s.',
   },
   {
     id: 'psu2', name: 'Druhý zdroj Seasonic Core GX-650', part: '650 W 80+ Gold, plně modulární, 150 × 86 × 140 mm (nástupce Focus GX-650)',
     qty: 1, dims: [150, 140, 86], dimsSrc: 'ověřeno: ATX 150 × 86 × 140 mm (Seasonic Focus GX)', model: { kind: 'psu' },
-    note: 'Jako ve videu napájí obě P100 mimo zdroj Dellu. Sám se nezapne, potřebuje Add2PSU.',
+    note: 'Jako ve videu napájí jen druhou P100 (první jede ze zdroje Dellu přes jeho 2× 6 pin). Sám se nezapne, potřebuje Add2PSU.',
   },
   {
     id: 'add2psu', name: 'Add2PSU modul', part: 'Sepne druhý zdroj současně s PC (24pinová zásuvka, vstup Molex/SATA, relé)',
@@ -62,7 +58,7 @@ const P100_PC_ITEMS = [
   {
     id: 'eps_cable', name: 'Redukce 2× PCIe 8 pin → EPS 8 pin', part: 'NVIDIA 030-0571-000, ze dvou PCIe kabelů zdroje udělá 1× EPS pro P100',
     qty: 2, dims: [140, 50, 15.1], dimsSrc: 'ověřeno: kabel 10 cm (gekko), Mini-Fit Jr 18 × 15,1 × 19,6 mm', model: { kind: 'epsCable' },
-    note: 'KRITICKÉ: PCIe a EPS mají +12 V a zem prohozené. Kabel PCIe zapojený přímo do P100 zkratuje zdroj nebo kartu.',
+    note: 'KRITICKÉ: PCIe a EPS mají +12 V a zem prohozené. Kabel PCIe zapojený přímo do P100 zkratuje zdroj nebo kartu. Redukce bere i 2× 6 pin (NVIDIA PB-08248 tab. 8) – tak se připojí první karta k Dellu.',
   },
   {
     id: 'pwm_ctrl', name: 'PWM regulátor s knoflíkem napájený ze SATA (ModDIY TD404)', part: '4 porty 4 pin PWM, napájení SATA 12 V, max. 60 W, knoflík 0–100 %',

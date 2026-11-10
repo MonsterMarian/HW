@@ -31,12 +31,12 @@ test('zapnutí Dellu: Add2PSU stáhne PS_ON# na COM, obě P100 napájené, venti
 });
 
 test('PCIe kabel napřímo do EPS zdířky P100 = zkrat +12 V na zem karty (přes zem slotu)', () => {
-  // kabel C: piny 1–3 (+12 V) dosednou na EPS pozice 1–3 (GND), zem 4–8 na EPS 5–8 (+12 V)
+  // kabel A druhého zdroje: piny 1–3 (+12 V) dosednou na EPS pozice 1–3 (GND), zem 4–8 na EPS 5–8 (+12 V)
   const bad = structuredClone(PC_POWER);
   bad.wires = bad.wires.filter((w) => !(w.to.id === 'gpu2' && w.to.pin.startsWith('EPS')));
   bad.wires.push(
-    { from: { id: 'psu2', pin: 'C1-3 +12V' }, to: { id: 'gpu2', pin: 'EPS1-4 GND' } },
-    { from: { id: 'psu2', pin: 'C4-8 GND' }, to: { id: 'gpu2', pin: 'EPS5-8 +12V' } },
+    { from: { id: 'psu2', pin: 'A1-3 +12V' }, to: { id: 'gpu2', pin: 'EPS1-4 GND' } },
+    { from: { id: 'psu2', pin: 'A4-8 GND' }, to: { id: 'gpu2', pin: 'EPS5-8 +12V' } },
   );
   const e = boot(bad);
   press(e);
@@ -72,4 +72,14 @@ test('L2 redukce 030-0571-000 odpovídá výkresu NVIDIA pin po pinu', () => {
   };
   for (const [eps, srcs] of Object.entries(map)) for (const s of srcs) assert.ok(same(`p1.${eps}`, s), `${s} → EPS ${eps}`);
   assert.ok(!same('p1.5 +12V', 'p1.1 GND'), '+12 V a zem jsou oddělené');
+});
+
+test('jako ve videu: G1 z Dellu (2× 6 pin), G2 jen z druhého zdroje – bez Add2PSU jede jen G1', () => {
+  const noSync = structuredClone(PC_POWER);
+  noSync.wires = noSync.wires.filter((w) => w.from.id !== 'add2psu' && w.to.id !== 'add2psu');
+  const e = boot(noSync);
+  press(e);
+  assert.equal(probe(e, 'st1'), 1, 'G1 napájí zdroj Dellu');
+  assert.equal(probe(e, 'st2'), 0, 'druhý zdroj se bez Add2PSU nezapne');
+  assert.equal(probe(e, 'rpm1'), 0, 'ventilátory visí na druhém zdroji');
 });

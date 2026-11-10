@@ -1,6 +1,7 @@
 // AI PC (Dell T5810 + 2× Tesla P100, sestava z videa Junk GPU Lab) – schéma napájení jako skutečný obvod.
-// Vypínač Dellu → vestavěný zdroj → SATA 12 V → Add2PSU (relé) → PS_ON# druhého zdroje → 4 PCIe kabely →
-// 2× redukce 030-0571-000 → EPS12V obou P100; druhý zdroj napájí přes SATA regulátor TD404 dva ventilátory 9733.
+// Jako ve videu (Junk GPU Lab): kartu G1 napájí zdroj Dellu přes 2× PCIe 6 pin, druhý zdroj jen kartu G2 („I added a
+// second one just for card 2“). Vypínač Dellu → SATA 12 V → Add2PSU (relé) → PS_ON# druhého zdroje → 2× PCIe 8 pin →
+// redukce 030-0571-000 → EPS12V; ventilátory 9733 napájí přes SATA regulátor TD404 druhý zdroj.
 // Konektory po skupinách pinů (L1); pin po pinu je redukce rozkreslená o úroveň níž (dvojklik).
 const c = (id, type, label, sx, sy, extra = {}) => ({ id, type, label, x: sx, y: sy, sx, sy, inputs: {}, outputs: {}, ...extra });
 const w = (fromId, fromPin, toId, toPin) => ({ from: { id: fromId, pin: fromPin }, to: { id: toId, pin: toPin } });
@@ -33,10 +34,12 @@ export const PC_POWER = {
     w('add2psu', '16 PS_ON#', 'psu2', '16 PS_ON#'),
     w('psu2', '15 COM', 'add2psu', '15 COM'),
     // 4 PCIe kabely → 2 redukce → EPS12V karet
-    w('psu2', 'A1-3 +12V', 'eps1', 'P1 1-3 +12V'), w('psu2', 'A4-8 GND', 'eps1', 'P1 4-8 GND'),
-    w('psu2', 'B1-3 +12V', 'eps1', 'P2 1-3 +12V'), w('psu2', 'B4-8 GND', 'eps1', 'P2 4-8 GND'),
-    w('psu2', 'C1-3 +12V', 'eps2', 'P1 1-3 +12V'), w('psu2', 'C4-8 GND', 'eps2', 'P1 4-8 GND'),
-    w('psu2', 'D1-3 +12V', 'eps2', 'P2 1-3 +12V'), w('psu2', 'D4-8 GND', 'eps2', 'P2 4-8 GND'),
+    // G1: 2× 6 pin z Dellu do redukce W1 (NVIDIA PB-08248 tab. 8 povoluje 2× 6 pin; 2 × 75 W stačí na limit 150 W)
+    w('dell', '6PIN-1 1-3 +12V', 'eps1', 'P1 1-3 +12V'), w('dell', '6PIN-1 4-6 GND', 'eps1', 'P1 4-8 GND'),
+    w('dell', '6PIN-2 1-3 +12V', 'eps1', 'P2 1-3 +12V'), w('dell', '6PIN-2 4-6 GND', 'eps1', 'P2 4-8 GND'),
+    // G2: 2× 8 pin z druhého zdroje do redukce W2
+    w('psu2', 'A1-3 +12V', 'eps2', 'P1 1-3 +12V'), w('psu2', 'A4-8 GND', 'eps2', 'P1 4-8 GND'),
+    w('psu2', 'B1-3 +12V', 'eps2', 'P2 1-3 +12V'), w('psu2', 'B4-8 GND', 'eps2', 'P2 4-8 GND'),
     w('eps1', 'EPS5-8 +12V', 'gpu1', 'EPS5-8 +12V'), w('eps1', 'EPS1-4 GND', 'gpu1', 'EPS1-4 GND'),
     w('eps2', 'EPS5-8 +12V', 'gpu2', 'EPS5-8 +12V'), w('eps2', 'EPS1-4 GND', 'gpu2', 'EPS1-4 GND'),
     // sloty PCIe x16 z CPU a zem slotu (deska Dellu)

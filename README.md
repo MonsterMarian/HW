@@ -59,9 +59,9 @@ skříň Dell v řezu a červeně limit 312 mm (plná délka PCIe), za který P1
 u karty NV1 jsou čipy na skutečných pozicích z PCB pohledu.
 
 ## Schéma napájení AI PC (SCHEMATIC u projektu 2)
-Simulovaný obvod jako u karty NV1: sítě nesou napětí (12 V, zem). Vypínač Dellu → vestavěný zdroj → SATA 12 V →
-Add2PSU (relé) → PS_ON# druhého zdroje → 4 PCIe kabely → 2× redukce NVIDIA 030-0571-000 → EPS12V obou P100;
-ventilátory 9733 napájí SATA regulátor TD404. PCIe kabel zapojený napřímo do EPS zdířky karty dá zkrat (`X`) přes
+Simulovaný obvod jako u karty NV1: sítě nesou napětí (12 V, zem). Zapojení jako ve videu: kartu G1 napájí zdroj
+Dellu přes 2× PCIe 6 pin a redukci NVIDIA 030-0571-000, druhý zdroj jen kartu G2 (2× PCIe 8 pin). Vypínač Dellu →
+SATA 12 V → Add2PSU (relé) → PS_ON# druhého zdroje; ventilátory 9733 napájí SATA regulátor TD404 z druhého zdroje. PCIe kabel zapojený napřímo do EPS zdířky karty dá zkrat (`X`) přes
 zem karty a slotu – stejně jako ve skutečnosti. Dvojklikem dovnitř (úroveň 2):
 - redukce 030-0571-000 pin po pinu podle výkresu NVIDIA PB-08248,
 - Add2PSU (relé spíná PS_ON# na COM, patent US8878390),
@@ -73,12 +73,12 @@ Do hloubky (dvojklik dál):
 - Dell → Xeon E5-1650 v3 (6 jader, ring, IMC, PCIe porty) → jádro Haswell (front-end, ROB 192, porty P0–P7) →
   příklad 1 bitu sčítačky ALU → hradla → CMOS → tranzistor → atomy.
 - Dell → RDIMM 8 GB (18× DDR4, RCD, SPD) → čip DDR4 4 Gb x4 (bank groups, dekodéry, sense amp) → simulované buňky 1T1C.
-- Dell → slot 1 → redukce PCIe x4 → M.2 pin po pinu → SSD Kingston NV3 (řadič, NAND, HMB).
+- Dell → slot 1 → Quadro K620 (GM107, DDR3, výstupy); Dell → SATA SSD Samsung 870 EVO (řadič MKX, LPDDR4, V-NAND).
 - P100 → GP100 (6 GPC, L2 4 MB, 8× řadič 512 bit) → SM (procesní bloky, registry, FP32/FP64) → příklad sčítačky
   a registru → hradla → … atomy.
 - Zdroj → primár (APFC, full-bridge LLC), sekundár (SR, DC-DC, supervizor), +5VSB se skutečnými součástkami.
 Sloty T5810 (manuál Dell): shora 1 (x8, half-length), 2 a 4 x16 Gen3, 3, 5, 6 PCI. P100 ve 2 a 4 zakryjí 3 a 5,
-takže K620 a M.2 redukce se nevejdou současně.
+takže zbývá jen slot 1 – má ho K620. Proto je disk 2,5" SATA SSD v šachtě Dellu místo NVMe s redukcí (ve videu NVMe není).
 
 ## Proklikávání (dvojklik)
 L1 deska → L2 bloky uvnitř čipu → L3 RTL (CRTC, kvadratické dopředné diference, fázový akumulátor, PCI dekodér…)

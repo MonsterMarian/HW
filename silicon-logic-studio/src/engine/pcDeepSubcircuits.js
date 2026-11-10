@@ -1,8 +1,8 @@
 // Hlubší úrovně AI PC (L3–L5): GP100, Xeon (Haswell-EP), RDIMM / DDR4, M.2 redukce a SSD.
-// Zdroje: NVIDIA Pascal whitepaper WP-08019 (obr. 7 a 8) + PB-08248; Intel ARK E5-1650 v3, Optimization
+// Zdroje (mimo jiné): NVIDIA Pascal whitepaper WP-08019 (obr. 7 a 8) + PB-08248; Intel ARK E5-1650 v3, Optimization
 // Reference Manual 356477 (Haswell), Hot Chips 25; Samsung RDIMM M393A1G40EB1 datasheet, Samsung K4A4G165WE
-// a Micron 4Gb DDR4 (obr. 2); PCIe pinout (Wikipedia/PCI-SIG CEM), M.2 Key M (congatec AN43); Kingston NV3
-// datasheet, Phison E27T (AnandTech, Phison CES 2024). Neověřené údaje mají v popisku "neověřeno".
+// a Micron 4Gb DDR4 (obr. 2); Samsung 870 EVO datasheet + KitGuru;
+// NVIDIA Quadro K620 datasheet 75509, GM107 (Tom's Hardware, AnandTech). Neověřené údaje mají v popisku "neověřeno".
 // Bloky (PC_BLOCK) jsou popisné; "příklad" = skutečný simulovaný prvek, kterým vede cesta dál až k atomům.
 const Z = 'Z';
 const c = (id, type, label, x, y, extra = {}) => ({ id, type, label, x, y, inputs: {}, outputs: {}, ...extra });
@@ -16,18 +16,7 @@ const w = (from, to) => {
   return { from: { id: fi, pin: fp.join('.') }, to: { id: ti, pin: tp.join('.') } };
 };
 
-// Piny konektorů redukce (jméno pinu = čísla pinů + signál). Používá je i definice zařízení v pcBuild.js.
-const EDGE = {
-  PET0: 'B14/B15 PET0', PER0: 'A16/A17 PER0', PET1: 'B19/B20 PET1', PER1: 'A21/A22 PER1',
-  PET2: 'B23/B24 PET2', PER2: 'A25/A26 PER2', PET3: 'B27/B28 PET3', PER3: 'A29/A30 PER3',
-  REFCLK: 'A13/A14 REFCLK', PERST: 'A11 PERST#', CLKREQ: 'B12 CLKREQ#', V33: 'A9,A10,B8 +3,3V', V12: 'B1-B3 +12V', GND: 'GND',
-};
-const M2 = {
-  PET0: '49/47 PET0', PER0: '43/41 PER0', PET1: '37/35 PET1', PER1: '31/29 PER1',
-  PET2: '25/23 PET2', PER2: '19/17 PER2', PET3: '13/11 PET3', PER3: '7/5 PER3',
-  REFCLK: '55/53 REFCLK', PERST: '50 PERST#', CLKREQ: '52 CLKREQ#', V33: '2,4,12,14… +3,3V', GND: 'GND',
-};
-export const CONN_PINS = { EDGE, M2 };
+
 
 export const PC_DEEP_SUBCIRCUITS = {};
 const def = (key, level, sub) => { PC_DEEP_SUBCIRCUITS[key] = { key, level, ...sub }; };
@@ -177,36 +166,33 @@ def('ddr4_chip', 4, {
   ],
 });
 
-// ================================================================ M.2 redukce (slot 1) a SSD
-def('m2_adapter_wiring', 3, {
-  name: 'Redukce PCIe x4 → M.2 Key M (Axagon PCEM2-N)',
-  subtitle: 'Pasivní mapování linek 1:1 podle jmen (obě strany pojmenované z pohledu zařízení): PCIe pinout (A/B strana) a M.2 Key M (congatec AN43). Zda má Axagon měnič 12 → 3,3 V a zda vede CLKREQ#, je neověřené. V T5810 jen do slotu 1.',
+// ================================================================ SATA SSD a Quadro K620
+def('sata_ssd', 3, {
+  name: 'Samsung 870 EVO 1 TB — vnitřek SSD',
+  subtitle: 'Datasheet Samsung Rev 1.1: SATA 6 Gb/s, řadič MKX, 1 GB LPDDR4, V-NAND 3bit MLC, 560/530 MB/s, TBW 600 TB. Teardown KitGuru: řadič S4LR059, 1 pouzdro NAND K90VGY8, LPDDR4-1866. Počet vrstev NAND a napájení desky neověřeny.',
   components: [
-    c('edge', 'CONN_PCIE_X4', 'J1 PCIe x4 hrana (slot)', 50, 50),
-    c('m2', 'CONN_M2_M', 'J2 M.2 Key M (SSD)', 660, 50),
-    blk('ssd', 'KINGSTON NV3 1 TB (M.2 2280)', 360, 380, [], [], 'DVOJKLIK → SSD', 230, 80, { drill: 'nv3_ssd' }),
+    blk('sata', 'SATA DATA 7 PIN + NAPÁJENÍ 15 PIN', 50, 60, [], ['SATA 6 Gb/s', '+5V'], 'Z DESKY DELLU (HDD0)', 230, 90),
+    blk('ctl', 'ŘADIČ SAMSUNG MKX (S4LR059)', 340, 60, ['SATA 6 Gb/s'], ['DRAM', 'NAND'], 'FTL, ECC, TURBOWRITE', 230, 90),
+    blk('dram', 'LPDDR4 1 GB (1866)', 660, 40, ['DRAM'], [], 'MAPOVACÍ TABULKA FTL', 200, 70),
+    blk('nand', 'V-NAND TLC · 1 POUZDRO K90VGY8', 660, 160, ['NAND'], [], 'POČET VRSTEV NEOVĚŘEN (128/133)', 240, 90),
+    blk('pwr', 'NAPÁJENÍ 5 V → JÁDRO, DRAM, NAND', 340, 260, ['+5V'], [], 'REGULÁTORY NEOVĚŘENY', 240, 80),
   ],
-  wires: [
-    ...[0, 1, 2, 3].flatMap((n) => [w(`edge.${EDGE[`PET${n}`]}`, `m2.${M2[`PET${n}`]}`), w(`edge.${EDGE[`PER${n}`]}`, `m2.${M2[`PER${n}`]}`)]),
-    w(`edge.${EDGE.REFCLK}`, `m2.${M2.REFCLK}`), w(`edge.${EDGE.PERST}`, `m2.${M2.PERST}`), w(`edge.${EDGE.CLKREQ}`, `m2.${M2.CLKREQ}`),
-    w(`edge.${EDGE.V33}`, `m2.${M2.V33}`), w(`edge.${EDGE.GND}`, `m2.${M2.GND}`),
-  ],
+  wires: [w('sata.SATA 6 Gb/s', 'ctl.SATA 6 Gb/s'), w('ctl.DRAM', 'dram.DRAM'), w('ctl.NAND', 'nand.NAND'), w('sata.+5V', 'pwr.+5V')],
 });
 
-def('nv3_ssd', 4, {
-  name: 'Kingston NV3 1 TB (SNV3S/1000G) — bloky',
-  subtitle: 'Kingston datasheet: M.2 2280 jednostranný, PCIe 4.0 x4 NVMe (v Dellu poběží jako Gen3). Řadič se mění podle šarže: Phison E27T (Cortex-R5, LDPC, 4 kanály / 16 CE, bez DRAM s HMB) nebo SM2268XT2. NAND 3D TLC/QLC, počet pouzder neověřen.',
+def('k620_board', 3, {
+  name: 'NVIDIA Quadro K620 — bloky karty',
+  subtitle: 'Datasheet NVIDIA 75509: 384 CUDA jader, 2 GB DDR3 128 bit 29 GB/s, PCIe 2.0 x16, max. 45 W, DVI-I DL + DP 1.2, low profile s ventilátorem. Čip GM107 (Maxwell, 28 nm, 1,87 mld. tranzistorů, 148 mm²: 1 GPC, 5 SMM) – že 3 SMM jsou aktivní, je dopočet (384 / 128).',
   components: [
-    blk('edge', 'M.2 KEY M · PCIe 4.0 x4', 50, 60, [], ['PCIe'], 'V T5810 GEN3 x4', 210, 80),
-    blk('ctl', 'ŘADIČ PHISON E27T / SM2268XT2', 320, 60, ['PCIe'], ['KANÁLY 0–3'], 'E27T: CORTEX-R5, LDPC, 16 CE', 260, 100),
-    blk('nand', 'NAND 3D (TLC / QLC PODLE ŠARŽE)', 650, 60, ['KANÁLY 0–3'], [], 'POČET POUZDER NEOVĚŘEN', 260, 90),
-    blk('hmb', 'BEZ DRAM: HMB V RAM POČÍTAČE', 320, 230, [], [], 'HOST MEMORY BUFFER', 260, 70),
-    blk('pwr', 'NAPÁJENÍ 3,3 V → ŘADIČ A NAND', 50, 230, [], [], 'REGULÁTORY NEOVĚŘENY', 230, 70),
+    blk('edge', 'PCIe 2.0 x16 HRANA', 50, 60, [], ['PCIe', '+12V/+3,3V'], 'BEZ PŘÍDAVNÉHO NAPÁJENÍ, MAX. 45 W', 210, 90),
+    blk('gpu', 'GM107 · 1 GPC · 3 SMM AKTIVNÍ (DOPOČET)', 330, 60, ['PCIe', 'VDD'], ['DDR3', 'DISPLEJ'], '384 CUDA, 2× 64 BIT ŘADIČ', 260, 100),
+    blk('mem', '2 GB DDR3 · 128 BIT · 29 GB/s', 680, 60, ['DDR3'], [], 'POČET ČIPŮ NEOVĚŘEN', 230, 80),
+    blk('out', 'DVI-I DUAL LINK + DisplayPort 1.2', 680, 200, ['DISPLEJ'], [], 'AŽ 4 DISPLEJE PŘES DP MST', 230, 80),
+    blk('vrm', 'NAPÁJENÍ KARTY ZE SLOTU', 330, 250, ['+12V/+3,3V'], ['VDD'], 'FÁZE A ŘADIČ NEOVĚŘENY', 260, 80),
+    blk('fan', 'AKTIVNÍ CHLADIČ (ULTRA-QUIET FANSINK)', 50, 260, [], [], 'RADIÁLNÍ VENTILÁTOR', 230, 70),
   ],
-  wires: [w('edge.PCIe', 'ctl.PCIe'), w('ctl.KANÁLY 0–3', 'nand.KANÁLY 0–3')],
+  wires: [w('edge.PCIe', 'gpu.PCIe'), w('edge.+12V/+3,3V', 'vrm.+12V/+3,3V'), w('vrm.VDD', 'gpu.VDD'), w('gpu.DDR3', 'mem.DDR3'), w('gpu.DISPLEJ', 'out.DISPLEJ')],
 });
-
-
 
 /** Odvozené listy: buňky DDR4 = simulované pole 1T1C z NV1 (dram_cell_array) o úroveň hlouběji, bez MUXu. */
 export function derivePcSubcircuits(H) {

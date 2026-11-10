@@ -2,8 +2,6 @@
 // +12 V = 12, zem = 0. Zkrat = síť buzená zároveň +12 V a zemí → engine ji vyhodnotí jako 'X'.
 // Piny konektorů nesou čísla podle norem (ATX12V / EPS12V, PCI Express CEM, SATA, Intel 4-wire PWM fan);
 // zdroje pinoutů jsou v PIN_SOURCES níže a v README.
-import { CONN_PINS } from '../pcDeepSubcircuits.js';
-
 const Z = 'Z';
 const num = (v) => typeof v === 'number';
 const is12 = (v) => v === 12;
@@ -26,15 +24,18 @@ const cablePins = (c) => ({ [`${c}1-3 +12V`]: Z, [`${c}4-8 GND`]: 0 });
 export const PC_DEVICES = {
   // Dell T5810 jako celek: vypínač → vestavěný zdroj 685 W → SATA napájení (pro Add2PSU a regulátor)
   DELL_T5810: {
-    meta: { ref: 'PC1', part: 'Dell Precision T5810 (deska C612 + zdroj 685 W)', pkg: 'TOWER', desc: 'Vypínač zapne vestavěný zdroj; jeho SATA kabel napájí Add2PSU. Sloty PCIe x16 nesou karty P100.' },
+    meta: { ref: 'PC1', part: 'Dell Precision T5810 (deska C612 + zdroj 685 W)', pkg: 'TOWER', desc: 'Vypínač zapne vestavěný zdroj: SATA napájí Add2PSU, 2× PCIe 6 pin (přes PSU extended card, Dell KB 000140822) napájí kartu G1 jako ve videu. Grafika max. 225 W na kartu.' },
     pins: {
       inputs: { 'POWER': 0 },
-      outputs: { 'SATA13 +12V': Z, 'SATA4 GND': Z, 'SLOT2 PCIe x16': Z, 'SLOT4 PCIe x16': Z, 'SLOT GND': 0 },
+      outputs: { 'SATA13 +12V': Z, 'SATA4 GND': Z, '6PIN-1 1-3 +12V': Z, '6PIN-1 4-6 GND': 0, '6PIN-2 1-3 +12V': Z, '6PIN-2 4-6 GND': 0, 'SLOT2 PCIe x16': Z, 'SLOT4 PCIe x16': Z, 'SLOT GND': 0 },
     },
     eval(comp) {
       const on = comp.inputs.POWER === 1;
       comp.outputs['SATA13 +12V'] = on ? 12 : Z;
       comp.outputs['SATA4 GND'] = on ? 0 : Z;
+      // PCIe 6 pin (CEM 2×3): 1–3 +12 V, 4 a 6 GND, 5 Sense (na kabelu zdroje uzemněný)
+      comp.outputs['6PIN-1 1-3 +12V'] = on ? 12 : Z;
+      comp.outputs['6PIN-2 1-3 +12V'] = on ? 12 : Z;
       comp.outputs['SLOT2 PCIe x16'] = on ? 1 : Z; // linky PCIe Gen3 x16 z CPU (logická 1 = slot napájený, PERST# uvolněn)
       comp.outputs['SLOT4 PCIe x16'] = on ? 1 : Z;
     },
@@ -42,19 +43,19 @@ export const PC_DEVICES = {
 
   // Druhý zdroj: PS_ON# má uvnitř pull-up na +5VSB, zdroj běží, když ho něco stáhne na COM
   ATX_PSU: {
-    meta: { ref: 'PS2', part: 'Seasonic Core GX-650 (ATX, 650 W)', pkg: 'ATX', desc: 'Zapne se, když je PS_ON# (pin 16) spojený s COM. PCIe kabely: piny 1–3 +12 V, 5/7/8 GND.' },
+    meta: { ref: 'PS2', part: 'Seasonic Core GX-650 ATX 3 (650 W)', pkg: 'ATX', desc: 'Jako ve videu napájí jen kartu G2. Zapne se, když je PS_ON# (pin 16) spojený s COM. Má 4× PCIe 6+2, použité 2: piny 1–3 +12 V, 4–8 zem.' },
     pins: {
       inputs: { '16 PS_ON#': Z },
       outputs: {
         '15 COM': 0,
-        ...cablePins('A'), ...cablePins('B'), ...cablePins('C'), ...cablePins('D'),
+        ...cablePins('A'), ...cablePins('B'),
         'SATA13 +12V': Z, 'SATA4 GND': Z, '8 PWR_OK': 0,
       },
     },
     pulls: { '16 PS_ON#': 1 },
     eval(comp) {
       const on = comp.inputs['16 PS_ON#'] === 0;
-      for (const c of 'ABCD') { comp.outputs[`${c}1-3 +12V`] = on ? 12 : Z; comp.outputs[`${c}4-8 GND`] = 0; }
+      for (const c of 'AB') { comp.outputs[`${c}1-3 +12V`] = on ? 12 : Z; comp.outputs[`${c}4-8 GND`] = 0; }
       comp.outputs['SATA13 +12V'] = on ? 12 : Z;
       comp.outputs['SATA4 GND'] = on ? 0 : Z;
       comp.outputs['8 PWR_OK'] = on ? 1 : 0;
@@ -162,18 +163,6 @@ export const PC_DEVICES = {
     meta: { ref: 'J', part: 'Ventilátor 4 pin (KF2510 / Molex 47053)', pkg: 'CONN', desc: '1 GND, 2 +12 V, 3 tacho (2 pulzy/ot.), 4 PWM 25 kHz – bez signálu běží ventilátor naplno.' },
     passive: true,
     pins: { inputs: {}, outputs: { '1 GND': Z, '2 +12V': Z, '3 SENSE': Z, '4 PWM': Z } },
-    eval() {},
-  },
-  CONN_PCIE_X4: {
-    meta: { ref: 'J', part: 'PCIe x4 hrana (A/B, 32 kontaktů na stranu)', pkg: 'EDGE', desc: 'PET = vysílač karty, PER = přijímač karty; klíč mezi piny 11 a 12.' },
-    passive: true,
-    pins: { inputs: {}, outputs: Object.fromEntries(Object.values(CONN_PINS.EDGE).map((n) => [n, Z])) },
-    eval() {},
-  },
-  CONN_M2_M: {
-    meta: { ref: 'J', part: 'M.2 Socket 3 Key M (PCIe x4)', pkg: 'CONN', desc: 'Piny podle congatec AN43; 59–66 klíč M.' },
-    passive: true,
-    pins: { inputs: {}, outputs: Object.fromEntries(Object.values(CONN_PINS.M2).map((n) => [n, Z])) },
     eval() {},
   },
   // Relé (Add2PSU: Golden GB-1C12L podle recenze, cívka 12 V): sepnutý kontakt přivede COM na NO

@@ -1469,7 +1469,7 @@ export const TERMINAL_TYPES = new Set([
   'BUS_SPLITTER', 'BUS_MERGER', 'VIRTUAL_SCREEN', 'SEVEN_SEGMENT',
   'CRYSTAL', 'PCI_EDGE', 'VGA_DB15', 'GAME_PORT', 'AUDIO_JACK', 'PCI_HOST', 'VGA_MONITOR', 'AUDIO_SPEAKERS', 'SATURN_PAD',
   // AI PC: popisné bloky z veřejných blokových schémat, konektory a kabely (jen měď), motor ventilátoru
-  'PC_BLOCK', 'BLOWER_9733', 'CONN_PCIE8', 'CONN_EPS8', 'CONN_SATA', 'CONN_ATX24', 'CONN_FAN4', 'CONN_PCIE_X4', 'CONN_M2_M', 'RELAY', 'DIODE',
+  'PC_BLOCK', 'BLOWER_9733', 'CONN_PCIE8', 'CONN_EPS8', 'CONN_SATA', 'CONN_ATX24', 'CONN_FAN4', 'RELAY', 'DIODE',
 ]);
 
 /** Level of the deepest (current) hierarchy entry. */

@@ -69,23 +69,16 @@ export const OFFERS = {
     ],
   },
   ssd: {
-    note: 'Nový NV3 1 TB (2280) stojí v ČR asi 3 300–3 850 Kč. Pozor na záměnu s verzí 2230 (SNV3SM3/1T0).',
+    note: 'Nový kus stojí v ČR 6 500–7 500 Kč (Datart a Mironet ověřeny), v EU kolem 279 €; použité na Bazoši od 2 500 Kč. Nižší ceny z výpisů vyhledávače (TS Bohemia 3 499 Kč) jsou nejspíš zastaralé, proto nejsou uvedené.',
     offers: [
-      o('Heureka.cz', 'Kingston NV3 1TB, SNV3S/1000G (nejnižší nabídka)', 'https://pevne-disky.heureka.cz/kingston-nv3-1tb-snv3s-1000g/', 3301, 'CZK', 3301, 'nové', 'snippet'),
-      o('Smarty.cz', 'Kingston SSD NV3 1TB NVMe PCIe M.2 2280', 'https://www.smarty.cz/Kingston-SSD-NV3-1TB-NVMe-PCIe-M-2-2280-6000-4000MB-s--4p159154', 3590, 'CZK', 3590, 'nové', 'snippet'),
-      o('Datart', 'SSD Kingston NV3 1TB NVMe (SNV3S/1000G)', 'https://www.datart.cz/ssd-kingston-nv3-1tb-nvme-snv3s-1000g.html', 3689, 'CZK', 3689, 'nové', 'fetched'),
-      o('Alza.cz', 'Kingston NV3 1TB - SSD disk', 'https://www.alza.cz/kingston-nv3-1tb-d12487074.htm', 3689, 'CZK', 3689, 'nové', 'snippet'),
-      o('TS Bohemia', 'Kingston NV3 SSD 1TB NVMe', 'https://www.tsbohemia.cz/kingston-nv3-ssd-1tb-nvme_d527299', 3699, 'CZK', 3699, 'nové', 'snippet'),
-      o('Mironet.cz', 'Kingston NV3 SSD 1TB / M.2 2280 / PCIe 4.0 NVMe', 'https://www.mironet.cz/kingston-nv3-ssd-1tb-m2-2280-pcie-40-nvme-r6000mbps-w4000mbps+dp699536/', 3840, 'CZK', 3840, 'nové', 'fetched'),
-    ],
-  },
-  m2_adapter: {
-    note: 'Axagon PCEM2-N stojí v ČR 190–240 Kč, v balení je full height i low profile záslepka.',
-    offers: [
-      o('Heureka.cz', 'Axagon PCEM2-N (nejnižší nabídka)', 'https://radice.heureka.cz/axagon-pcem2-n/', 188, 'CZK', 188, 'nové', 'snippet'),
-      o('Mironet.cz', 'AXAGON PCEM2-N, PCIe x4 - M.2 NVMe M-key adaptér', 'https://www.mironet.cz/axagon-pcem2n-pcie-x4-m2-nvme-mkey-slot-adapter+dp420552/', 219, 'CZK', 219, 'nové', 'fetched'),
-      o('Datart', 'Řadič Axagon PCEM2-N - M.2 NVMe M-key slot', 'https://www.datart.cz/radic-axagon-pcem2-n-m-2-nvme-m-key-slot-pcem2-n.html', 229, 'CZK', 229, 'nové', 'fetched'),
-      o('Smarty.cz', 'AXAGON PCEM2N PCIe x4 M.2 NVMe adaptér', 'https://www.smarty.cz/AXAGON-PCEM2N-PCIe-x4-M-2-NVMe-Mkey-slot-adapter-4p41933', 229, 'CZK', 229, 'nové', 'snippet'),
+      o('Bazoš.cz', 'Samsung 870 EVO 1 TB SSD – 100% stav, otestovaný (Brno-venkov)', 'https://pc.bazos.cz/inzerat/225887242/samsung-870-evo-1-tb-ssd-100-stav-pulka-ceny.php', 2500, 'CZK', 2500, 'použité', 'fetched'),
+      o('Bazoš.cz', 'SSD disk Samsung 870 EVO 1TB (Brno)', 'https://pc.bazos.cz/inzerat/225857030/ssd-disk-samsung-870-evo-1tb.php', 3500, 'CZK', 3500, 'použité', 'snippet', 'stav neuveden'),
+      o('Bazoš.cz', 'Samsung 870 EVO 1TB SSD – lehce použitý (Jablonec n. N.)', 'https://pc.bazos.cz/inzerat/226103373/hdd-samsung-870-evo-1tb-ssd.php', 3800, 'CZK', 3800, 'použité', 'fetched'),
+      o('Smarty.cz', 'Samsung 870 EVO SSD 2,5" 1TB', 'https://www.smarty.cz/Samsung-870-EVO-SSD-2-5-1TB-4p24246', 5899, 'CZK', 5899, 'nové', 'snippet'),
+      o('Datart', 'SSD Samsung 870 EVO 1TB (MZ-77E1T0B/EU)', 'https://www.datart.cz/ssd-samsung-870-evo-1tb-mz-77e1t0b-eu.html', 6499, 'CZK', 6499, 'nové', 'fetched'),
+      o('Geizhals.de', 'Samsung SSD 870 EVO 1TB MZ-77E1T0B (nejnižší: workstation4u přes eBay)', 'https://geizhals.de/samsung-ssd-870-evo-1tb-mz-77e1t0b-a2458826.html', 279, 'EUR', 6789, 'nové', 'fetched'),
+      o('Mironet.cz', 'SAMSUNG 870 EVO 1TB', 'https://www.mironet.cz/samsung-870-evo-1tb-25-tlc-rw-560-530-mbps-iops-98k-88k-mtbf-15mh-5y+dp473723/', 7290, 'CZK', 7290, 'nové', 'fetched'),
+      o('Alza.cz', 'Samsung 870 EVO 1TB', 'https://www.alza.cz/samsung-870-evo-1tb-d6308918.htm', 7499, 'CZK', 7499, 'nové', 'snippet'),
     ],
   },
   psu2: {

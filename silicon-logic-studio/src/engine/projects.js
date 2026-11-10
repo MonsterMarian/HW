@@ -10,7 +10,7 @@ export const PROJECTS = [
     subtitle: 'NVIDIA NV1 / STG2000X, 2 MB DRAM, PCI',
     circuit: NV1_BOARD, // simulovaný obvod: všechny pohledy
     bom: NV1_BOM,
-    views: ['schematic', 'hardware', 'physics', 'economic'],
+    views: ['schematic', 'hardware', 'physics', 'economic', 'anatomy'],
     defaultView: 'hardware',
   },
   {
@@ -18,9 +18,9 @@ export const PROJECTS = [
     tab: 'AI PC 2× P100',
     title: 'AI PC · Dell T5810 + 2× Tesla P100',
     subtitle: 'Sestava z videa Junk GPU Lab: 32 GB HBM2 pro Qwen 27B v llama.cpp',
-    circuit: null, // jen kusovník: zatím pouze ECONOMIC view
+    circuit: null, // jen kusovník: pohledy ECONOMIC a ANATOMY
     bom: P100_PC_BOM,
-    views: ['economic'],
+    views: ['economic', 'anatomy'],
     defaultView: 'economic',
     source: { label: 'Video: Qwen 27B at 67 tok/s on Two $78 Tesla P100s', url: 'https://www.youtube.com/watch?v=JvLUoJYUjDM' },
   },

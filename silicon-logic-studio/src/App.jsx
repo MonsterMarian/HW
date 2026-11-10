@@ -8,6 +8,7 @@ import { Toolbar } from './components/Toolbar';
 import { LogicCanvas } from './views/LogicCanvas';
 import { PhysicsView } from './views/PhysicsView';
 import { EconomicView } from './views/EconomicView';
+import { AnatomyView } from './views/AnatomyView';
 import { WaveformViewer } from './components/WaveformViewer';
 import { AsmEditor } from './components/AsmEditor';
 import { AiPanel } from './components/AiPanel';
@@ -169,7 +170,9 @@ export default function App() {
 
         {/* Central Viewport: Schematic vs Hardware PCB vs Physics 3D Die */}
         <div className="flex-1 h-full relative">
-          {viewMode === 'economic' ? (
+          {viewMode === 'anatomy' ? (
+            <AnatomyView key={project.id} project={project} />
+          ) : viewMode === 'economic' ? (
             <EconomicView key={project.id} project={project} />
           ) : viewMode === 'physics' ? (
             <PhysicsView

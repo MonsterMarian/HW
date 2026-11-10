@@ -16,6 +16,7 @@ import {
   FolderOpen,
   ShieldCheck,
   ShoppingCart,
+  Boxes,
 } from 'lucide-react';
 import { audioEngine } from '../engine/audioEngine';
 import { DEVICES } from '../engine/devices/index.js';
@@ -178,6 +179,7 @@ export function Toolbar({
     { id: 'hardware', label: 'PCB', Icon: Cpu, title: 'Hardware PCB – deska s pouzdry DIP/QFP' },
     { id: 'physics', label: 'DIE 3D', Icon: Layers, title: 'Silicon Die 3D – vrstvy křemíku a teplotní mapa' },
     { id: 'economic', label: 'ECONOMIC', Icon: ShoppingCart, title: 'Economic – díly jak z obchodu ve skutečné velikosti, ceny a odkazy na nákup' },
+    { id: 'anatomy', label: 'ANATOMY', Icon: Boxes, title: 'Anatomy (test) – izometrický výkres celé sestavy, malé díly s očíslovanými popisky, rozložení' },
   ];
 
   // Jednotný vzhled tlačítek lišty: ostré hrany, tenká linka, jantar jen pro aktivní stav
@@ -214,7 +216,7 @@ export function Toolbar({
             disabled={!allowed}
             onClick={() => setViewMode(id)}
             className={`${btn(viewMode === id)} ${i > 0 ? '-ml-px' : ''} disabled:opacity-30 disabled:pointer-events-none`}
-            title={allowed ? title : 'Tento projekt má zatím jen kusovník – jen ECONOMIC view'}
+            title={allowed ? title : 'Tento projekt má zatím jen kusovník – jen ECONOMIC a ANATOMY'}
           >
             <Icon size={13} />
             <span>{label}</span>

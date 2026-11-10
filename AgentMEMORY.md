@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-10 16:41
+Aktualizováno: 2026-11-10 16:26
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -121,5 +121,5 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - 2026-11-10 16:05 — „řeš neověřené/rizikové, pak schémata do hloubky“ → 3 rešerše (sloty, teardowny, architektury),
   opravy (CEM kontakty, sloty v ANATOMY, Add2PSU bez diody, TD404 = 555 odhad, PSU díly), L3–L5 GP100/Xeon/DDR4/M.2/SSD,
   knoflík regulátoru klikem; 150/150 testů.
-- 2026-11-10 16:41 — „rozhodni jak ve videu, pokračuj v neověřeném“ → napájení G1 z Dellu (2× 6 pin), SATA SSD 870 EVO
+- 2026-11-10 16:26 — „rozhodni jak ve videu, pokračuj v neověřeném“ → napájení G1 z Dellu (2× 6 pin), SATA SSD 870 EVO
   místo NVMe (nabídky, model, L3), K620 L3, IHS Xeonu podle Intel TMSDG; 151/151 testů.

@@ -7,8 +7,18 @@ import { DEVICES } from '../src/engine/devices/index.js';
 import { packRows } from '../src/views/economic/layout.js';
 import { MODEL_KINDS } from '../src/views/economic/models.js';
 
-test('po spuštění: 1. projekt karta NV1, 2. projekt AI PC s P100', () => {
-  assert.deepEqual(PROJECTS.map((p) => p.id), ['nv1', 'p100pc']);
+test('můj PC: díly z diagnostiky, odhady označené, 4× 8 GB RAM', () => {
+  const bom = PROJECTS[2].bom;
+  const it = (id) => bom.find((i) => i.id === id);
+  assert.equal(it('my_ram').qty, 4);
+  assert.deepEqual(it('my_mobo').dims.slice(0, 2), [305, 221]);
+  assert.deepEqual(it('my_gpu').dims, [230, 120, 42]);
+  for (const id of ['my_case', 'my_psu', 'my_cooler']) assert.match(it(id).dimsSrc, /^odhad/, id);
+  assert.ok(bom.every((i) => i.price), 'každý díl má aspoň jednu nabídku');
+});
+
+test('po spuštění: 1. projekt karta NV1, 2. AI PC s P100, 3. můj PC', () => {
+  assert.deepEqual(PROJECTS.map((p) => p.id), ['nv1', 'p100pc', 'mypc']);
   assert.ok(PROJECTS[0].circuit.components.some((c) => c.type === 'NV1_CORE'));
   assert.ok(PROJECTS.every((p) => p.views.includes('economic') && p.views.includes(p.defaultView)));
 });

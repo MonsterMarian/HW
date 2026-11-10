@@ -4,6 +4,8 @@ import { DEVICES } from '../../engine/devices/index.js';
 import { NV1_CARD, nv1CardOutline, PX_PER_MM } from '../../engine/boardLayout.js';
 import { THEME, fmtHz, fitText, signalStyle } from './theme.js';
 import { SCH, deviceMeta, pinLabel, refOf, blockTitle } from './geometry.js';
+import { B360_LAYOUT } from '../../engine/economic/catalog.js';
+import { MB, at } from '../../engine/myPcLayout.js';
 
 const mm = (v) => v * PX_PER_MM;
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -85,6 +87,108 @@ export function drawCard(ctx) {
   // klíč 5 V konektoru (výřez ve zlatých kontaktech)
   ctx.fillStyle = THEME.bg;
   ctx.fillRect(tab.x + tab.key.at, y + h, tab.key.w, tab.h + 1);
+  ctx.restore();
+}
+
+// ------------------------------------------------------------------ deska ASUS PRIME B360-PLUS (projekt MŮJ PC)
+const B360_CHIPS = ['RTL8111H', 'ALC887', 'ASM1083', 'SUPER I/O', 'BIOS'];
+
+/** Deska B360-PLUS 1 : 1 podle manuálu (B360_LAYOUT): maska, otvory, patice, DIMM, sloty, M.2, chladiče, konektory, I/O. */
+export function drawMyPcBoard(ctx) {
+  const L = B360_LAYOUT;
+  const P = (u, v) => at(u, v);
+  const rect = (u, v, du, dv, fill, stroke = null) => {
+    const p = P(u, v);
+    ctx.fillStyle = fill;
+    ctx.fillRect(p.x, p.y, mm(du), mm(dv));
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.strokeRect(p.x + 0.5, p.y + 0.5, mm(du) - 1, mm(dv) - 1); }
+  };
+  const label = (text, u, v, size = 7, color = THEME.silk, align = 'left') => {
+    const p = P(u, v);
+    ctx.font = `700 ${size}px ${THEME.mono}`;
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.fillText(text, p.x, p.y);
+    ctx.textAlign = 'left';
+  };
+  ctx.save();
+  // deska: černá maska řady Prime
+  ctx.fillStyle = '#121417';
+  ctx.fillRect(MB.x, MB.y, MB.w, MB.h);
+  ctx.strokeStyle = THEME.maskEdge;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(MB.x, MB.y, MB.w, MB.h);
+  // montážní otvory ATX
+  for (const [v, u] of L.holes) {
+    const p = P(u, v);
+    ctx.fillStyle = '#B9BBBE';
+    ctx.beginPath(); ctx.arc(p.x, p.y, mm(3.6), 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#020302';
+    ctx.beginPath(); ctx.arc(p.x, p.y, mm(1.6), 0, Math.PI * 2); ctx.fill();
+  }
+  // chladiče (VRM, PCH) – stříbrné hliníkové bloky
+  for (const h of L.heatsinks) rect(h.u - h.d / 2, h.v - h.w / 2, h.d, h.w, '#8F959C', '#5C6168');
+  label('DIGI+ VRM', 70, 40, 7);
+  label('INTEL B360', 178, 236, 7, THEME.silk, 'center');
+  // patice LGA1151: tělo + zatěžovací rámeček + otvory chladiče 75 × 75 mm
+  const [sv, su] = L.socket;
+  rect(su - 23.75, sv - 23.75, 47.5, 47.5, '#2B2B2E');
+  ctx.strokeStyle = '#C9CDD2';
+  ctx.lineWidth = mm(1.2);
+  const fr = P(su - 23, sv - 23);
+  ctx.strokeRect(fr.x, fr.y, mm(46), mm(46));
+  for (const [du, dv] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const p = P(su + du * 37.5, sv + dv * 37.5);
+    ctx.strokeStyle = '#B9BBBE'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(p.x, p.y, mm(2.6), 0, Math.PI * 2); ctx.stroke();
+  }
+  label('LGA1151', su, sv - 25, 8, THEME.silk, 'center');
+  // DIMM sloty (svisle), od CPU: B1, B2, A1, A2
+  ['DIMM_B1', 'DIMM_B2', 'DIMM_A1', 'DIMM_A2'].forEach((name, i) => {
+    const u = L.dimm.u[i];
+    rect(u - 3.25, L.dimm.v - L.dimm.len / 2, 6.5, L.dimm.len, i % 2 ? '#1C1D20' : '#7E848B', '#3A3D42');
+    const p = P(u + 1.2, L.dimm.v + L.dimm.len / 2 + 3);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.PI / 2);
+    ctx.font = `700 6px ${THEME.mono}`; ctx.fillStyle = THEME.silk; ctx.fillText(name, 0, 0); ctx.restore();
+  });
+  // rozšiřující sloty
+  const SLOT = { x16: ['#7E848B', 'PCIEX16'], x1: ['#1C1D20', 'PCIEX1'], pci: ['#E9E7E1', 'PCI'] };
+  const n = { x16: 0, x1: 0, pci: 0 };
+  for (const s of L.slots) {
+    const [fill, name] = SLOT[s.kind];
+    rect(s.u0, s.v - 3.75, s.len, 7.5, fill, '#3A3D42');
+    label(`${name}_${++n[s.kind]}`, s.u0 + s.len + 3, s.v + 1.5, 7);
+  }
+  // M.2: konektor, šroubek 2280 a obrys modulu
+  L.m2.forEach((m, i) => {
+    const o = P(m.screw - 2, m.v - 11);
+    ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(232,230,223,0.35)'; ctx.lineWidth = 1;
+    ctx.strokeRect(o.x, o.y, mm(m.u - m.screw + 2), mm(22)); ctx.setLineDash([]);
+    rect(m.u - 3, m.v - 11, 6, 22, '#1A1B1E', '#4A4D52');
+    const sc = P(m.screw, m.v);
+    ctx.fillStyle = '#C9CDD2'; ctx.beginPath(); ctx.arc(sc.x, sc.y, mm(2.5), 0, Math.PI * 2); ctx.fill();
+    label(`M.2_${i + 1}`, m.screw + 4, m.v - 12.5, 7);
+  });
+  // napájecí konektory, SATA, baterie
+  rect(L.atx24[1] - 5, L.atx24[0] - 26, 10, 52, '#1C1D20', '#4A4D52');
+  label('EATXPWR', L.atx24[1] - 7, L.atx24[0] + 30, 7, THEME.silk, 'right');
+  rect(L.eps8[1] - 9, L.eps8[0] - 5, 18, 10, '#1C1D20', '#4A4D52');
+  label('EATX12V', L.eps8[1], L.eps8[0] + 10, 7, THEME.silk, 'center');
+  for (const [v, u] of L.sata) rect(u - 5.5, v - 4, 11, 8, '#1C1D20', '#4A4D52');
+  label('SATA6G', 200, 278, 6);
+  const bt = P(L.battery[1], L.battery[0]);
+  ctx.fillStyle = '#B9BBBE'; ctx.beginPath(); ctx.arc(bt.x, bt.y, mm(10), 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#26282D'; ctx.font = `700 7px ${THEME.mono}`; ctx.textAlign = 'center'; ctx.fillText('CR2032', bt.x, bt.y + 3); ctx.textAlign = 'left';
+  // zadní I/O (u 0–18) a čipy na desce
+  const IO = { ps2: '#7A4FB0', usb3: '#1F5FBF', usb31: '#19B5B0', audio: '#7FC4E8', lan: '#9EA2A7', dvi: '#E9E7E1', hdmi: '#3A3D42' };
+  for (const [kind, v0, v1] of L.io) rect(0, v0, 18, v1 - v0, IO[kind] || '#9EA2A7', '#5C6066');
+  L.chips.forEach((ch, i) => {
+    rect(ch.u - ch.s / 2, ch.v - ch.s / 2, ch.s, ch.s, THEME.epoxy, 'rgba(255,255,255,0.15)');
+    label(B360_CHIPS[i], ch.u, ch.v + ch.s / 2 + 3.5, 6, THEME.silk, 'center');
+  });
+  // potisk
+  label('PRIME B360-PLUS', 90, 174, 15, 'rgba(236,238,240,0.85)', 'center');
+  label('ASUS', 143, 147, 13, 'rgba(236,238,240,0.85)', 'center');
   ctx.restore();
 }
 
@@ -294,6 +398,53 @@ export function drawPcbPart(ctx, comp, g, engine, { selected = false } = {}) {
       ctx.arc(x + w * 0.35, y + h / 2, Math.min(w, h) * 0.17, 0, Math.PI * 2);
       ctx.fill();
       bracketCaption(ctx, comp, x, y + h, w);
+      break;
+    }
+    case 'LGA1151': { // CPU v patici: zelený substrát, stříbrný rozvaděč tepla s potiskem
+      ctx.fillStyle = '#2F5A3B';
+      ctx.fillRect(x, y, w, h);
+      const i = mm(2);
+      ctx.fillStyle = '#C3C8CE';
+      ctx.fillRect(x + i, y + i, w - 2 * i, h - 2 * i);
+      if (selected) { ctx.strokeStyle = THEME.high; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); }
+      textFit(ctx, ['INTEL® CORE™', 'i7-9700', 'SRG13 3.00GHZ'], x + w / 2, y + h * 0.25, w - 12, h * 0.6, 9, '#3A3D42');
+      silkRef(ctx, refOf(comp), x, y - 4);
+      break;
+    }
+    case 'UDIMM': { // modul shora: černý chladič HyperX Fury
+      ctx.fillStyle = '#141518';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = selected ? THEME.high : '#3A3D42';
+      ctx.lineWidth = selected ? 1.5 : 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(-Math.PI / 2);
+      textFit(ctx, ['HyperX FURY 8GB'], 0, -w / 2 + 2, h - 10, w - 4, 7, '#E9E9E9');
+      ctx.restore();
+      break;
+    }
+    case 'PCIe x16': { // grafika ve slotu: shora je vidět horní hrana karty, záslepka vlevo
+      ctx.fillStyle = '#1B1C1F';
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = '#2A2C30';
+      ctx.fillRect(x, y, w, mm(4)); // zadní plech (backplate) nad slotem
+      ctx.fillStyle = '#B9BFC6';
+      ctx.fillRect(x - mm(1), y - mm(4), mm(1.5), h + mm(8)); // záslepka
+      for (let fx = x + mm(8); fx < x + w - mm(4); fx += mm(2)) { ctx.fillStyle = '#5C6168'; ctx.fillRect(fx, y + mm(6), 1, h - mm(10)); } // žebrování
+      for (let k = 0; k < 2; k++) { ctx.fillStyle = '#0B0C0E'; ctx.fillRect(x + w - mm(52) + k * mm(26), y + mm(2), mm(21), mm(8)); } // 2× 8 pin
+      if (selected) { ctx.strokeStyle = THEME.high; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); }
+      textFit(ctx, ['ASUS DUAL · GEFORCE RTX 3060 Ti'], x + w / 2 - mm(20), y + h * 0.35, w * 0.6, h * 0.5, 10, '#C9CDD2');
+      silkRef(ctx, refOf(comp), x + mm(3), y + h + 10);
+      break;
+    }
+    case 'M.2 2280': { // SSD v M.2_2: černá deska se štítkem Samsung
+      ctx.fillStyle = '#16171A';
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = '#26282D';
+      ctx.fillRect(x + mm(4), y + mm(1), w - mm(10), h - mm(2));
+      ctx.fillStyle = THEME.gold;
+      ctx.fillRect(x + w - mm(4), y + mm(1), mm(3.8), h - mm(2));
+      if (selected) { ctx.strokeStyle = THEME.high; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); }
+      textFit(ctx, ['SAMSUNG 970 EVO Plus', 'NVMe M.2 · 500GB'], x + w / 2 - mm(2), y + mm(3), w - mm(14), h - mm(4), 8, '#E9E9E9');
       break;
     }
     case 'PC':

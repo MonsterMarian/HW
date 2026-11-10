@@ -71,7 +71,91 @@ const P100_PC_ITEMS = [
   },
   {
     id: 'case_fan', name: 'Ventilátor Arctic P12 PWM PST 120 mm', part: 'Přední a zadní skříňový, odvod ~300 W tepla ze skříně',
-    qty: 2, dims: [120, 120, 25], dimsSrc: 'ověřeno: arctic.de (5 lopatek, kabel 400 mm)', model: { kind: 'fan120' },
+    qty: 2, dims: [120, 120, 25], dimsSrc: 'ověřeno: arctic.de (5 lopatek, kabel 400 mm); 3D = oficiální CAD model Arctic P12 Pro (rám shodný, lopatky jiné)', model: { kind: 'fan120', real: 'arctic_p12_pro' },
+  },
+];
+
+// ---------------------------------------------------------------- projekt 3: můj PC (diagnostika Windows 10. 11. 2026)
+// Co software nevidí (skříň, zdroj, chladič, typ myši/mikrofonu), je ODHAD – seznam k opravě je v MujPC_odhady.md.
+// Layout desky: ASUS manuál E13832 str. 1-1 (měřeno z vektorového výkresu, ±2 mm), [v od horní hrany, u od zadní hrany I/O].
+export const B360_LAYOUT = {
+  holes: [[6.3, 32.8], [6.3, 164.7], [163.5, 10.2], [165.2, 164.7], [288, 10], [288, 164.7]],
+  socket: [86, 108],
+  dimm: { v: 82.7, len: 141.2, u: [164.2, 174, 183, 192.8] }, // od CPU: B1, B2, A1, A2
+  slots: [
+    { kind: 'x1', v: 162.7, u0: 42, len: 27 }, // PCIEX1_1
+    { kind: 'x16', v: 182.8, u0: 42, len: 89, safe: true }, // PCIEX16_1 – grafika
+    { kind: 'x1', v: 202.9, u0: 42, len: 27 }, // PCIEX1_2
+    { kind: 'x16', v: 243.6, u0: 42, len: 89 }, // PCIEX16_2 (x4)
+    { kind: 'pci', v: 264.3, u0: 39, len: 80 }, // PCI1 (most ASM1083)
+    { kind: 'pci', v: 284.6, u0: 39, len: 80 }, // PCI2
+  ],
+  m2: [{ v: 164, u: 153, screw: 74 }, { v: 225, u: 124, screw: 46 }], // M.2_1 (x2), M.2_2 (x4 – je v něm SSD)
+  heatsinks: [{ v: 212, u: 178, w: 40, d: 40, h: 9 }, { v: 82, u: 70, w: 64, d: 16, h: 24 }], // PCH B360; VRM = odhad tvaru
+  atx24: [112, 214.8], eps8: [17.5, 38],
+  sata: [[252, 215], [268, 215], [284, 193], [284, 211], [297, 193], [297, 211]],
+  battery: [261, 136],
+  io: [['ps2', 2, 17, 33], ['dvi', 26, 57, 30], ['usb3', 63, 78, 15], ['hdmi', 83, 99, 12], ['usb31', 105, 121, 15], ['lan', 122, 141, 31], ['audio', 144, 157, 34]],
+  chips: [{ v: 175, u: 22, s: 6 }, { v: 280, u: 22, s: 7 }, { v: 254, u: 14, s: 10 }, { v: 220, u: 20, s: 12 }, { v: 260, u: 179, s: 5 }], // RTL8111H, ALC887, ASM1083, Super I/O, BIOS
+};
+
+const MY_PC_ITEMS = [
+  {
+    id: 'my_mobo', name: 'ASUS PRIME B360-PLUS', part: 'ATX deska, Intel B360, LGA1151, 4× DDR4, 2× M.2, PCIe x16 + x4, 2× x1, 2× PCI (ASM1083), RTL8111H, ALC887',
+    qty: 1, dims: [305, 221, 36], dimsSrc: 'ověřeno: ASUS manuál E13832 (305 × 221 mm, polohy prvků z výkresu ±2 mm); výška I/O odhad', model: { kind: 'atxBoard', layout: B360_LAYOUT },
+    note: 'Zjištěno z WMI: Rev 1.xx, BIOS 3101 (10. 9. 2021). Grafika je v PCIEX16_1 (linka x16), SSD v M.2_2 (linka x4 – M.2_1 umí jen x2).',
+  },
+  {
+    id: 'my_cpu', name: 'Intel Core i7-9700', part: '8 jader / 8 vláken, 3,0 / 4,7 GHz, 12 MB L3, 65 W, UHD 630, sSpec SRG13 (stepping R0)',
+    qty: 1, dims: [37.5, 37.5, 4.4], dimsSrc: 'ověřeno: Intel ARK (pouzdro 37,5 × 37,5 mm); výška a plocha IHS odhad', model: { kind: 'cpu', marking: ['INTEL® CORE™', 'i7-9700', 'SRG13 3.00GHZ'], ihs: [33.5, 33.5], sub: 1.15 },
+    note: 'CPUID 906ED = jediný sSpec SRG13. Má integrovanou grafiku UHD 630 (monitor ale jede z RTX).',
+  },
+  {
+    id: 'my_cooler', name: 'Boxový chladič Intel E97379-003', part: 'Hliníkový radiální chladič s 90mm ventilátorem 4 pin PWM, push-pin úchyty 75 × 75 mm (dodáván k i7-9700 BOX)',
+    qty: 1, dims: [95, 95, 48.7], dimsSrc: 'odhad: výška 48,7 mm (Galaxus), průměr ~95 mm; model chladiče je ODHAD', model: { kind: 'boxCooler', core: 'alu' },
+    note: 'ODHAD – chladič software nezjistí. Pokud máš věžový chladič, oprav v MujPC_odhady.md.',
+  },
+  {
+    id: 'my_ram', name: 'Kingston HyperX Fury 8 GB DDR4-2666 CL16', part: 'KHX2666C16/8G (pravděpodobně HX426C16FB2/8, černý chladič), 1Rx8, 1,2 V; 4 kusy = 32 GB dual channel',
+    qty: 4, dims: [133.35, 34.04, 7.08], dimsSrc: 'ověřeno: Kingston datasheet HX426C16FB2K2/16', model: { kind: 'udimm', marking: ['HyperX', 'FURY', 'HX426C16FB2/8 · 8GB DDR4-2666 CL16'] },
+    note: 'SPD kód je stejný pro černou, bílou i červenou verzi (FB/FW/FR) – barva chladiče je odhad.',
+  },
+  {
+    id: 'my_gpu', name: 'ASUS Dual GeForce RTX 3060 Ti OC 8 GB GDDR6X', part: 'DUAL-RTX3060TI-O8GD6X: GA104, 8 GB GDDR6X 19 Gb/s, boost 1 710 MHz, 225 W, 2× 8 pin, HDMI 2.1 + 3× DP 1.4a',
+    qty: 1, dims: [230, 120, 42], dimsSrc: 'ověřeno: asus.com techspec (230 × 120 × 42 mm, 2 sloty)', model: { kind: 'gpu', fans: 2, fanD: 88, power: ['8pin', '8pin'], shroudColor: 0x1b1c1f, accent: 0x8a8f96, marking: ['ASUS', 'DUAL', 'GEFORCE RTX 3060 Ti'] },
+    note: 'Subsystém 1043:88AE + VBIOS 94.04.94.00.85 přesně odpovídají verzi OC (TechPowerUp VGA BIOS 254310). Běží v PCIe 3.0 x16. Pořadí výstupů na záslepce a poloha 8 pinů jsou odhad.',
+  },
+  {
+    id: 'my_ssd', name: 'Samsung 970 EVO Plus 500 GB', part: 'MZ-V7S500BW: NVMe M.2 2280, PCIe 3.0 x4, řadič Phoenix, 512 MB LPDDR4, V-NAND TLC',
+    qty: 1, dims: [80.15, 22.15, 2.38], dimsSrc: 'ověřeno: Samsung datasheet', model: { kind: 'm2ssd', marking: ['SAMSUNG', '970 EVO Plus', 'NVMe M.2 · 500GB · MZ-V7S500'] },
+  },
+  {
+    id: 'my_case', name: 'Skříň Endorfy Signum 300 Air (ODHAD)', part: 'ATX midi tower, síťované čelo, tvrzené sklo vlevo, 4× Stratus 120 PWM (3 vpředu, 1 vzadu)',
+    qty: 1, dims: [413, 216, 447], dimsSrc: 'odhad: model skříně odhadnut; rozměry Endorfy datasheet (H 447 × Š 216 × H 413 mm), kryt zdroje neověřen', model: { kind: 'atxCase', fans: { front: 3, rear: 1 }, shroudH: 95, marking: 'ENDORFY' },
+    note: 'ODHAD – skříň software nevidí. Vejde se do ní karta do 325 mm a chladič do 161 mm.',
+  },
+  {
+    id: 'my_psu', name: 'Zdroj Endorfy Vero L5 Bronze 600 W (ODHAD)', part: 'ATX, 80+ Bronze, nemodulární, 120mm ventilátor, 1× EPS 4+4, 2× PCIe 6+2, 5× SATA',
+    qty: 1, dims: [150, 140, 87], dimsSrc: 'odhad: model zdroje odhadnut; rozměry Datart (150 × 140 × 87 mm)', model: { kind: 'psu', marking: ['ENDORFY', 'VERO L5 600W 80+ BRONZE'], modular: false },
+    note: 'ODHAD – zdroj software nevidí. Karta potřebuje 2× 8 pin (ASUS doporučuje 750W zdroj; 600 W na i7-9700 + 3060 Ti v praxi stačí).',
+  },
+  {
+    id: 'my_monitor', name: 'ASUS VA249HE 23,8"', part: 'VA panel 1920 × 1080 @ 60 Hz, HDMI + VGA, stojan s náklonem (EDID AUS24C1, vyroben 2020)',
+    qty: 1, dims: [552.4, 396.9, 205], dimsSrc: 'ověřeno: asus.com techspec (se stojanem), hlava 552,4 × 334,2 × 56,6 mm (lcd-compare); rámeček a podstavec odhad', model: { kind: 'monitor', t: 56.6, panelH: 334.2, base: [205, 175], round: true, screen: [527, 296.5] },
+    note: 'EDID říká jen „VA249“ – stejný kód má i VA249NA (DVI místo HDMI), který vypadá stejně.',
+  },
+  {
+    id: 'my_keyboard', name: 'ASUS ROG Strix Flare', part: 'Mechanická klávesnice Cherry MX RGB (barva spínačů neznámá), full size, mediální klávesy, váleček hlasitosti, odznak ROG',
+    qty: 1, dims: [454, 230, 31], dimsSrc: 'ověřeno: 454 × 155 × 31 mm bez opěrky (Comfor, Mironet); opěrka ~75 mm odhad', model: { kind: 'keyboard', rest: 75, marking: 'ROG' },
+  },
+  {
+    id: 'my_mouse', name: 'USB herní myš (OEM 30FA:1440)', part: 'Drátová RGB herní myš, čínský OEM „INSTANT“ prodávaný pod různými značkami',
+    qty: 1, dims: [122, 68, 36], dimsSrc: 'odhad: typická myš stejného OEM (Anko 122 × 68 × 36 mm)', model: { kind: 'mouse' },
+    note: 'Značku a model najdeš na štítku na spodku myši.',
+  },
+  {
+    id: 'my_mic', name: 'USB mikrofon (C-Media 0D8C:0134)', part: 'USB kondenzátorový mikrofon na trojnožce typu TONOR TC-777 (Windows ho vidí jen jako mikrofon)',
+    qty: 1, dims: [150, 150, 260], dimsSrc: 'odhad: typický stolní USB mikrofon na trojnožce', model: { kind: 'usbMic' },
   },
 ];
 
@@ -107,6 +191,7 @@ export function withOffers(items, offers = OFFERS) {
 
 export const P100_PC_BOM = withOffers(P100_PC_ITEMS);
 export const NV1_BOM = withOffers(NV1_ITEMS);
+export const MY_PC_BOM = withOffers(MY_PC_ITEMS);
 
 /** Součet kusovníku v Kč: nejlevnější varianta, medián nabídek, maximum; missing = položky bez nabídky. */
 export function bomTotal(bom) {

@@ -9,6 +9,7 @@ import { ExternalLink, Tag, ShoppingCart } from 'lucide-react';
 import { disposeTree, declutterLabels } from './physics/common.js';
 import { buildModel, ruler } from './economic/models.js';
 import { packRows } from './economic/layout.js';
+import { createComposer } from './physics/viewQuality.js';
 import { bomTotal, fmtKc, fmtRange } from '../engine/economic/catalog.js';
 import { CHECKED, RATES } from '../engine/economic/offers.js';
 
@@ -69,7 +70,8 @@ export function EconomicView({ project }) {
     hoverBox.visible = selBox.visible = false;
     scene.add(hoverBox, selBox);
 
-    const st = { renderer, labelRenderer, scene, camera, controls, content, key, hoverBox, selBox, pickables: [], labels: [], byId: new Map(), fly: null };
+    const q = createComposer(renderer, scene, camera, container.clientWidth, container.clientHeight);
+    const st = { renderer, labelRenderer, scene, camera, controls, content, key, q, hoverBox, selBox, pickables: [], labels: [], byId: new Map(), fly: null };
     three.current = st;
     if (import.meta.env.DEV) window.__eco = st; // dev: skrytý screenshot nástroj
 
@@ -114,7 +116,7 @@ export function EconomicView({ project }) {
         if (k >= 1) { st.fly = null; st.relabel = true; }
       }
       controls.update();
-      renderer.render(scene, camera);
+      q.render();
       labelRenderer.render(scene, camera);
       if (st.labels.length && (st.relabel || frame++ % 8 === 0)) { st.relabel = false; declutterLabels(st.labels, camera, container); }
     };
@@ -126,6 +128,7 @@ export function EconomicView({ project }) {
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      q.setSize(w, h);
       labelRenderer.setSize(w, h);
     });
     ro.observe(container);
@@ -137,6 +140,7 @@ export function EconomicView({ project }) {
       dom.removeEventListener('pointerdown', onDown);
       dom.removeEventListener('pointerup', onUp);
       controls.dispose();
+      q.composer.dispose();
       disposeTree(scene);
       scene.environment?.dispose();
       renderer.dispose();
@@ -209,6 +213,7 @@ export function EconomicView({ project }) {
     // světlo a stíny podle velikosti stolu, kamera na celý stůl
     const R = Math.max(width, depth) / 2 + 300;
     st.key.position.set(R * 0.6, R * 1.6, R * 0.9);
+    st.q.setRadius(R * 0.5);
     Object.assign(st.key.shadow.camera, { left: -R, right: R, top: R, bottom: -R, near: 10, far: R * 5 });
     st.key.shadow.camera.updateProjectionMatrix();
     // kamera shora zepředu (~38°): oddaluj, dokud se všechny rohy dílů nevejdou do záběru

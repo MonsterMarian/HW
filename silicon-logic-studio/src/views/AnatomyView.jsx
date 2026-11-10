@@ -99,7 +99,7 @@ export function AnatomyView({ project }) {
               <span className={`w-6 h-6 shrink-0 grid place-items-center rounded-full border text-[10px] font-bold ${on ? 'bg-(--accent-amber) border-(--accent-amber) text-(--bg-dark)' : 'border-gray-600 text-gray-300'}`}>{i + 1}</span>
               <span className="flex-1 min-w-0">
                 <span className="block font-sans font-semibold text-[12px] text-gray-200 truncate">{it.qty > 1 ? `${it.qty}× ` : ''}{it.name}</span>
-                <span className="block text-[10px] text-gray-500">{inFig ? `${it.dims.map((v) => v.toLocaleString('cs-CZ')).join(' × ')} mm` : 'mimo výkres (není na kartě)'}</span>
+                <span className="block text-[10px] text-gray-500">{inFig ? `${it.dims.map((v) => v.toLocaleString('cs-CZ')).join(' × ')} mm` : 'mimo výkres (periferie)'}</span>
               </span>
             </button>
           );

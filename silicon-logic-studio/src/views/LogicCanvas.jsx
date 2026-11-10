@@ -4,7 +4,8 @@ import { WireState } from '../engine/logicEngine';
 import { componentDims, NV1_CARD } from '../engine/boardLayout';
 import { THEME, signalStyle, fmtTime } from './canvas/theme';
 import { makeLayout, viewPos, setViewPos, isDevice, isBoxPart, isOffBoard, labelTag, routeOrtho, routeAround, tracePolyline } from './canvas/geometry';
-import { drawCard, drawPcbPart, drawSchematicDevice, liveRect, padButtons } from './canvas/boardDraw';
+import { drawCard, drawMyPcBoard, drawPcbPart, drawSchematicDevice, liveRect, padButtons } from './canvas/boardDraw';
+import { boardKindOf, myPcBoard } from '../engine/myPcLayout';
 import { pcbRoutes } from './canvas/pcbRoutes';
 
 const CHIP_PROFILES = {
@@ -1224,7 +1225,8 @@ export function LogicCanvas({
     const schematic = displayMode === 'schematic';
     const z = viewState.zoom;
     const comps = [...engine.components.values()];
-    const hasCard = !schematic && comps.some((c) => c.type === 'NV1_CORE');
+    const board = schematic ? null : boardKindOf(comps); // 'nv1' karta | 'mypc' deska B360-PLUS
+    const hasCard = board === 'nv1';
 
     ctx.save();
     ctx.clearRect(0, 0, width, height);
@@ -1260,6 +1262,7 @@ export function LogicCanvas({
     }
 
     if (hasCard) drawCard(ctx);
+    else if (board === 'mypc') drawMyPcBoard(ctx);
 
     // Spoje: ve schématu pravoúhle, na kartě měděné cesty (sběrnice tlustší), mimo kartu kabely
     const card = NV1_CARD;
@@ -1315,7 +1318,7 @@ export function LogicCanvas({
       ctx.restore();
     };
 
-    const routes = hasCard ? pcbRoutes(engine, (c) => layout.geom(c, primitiveSchematicPin), getPinPos) : null;
+    const routes = board ? pcbRoutes(engine, (c) => layout.geom(c, primitiveSchematicPin), getPinPos, board === 'mypc' ? myPcBoard() : undefined) : null;
 
     for (const wire of engine.wires) {
       const a = engine.components.get(wire.from.id);
@@ -1377,7 +1380,7 @@ export function LogicCanvas({
         painters.drawRealisticHardwarePCB(ctx, comp, isSelected, animTime);
       }
     };
-    for (const comp of comps) if (schematic || !isOffBoard(comp)) drawComp(comp);
+    for (const comp of comps) if (schematic || (!isOffBoard(comp) && !(board === 'mypc' && comp.type === 'MYPC_BOARD'))) drawComp(comp); // deska B360 = podklad
     cables.forEach(drawWire);
     if (!schematic) for (const comp of comps) if (isOffBoard(comp)) drawComp(comp);
 
@@ -1639,7 +1642,7 @@ export function LogicCanvas({
 
             {/* Depth Badge */}
             <span className="flex items-center px-3 border-l border-(--line) text-gray-500 whitespace-nowrap">
-              ÚROVEŇ&nbsp;<b className="text-(--accent-amber)">{hierarchyStack[hierarchyStack.length - 1].level || hierarchyStack.length}</b>&nbsp;/ 8
+              ÚROVEŇ&nbsp;<b className="text-(--accent-amber)">{hierarchyStack[hierarchyStack.length - 1].level || hierarchyStack.length}</b>&nbsp;/ 11
             </span>
           </div>
 

@@ -3,10 +3,12 @@
 
 import { NV1_BOARD } from './presets/nv1Board.js';
 import { PC_POWER } from './presets/pcPower.js';
+import { MY_PC_SYSTEM } from './presets/myPcSystem.js';
 
 export const PRESET_CIRCUITS = {
   nvidia_nv1: NV1_BOARD,
   ai_pc_power: PC_POWER,
+  my_pc: MY_PC_SYSTEM,
 
   mini_pc: {
     name: 'Mini 8-Bit Computer (CPU + ROM + ALU + CRT)',

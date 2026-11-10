@@ -1,7 +1,8 @@
 // Projekty, které aplikace založí po každém spuštění. Otevře se první z nich.
 import { NV1_BOARD } from './presets/nv1Board.js';
 import { PC_POWER } from './presets/pcPower.js';
-import { NV1_BOM, P100_PC_BOM } from './economic/catalog.js';
+import { MY_PC_SYSTEM } from './presets/myPcSystem.js';
+import { NV1_BOM, P100_PC_BOM, MY_PC_BOM } from './economic/catalog.js';
 
 export const PROJECTS = [
   {
@@ -21,9 +22,19 @@ export const PROJECTS = [
     subtitle: 'Sestava z videa Junk GPU Lab: 32 GB HBM2 pro Qwen 27B v llama.cpp',
     circuit: PC_POWER, // schéma napájení (simulované); PCB ani křemík zatím ne
     bom: P100_PC_BOM,
-    views: ['schematic', 'economic', 'anatomy'],
+    views: ['schematic', 'physics', 'economic', 'anatomy'],
     defaultView: 'economic',
     source: { label: 'Video: Qwen 27B at 67 tok/s on Two $78 Tesla P100s', url: 'https://www.youtube.com/watch?v=JvLUoJYUjDM' },
+  },
+  {
+    id: 'mypc',
+    tab: 'MŮJ PC',
+    title: 'Můj PC · i7-9700 + RTX 3060 Ti',
+    subtitle: 'ASUS PRIME B360-PLUS, 32 GB DDR4, Samsung 970 EVO Plus – zjištěno diagnostikou Windows 10. 11. 2026',
+    circuit: MY_PC_SYSTEM, // schéma celého PC (simulované), dvojklik = vnitřek dílů až k atomům
+    bom: MY_PC_BOM,
+    views: ['schematic', 'hardware', 'physics', 'economic', 'anatomy'],
+    defaultView: 'economic',
   },
 ];
 

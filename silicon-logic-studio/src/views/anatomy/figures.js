@@ -62,6 +62,7 @@ export function pcParts() {
   P.push(part('case_fan', 'fan0', [200, 20, 0, 120, 120, 25], [80, 0, 0], { round: true, orient: FLAT }));
   P.push(part('case_fan', 'fan1', [200, 160, 0, 120, 120, 25], [80, 0, 0], { round: true, orient: FLAT }));
   P.push(part('paste', 'paste', [345, 400, 0, 15, 92, 15], [80, 0, 0], { round: 'x', orient: FLAT_TURNED }));
+  for (const p of P) if (p.id === 'dell_t5810') p.box = true; // skříň ve 3D jen jako desky
   return {
     parts: P,
     shell: { W, D, H },
@@ -69,6 +70,33 @@ export function pcParts() {
     clash: { y0: PCIE_FULL_LENGTH, y1: 415, note: `P100 + kryt + 9733 ≈ 411 mm > ${PCIE_FULL_LENGTH} mm (plná délka PCIe)` },
   };
 }
+
+/**
+ * Můj PC: skříň (odhad Endorfy Signum 300 Air) v řezu, deska ASUS PRIME B360-PLUS na stěně, díly na pozicích z manuálu.
+ * Bod desky (v od horní hrany, u od zadní hrany, výška nad PCB) → sestava: x = 11,6 + výška, y = 15 + u, z = 422 − v.
+ */
+export function myPcParts() {
+  const W = 216, D = 413, H = 447;
+  const top = 422, by = 15, bx = 10; // horní hrana desky, zadní hrana desky, PCB na distančních sloupcích 6 mm
+  const z = (v) => top - v, y = (u) => by + u;
+  const BOARD = ['-z', 'x', '-y']; // osy modelu desky (v, nahoru, −u) → sestava
+  const P = [];
+  P.push(part('my_case', 'floor', [0, 0, 0, W, D, 3], [0, 0, 0], { tone: 'mid', box: true }));
+  P.push(part('my_case', 'rear', [0, 0, 3, W, 3, H - 3], [0, 0, 0], { tone: 'mid', box: true }));
+  P.push(part('my_case', 'tray', [0, 3, 3, 4, D - 3, H - 3], [0, 0, 0], { tone: 'mid', box: true }));
+  P.push(part('my_mobo', 'board', [bx, by, top - 305, 36, 221, 305], [0, 0, 0], { orient: BOARD }));
+  P.push(part('my_cpu', 'cpu', [bx + 4.5, y(108) - 18.75, z(86) - 18.75, 4.4, 37.5, 37.5], [140, 0, 40], { orient: BOARD }));
+  P.push(part('my_cooler', 'cooler', [bx + 8.9, y(108) - 47.5, z(86) - 47.5, 48.7, 95, 95], [220, 0, 60], { orient: BOARD }));
+  [164.2, 174, 183, 192.8].forEach((u, i) => P.push(part('my_ram', `ram${i}`, [bx + 4.6, y(u) - 3.54, z(82.7) - 66.7, 34.04, 7.08, 133.35], [150 + i * 20, 0, 30 + i * 10], { orient: ['z', 'y', '-x'] })));
+  // grafika v PCIEX16_1 (v 182,8), chladičem dolů; SSD v M.2_2 (v 225, u 46–124) pod ní
+  P.push(part('my_gpu', 'gpu', [bx + 4.6, 4, z(182.8) - 39, 120, 230, 42], [260, 40, -30], { orient: ['y', '-z', '-x'] }));
+  P.push(part('my_ssd', 'ssd', [bx + 3.6, y(44), z(225) - 11, 2.38, 80.15, 22.15], [320, 0, -80], { orient: ['y', 'x', '-z'] }));
+  // zdroj dole vzadu ventilátorem dolů (kryt zdroje není kreslený)
+  P.push(part('my_psu', 'psu', [33, 6, 3, 150, 140, 87], [0, -40, -20], { orient: ['x', '-z', 'y'] }));
+  return { parts: P, shell: { W, D, H }, camera: [0.75, 0.5, -0.8] }; // 3D: pohled zepředu přes okno (three −Z = dopředu)
+}
+
+export const ASSEMBLIES = { p100pc: pcParts, mypc: myPcParts }; // projekty se sestavou ve skříni
 
 /** Karta NV1: deska podle PCB pohledu (3,7 px/mm), součástky na skutečných pozicích. */
 export function nv1Parts(circuit) {
@@ -116,8 +144,8 @@ function balloons(anchors, W) {
  * Vrací { svg, items: [{ id, n }] } – n = číslo popisku.
  */
 export function anatomyFigure(project, { explode = 0, focus = null } = {}) {
-  const isPc = project.id === 'p100pc';
-  const model = isPc ? pcParts() : nv1Parts(project.circuit);
+  const isPc = project.id in ASSEMBLIES;
+  const model = isPc ? ASSEMBLIES[project.id]() : nv1Parts(project.circuit);
   const bomIndex = new Map(project.bom.map((it, i) => [it.id, i + 1]));
   const off = (p) => p.b.slice(0, 3).map((v, k) => v + p.explode[k] * explode);
 
@@ -155,7 +183,10 @@ export function anatomyFigure(project, { explode = 0, focus = null } = {}) {
     const c = (x, y, z) => iso([x, y, z], P);
     const edges = [[[W, 0, 0], [W, D, 0]], [[W, D, 0], [0, D, 0]], [[W, 0, H], [W, D, H]], [[W, D, H], [0, D, H]], [[0, D, H], [0, 0, H]], [[0, 0, H], [W, 0, H]], [[W, 0, 0], [W, 0, H]], [[W, D, 0], [W, D, H]], [[0, D, 0], [0, D, H]]];
     body.push(edges.map(([a, b]) => lineSvg(pathOf([c(...a), c(...b)]), { tone: 'mid', dashed: true })).join(''));
+  }
+  if (model.clash) {
     // limit plné délky PCIe a kolize karet s krytem a ventilátorem
+    const c = (x, y, z) => iso([x, y, z], P);
     const y = model.clash.y0;
     body.push(lineSvg(pathOf([c(12, y, 40), c(12, y, 200), c(170, y, 200), c(170, y, 40)], true), { tone: 'red', dashed: true }));
     if (explode < 0.05) {

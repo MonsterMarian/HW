@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { std } from '../physics/common.js';
 import { buildModel } from '../economic/models.js';
-import { pcParts, nv1Parts } from './figures.js';
+import { ASSEMBLIES, nv1Parts } from './figures.js';
 
 // osy sestavy (x od desky, y dopředu, z nahoru) → three.js (Y nahoru): X = x, Y = z, Z = -y
 const AXIS = { x: [1, 0, 0], y: [0, 0, -1], z: [0, 1, 0] };
@@ -37,15 +37,15 @@ function boxMesh([x, y, z, w, d, h], mat) {
 
 /** Sestaví scénu: { root, parts: [{ id, group, base, explode }], clash } */
 export function buildAnatomyScene(project) {
-  const isPc = project.id === 'p100pc';
-  const model = isPc ? pcParts() : nv1Parts(project.circuit);
+  const isPc = project.id in ASSEMBLIES;
+  const model = isPc ? ASSEMBLIES[project.id]() : nv1Parts(project.circuit);
   const bom = new Map(project.bom.map((it) => [it.id, it]));
   const root = new THREE.Group();
   const parts = [];
   for (const p of model.parts) {
     const g = new THREE.Group();
     const item = bom.get(p.id);
-    if (p.id === 'dell_t5810') g.add(boxMesh(p.b, (CHASSIS_MAT[p.key] || CHASSIS_MAT.tray)()));
+    if (p.box) g.add(boxMesh(p.b, (CHASSIS_MAT[p.key] || CHASSIS_MAT.tray)())); // skříň = jednoduché desky
     else if (item) {
       const m = buildModel(p.freqHz ? { ...item, model: { ...item.model, freqHz: p.freqHz } } : item);
       place(m, p.orient || ['x', 'z', '-y'], p.b);
@@ -63,6 +63,8 @@ export function buildAnatomyScene(project) {
     const edges = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: 0x7a7d82, dashSize: 8, gapSize: 6 }));
     edges.computeLineDistances();
     root.add(edges);
+  }
+  if (model.clash) {
     // limit plné délky PCIe a přesah krytu + ventilátoru za něj (jen ve složeném stavu)
     clash = new THREE.Group();
     const red = new THREE.MeshBasicMaterial({ color: 0xde3b3d, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide });
@@ -72,7 +74,8 @@ export function buildAnatomyScene(project) {
       if (y0 + d > model.clash.y0) clash.add(boxMesh([x0, Math.max(y0, model.clash.y0), z0, w, y0 + d - Math.max(y0, model.clash.y0), h], new THREE.MeshBasicMaterial({ color: 0xde3b3d, transparent: true, opacity: 0.28, depthWrite: false })));
     }
     root.add(clash);
-  } else {
+  }
+  if (!isPc) {
     // deska karty NV1 z obrysu PCB pohledu
     const shape = new THREE.Shape(model.card.map(([x, y]) => new THREE.Vector2(x, -y))); // po otočení: -y tvaru → Z = -y sestavy
     const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.6, bevelEnabled: false });
@@ -82,6 +85,6 @@ export function buildAnatomyScene(project) {
     root.add(pcb);
   }
   root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  return { root, parts, clash };
+  return { root, parts, clash, camera: model.camera || [0.75, 0.55, 0.75] };
 }
 

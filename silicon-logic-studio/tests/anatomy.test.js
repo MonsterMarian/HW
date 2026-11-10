@@ -3,7 +3,14 @@ import assert from 'node:assert/strict';
 import { PROJECTS } from '../src/engine/projects.js';
 import { anatomyFigure } from '../src/views/anatomy/figures.js';
 
-const [nv1, pc] = PROJECTS;
+const [nv1, pc, my] = PROJECTS;
+
+test('ANATOMY: můj PC – díly ve skříni, periferie mimo výkres, bez kolize', () => {
+  const { items, offFigure, svg } = anatomyFigure(my);
+  assert.deepEqual(offFigure, ['my_monitor', 'my_keyboard', 'my_mouse', 'my_mic']);
+  assert.equal(items.length, my.bom.length - 4);
+  assert.doesNotMatch(svg, /plná délka PCIe/);
+});
 
 test('ANATOMY: oba projekty mají výkres bez NaN, i rozložený', () => {
   for (const p of PROJECTS) {

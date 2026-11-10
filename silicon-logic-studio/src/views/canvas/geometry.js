@@ -7,7 +7,7 @@ import { componentDims, hardwarePinPos, isBracketPart } from '../../engine/board
 
 export const isDevice = (comp) => !!DEVICES[comp.type];
 export const deviceMeta = (comp) => DEVICES[comp.type]?.meta || null;
-export const isOffBoard = (comp) => !!DEVICES[comp.type]?.meta?.offBoard;
+export const isOffBoard = (comp) => !!DEVICES[comp.type]?.meta?.offBoard || !!comp.offBoard; // comp.offBoard: spínač/ukazatel mimo desku
 // Primitiva s vlastní schematickou značkou (ostatní se ve schématu kreslí jako box s piny)
 const SYMBOL_TYPES = new Set(['AND', 'NAND', 'OR', 'NOR', 'XOR', 'NOT', 'D_FF', 'INPUT', 'CLOCK', 'PROBE', 'VIRTUAL_SCREEN', 'SEVEN_SEGMENT', 'NMOS', 'PMOS', 'VDD', 'GND', 'LAYER', 'ATOM']);
 /** Box s piny: skutečné součástky karty, funkční bloky čipu a ve schématu i registry, sčítačky, konstanty… */
@@ -172,6 +172,9 @@ export function makeLayout(engine, mode) {
         pins.set(pin, { x, y, side });
       });
     }
+    // DPS: zařízení se skutečnými místy vývodů (konektory desky, patice, slot) je má pevně, ne rozprostřené po stranách
+    const hw = mode === 'hardware' && DEVICES[comp.type]?.hwPins;
+    if (hw) for (const [pin, [fx, fy, side]] of Object.entries(hw)) if (pins.has(pin)) pins.set(pin, { x: pos.x + w * fx, y: pos.y + h * fy, side });
     return { x: pos.x, y: pos.y, w, h, header, pins, sides: bySide };
   }
 

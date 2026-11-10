@@ -5,12 +5,12 @@
 // NVIDIA Quadro K620 datasheet 75509, GM107 (Tom's Hardware, AnandTech). Neověřené údaje mají v popisku "neověřeno".
 // Bloky (PC_BLOCK) jsou popisné; "příklad" = skutečný simulovaný prvek, kterým vede cesta dál až k atomům.
 const Z = 'Z';
-const c = (id, type, label, x, y, extra = {}) => ({ id, type, label, x, y, inputs: {}, outputs: {}, ...extra });
+export const c = (id, type, label, x, y, extra = {}) => ({ id, type, label, x, y, inputs: {}, outputs: {}, ...extra });
 const pins = (names) => Object.fromEntries(names.map((n) => [n, Z]));
-const blk = (id, label, x, y, ins, outs, note, w = 190, h = 90, extra = {}) => c(id, 'PC_BLOCK', label, x, y, { inputs: pins(ins), outputs: pins(outs), note, w, h, ...extra });
-const inp = (id, label, x, y) => c(id, 'INPUT', label, x, y, { outputs: { out: 0 } });
-const probe = (id, label, x, y) => c(id, 'PROBE', label, x, y, { inputs: { in: Z } });
-const w = (from, to) => {
+export const blk = (id, label, x, y, ins, outs, note, w = 190, h = 90, extra = {}) => c(id, 'PC_BLOCK', label, x, y, { inputs: pins(ins), outputs: pins(outs), note, w, h, ...extra });
+export const inp = (id, label, x, y) => c(id, 'INPUT', label, x, y, { outputs: { out: 0 } });
+export const probe = (id, label, x, y) => c(id, 'PROBE', label, x, y, { inputs: { in: Z } });
+export const w = (from, to) => {
   const [fi, ...fp] = from.split('.');
   const [ti, ...tp] = to.split('.');
   return { from: { id: fi, pin: fp.join('.') }, to: { id: ti, pin: tp.join('.') } };
@@ -22,7 +22,7 @@ export const PC_DEEP_SUBCIRCUITS = {};
 const def = (key, level, sub) => { PC_DEEP_SUBCIRCUITS[key] = { key, level, ...sub }; };
 
 // Příklad sčítačky: 3 vstupy → FULL_ADDER → součet a přenos (dvojklikem dál na hradla, CMOS, tranzistor, atomy)
-const adderExample = (label, x, y) => ({
+export const adderExample = (label, x, y) => ({
   components: [
     inp('ex_a', 'A', x, y), inp('ex_b', 'B', x, y + 70), inp('ex_c', 'PŘENOS VSTUP', x + 100, y),
     c('ex_fa', 'FULL_ADDER', label, x + 220, y),

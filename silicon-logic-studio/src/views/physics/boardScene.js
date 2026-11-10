@@ -266,6 +266,7 @@ export function buildBoardScene(ctx) {
   desk.rotation.x = -Math.PI / 2;
   desk.position.y = hasCard ? DESK_Y : -2.2;
   desk.receiveShadow = true;
+  desk.userData.desk = true; // stůl se nepočítá do záběru kamery
 
   // Frame the camera on everything but the desk
   const box = new THREE.Box3().setFromObject(group);

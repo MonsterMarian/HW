@@ -26,7 +26,7 @@ const clk = (e, id, level) => { e.components.get(id).manualState = level; e.prop
 describe('subcircuit data', () => {
   for (const sub of canonical) {
     it(`${sub.key}: valid netlist, readable layout, settles`, () => {
-      assert.ok(Number.isInteger(sub.level) && sub.level >= 2 && sub.level <= 8, 'level');
+      assert.ok(Number.isInteger(sub.level) && sub.level >= 2 && sub.level <= 11, 'level');
       assert.ok(sub.name && sub.subtitle, 'name/subtitle');
       const e = load(sub.key);
       for (const wire of sub.wires) {
@@ -68,7 +68,10 @@ describe('drill-down tree', () => {
           continue;
         }
         assert.ok(sub.level > level, `${comp.id}: level must grow (${level} -> ${sub.level})`);
-        if (reached.has(sub.key)) continue;
+        // tentýž obvod pod jiným výrobním procesem (Intel 14 nm / Samsung 8N …) vede na jiné tranzistory – projít znovu
+        const proc = [...stack].reverse().map((e) => H[e.key]?.process).find(Boolean) || '';
+        if (reached.has(`${sub.key}|${proc}`)) continue;
+        reached.set(`${sub.key}|${proc}`, sub.level);
         reached.set(sub.key, sub.level);
         visit(sub, [...stack, { key: sub.key, level: sub.level }]);
       }
@@ -102,7 +105,15 @@ describe('drill-down tree', () => {
       stack = [...stack, { key: sub.key, level: sub.level }];
     }
     assert.deepEqual(path, ['L2 nv1_die', 'L3 crtc', 'L4 REGISTER_8BIT', 'L5 MUX', 'L6 NAND', 'L7 nmos_transistor', 'L8 sio2_lattice']);
-    assert.equal(findSubcircuit(circuit.components[0], stack), null, 'atoms are terminal');
+    // pod atomy: atom Si → jádro ²⁸Si → proton → kvarky (elementární, konec)
+    for (const [id, key] of [['si_atom', 'atom_si'], ['nucleus', 'nucleus_si'], ['protons', 'proton']]) {
+      const sub = findSubcircuit(circuit.components.find((cmp) => cmp.id === id), stack);
+      assert.equal(sub?.key, key, id);
+      circuit = sub;
+      stack = [...stack, { key: sub.key, level: sub.level }];
+    }
+    assert.equal(stack.at(-1).level, 11);
+    assert.ok(circuit.components.every((cmp) => findSubcircuit(cmp, stack) === null), 'kvarky jsou elementární');
   });
 
   it('explicit drill wins, ancestors and shallower levels are never returned', () => {

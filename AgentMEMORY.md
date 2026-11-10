@@ -81,6 +81,48 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - CEM 3.0: B1 je 45,65 mm od zadní hrany desky (modely karet opraveny). Dell PSU má jen 2× 6pin (přes extended card).
 - Zkrat při PCIe kabelu do EPS: X stáhne i druhou kartu (společná zem desky přes sloty) – fyzikálně správně.
 
+## Projekt MŮJ PC (2026-11-10, 1. fáze)
+- Uživatelův vlastní PC z diagnostiky Windows: `projects.js` id `mypc` (3. karta), `circuit: null`, pohledy ECONOMIC + ANATOMY.
+  Kusovník `MY_PC_ITEMS` + `B360_LAYOUT` (polohy z manuálu E13832 ±2 mm) v catalog.js, nabídky `my_*` v offers.js.
+- Odhady (skříň Endorfy Signum 300 Air, zdroj Vero L5 600 W, chladič E97379-003, myš, mikrofon) jsou v `../MujPC_odhady.md`
+  – uživatel je chce časem opravit. USB audio 0D8C:0134 je MIKROFON (jen záznamový endpoint), ne sluchátka.
+- Nové modely v models.js: atxBoard (osa u = −Z, jinak by deska byla zrcadlově!), atxCase, gpu, udimm, m2ssd, boxCooler,
+  keyboard (KB_ROWS 104 kláves), monitor, mouse, usbMic; psu/fan120/cpu dostaly parametry (marking, modular, ihs).
+- ANATOMY: `ASSEMBLIES` ve figures.js (p100pc, mypc), `p.box` = deska skříně, `model.camera` = směr kamery 3D (mypc zepředu).
+- 2. fáze HOTOVÁ: L1 `presets/myPcSystem.js` (simulované: tlačítko → Super I/O → PS_ON# → zdroj → PWR_OK → VRM → PLTRST# →
+  POST jen s RAM → DMI/PCIe → GPU (oba 8 piny) → HDMI → monitor; M.2_2, USB, ventilátory), modely `devices/myPc.js`
+  (MYPC_*), L2–L4 `engine/myPcSubcircuits.js` (deska, B360, cfl_die, cfl_core, GPU deska, GA104, ampere_sm, zdroj, SSD,
+  Phoenix, Fury modul, DDR4 8Gb x8 → ddr4_cells, ventilátor, monitor, klávesnice s maticí z hradel, myš, mikrofon).
+  Helpery c/blk/inp/probe/w/adderExample jsou exportované z pcDeepSubcircuits.js; `nameNets` z pcBuild.js.
+  Popisek sítě s napětím musí začínat „+číslo“ (theme.js), proto VCORE = '+1,2V VCORE'. Testy `tests/my_pc.test.js`.
+- „Až úplně dolů“: knihovna simulovaných buněk `cell_*` v myPcSubcircuits.js (buck z NMOS, serdes 4:1, sram latch, decoder,
+  match, arbiter, mac, parity, lt komparátor/PWM, tft pixel, aps pixel, quad, toggle, pwrbtn) + tabulka `DRILLS` na konci
+  souboru = drill každého funkčního PC_BLOCKu (i na NV1 obvody: pci_target, sigma_delta, eprom_array, crtc, ramdac_datapath,
+  dram_cell_array). Bez drillu jen pasivní díly (seznam PASSIVE v testu). Pravidlo: L5 obvod smí obsahovat jen základní
+  hradla / tranzistory (MUX ani D_FF v L5 = slepá ulička, nemají *_cmos); L4 smí D_FF/MUX/FULL_ADDER.
+- PCB + DIE 3D pro MŮJ PC: `engine/myPcLayout.js` (MB obdélník 221 × 305 mm, u → x, v → y; ON_BOARD, HW_POS = x/y v presetu,
+  HW_PINS → `hwPins` zařízení = pevné vývody v pohledu PCB, `myPcBoard()` pro router, `boardKindOf`). 2D: `drawMyPcBoard`
+  (boardDraw.js, z B360_LAYOUT), pouzdra LGA1151/UDIMM/PCIe x16/M.2 2280, deska `mb` se nekreslí (je podklad, klik = drill).
+  `comp.offBoard` (spínač, sondy) = kabel. 3D L1: `views/physics/myPcScene.js` (modely z ECONOMIC; grafika natočená makeBasis,
+  kabely jen mimo desku, k sondám ne). `sub.scene` ('board' u L2 zařízení, 'die' u čipů L3) přebíjí druh 3D scény podle úrovně.
+- Uživatel: „vymýšlíš“ → tranzistory podle skutečného procesu: `sub.process` nejbližšího předka vybere `${NMOS|PMOS}_${process}`
+  (findSubcircuit, processOf): cfl_die/b360_pch 'intel14' (IEDM 2014 + 14++ CPP 84), ga104_die 'samsung8n', cell_buck 'power'
+  (trench se shield gate), cell_tft 'tft' (a-Si:H), L2 mého PC 'unknown' (princip, proces nezveřejněn); NV1 bez procesu = 0,5 µm.
+  Data `engine/processSubcircuits.js` (L7 + L8 hkmg/sio2_gate/asi_sinx), pod atomy `engine/particleSubcircuits.js`
+  (L9 atom_X, L10 nucleus_X, L11 proton/neutron = konec). MAX_LEVEL 11. 3D `views/physics/deepScenes.js` (finfet v jednotkách
+  10 nm, trench µm, planar, lattice Å, atom, nucleus fm, nucleon). Test procházení stromu dedupluje podle (klíč, proces).
+- 3D čitelnost (`views/physics/viewQuality.js`): GTAO + OutputPass kompozitor ve všech 3D pohledech (DIE 3D, ECONOMIC,
+  ANATOMY), v DIE 3D obrysy hran (`addEdges`) a `fitView` (kamera podle rohů obálky, světla/stíny/mlha/mřížka/near/far podle
+  velikosti scény; stůl `userData.desk` se nepočítá). Moderní čipy mého PC = `scene: 'flipdie'` → `buildFlipDie` (substrát,
+  BGA/LGA, die bez drátků; PACKAGES v siliconScenes.js, rozměry die mimo i7/GA104 odhad). three 0.187 nemá PCFSoftShadowMap.
+- AI PC až dolů: `engine/aiPcDepth.js` (DRILLS bloků, gm107_die L4, scene/process marks: gp100 tsmc16, xeon intel22, gm107
+  tsmc28, ddr4_cells dram), L1 3D `views/physics/aiPcScene.js` (sestava z ANATOMY 3D namapovaná na součástky PC_POWER).
+  Nové L7: intel22, tsmc16, tsmc28 (planar), NMOS_dram (BCAT, planar recess), NMOS_vnand (scene 'vnand'); L8 ono_lattice,
+  cu_lattice; cell_nand (V-NAND řetězec), cell_eeprom (SPD/EDID/BIOS). Měď: CONN_*/RELAY + COPPER_BLOCKS → cu_lattice → atom_cu.
+  Pouzdra flipdie: xeon (LGA2011-3), gp100 (CoWoS + 4× HBM2), gm107, ddr4_chip. Testy tests/ai_pc.test.js.
+- PAST: v PowerShellu `'a' + $x + 'b', 'c'` – čárka váže víc než + → rozbité JSON kroků pro shot.cjs (Electron pak visí).
+- PAST: PowerShell `Get-Content -Raw` čte UTF-8 bez BOM jako cp1250 → rozbije diakritiku. Používat [IO.File]::ReadAllText.
+
 ## Další kroky / známé vady
 - PC projekt nemá schéma/PCB/3D simulaci, jen ECONOMIC. Nabídky stárnou (inzeráty z Bazoše zmizí) – při další
   práci přerešeršovat. eBay/Alza/Heureka blokují stahování (403): jejich ceny jsou jen z výpisu vyhledávače.
@@ -124,3 +166,9 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - 2026-11-10 16:26 — „rozhodni jak ve videu, pokračuj v neověřeném“ → napájení G1 z Dellu (2× 6 pin), SATA SSD 870 EVO
   místo NVMe (nabídky, model, L3), K620 L3, IHS Xeonu podle Intel TMSDG; 151/151 testů.
 - 2026-11-10 19:56 — „detailní dokument o dnešní práci + vše na GitHub“ → docs/PRACOVNI_DENIK_2026-11-10.md, odkaz v README.
+- 2026-11-10 — „diagnóza tohoto PC, nový projekt můj PC: ekonomika + přesné 3D modely, schémata až potom“ → projekt mypc,
+  4 rešerše (GPU/CPU, deska/RAM/SSD, periferie, skříň/zdroj), 12 položek s nabídkami, ANATOMY sestava, MujPC_odhady.md; 153/153 testů.
+- 2026-11-10 — „celé schéma každé komponenty“ → 3 rešerše (deska/B360/CPU, GPU/GA104/monitor, zdroj/SSD/RAM/periferie),
+  L1 simulované schéma PC + 20 podobvodů L2–L4 navázaných na hradla/tranzistory/atomy; 179/179 testů.
+- 2026-11-10 — „pokračuj, ještě to není až úplně dolů“ → 15 simulovaných buněk, každý funkční blok mého PC vede až na atomy
+  (test prochází celý strom); 195/195 testů.

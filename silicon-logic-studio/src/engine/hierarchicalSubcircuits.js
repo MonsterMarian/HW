@@ -1,5 +1,9 @@
 import { PC_SUBCIRCUITS } from './pcSubcircuits.js';
 import { PC_DEEP_SUBCIRCUITS, derivePcSubcircuits } from './pcDeepSubcircuits.js';
+import { MY_PC_SUBCIRCUITS } from './myPcSubcircuits.js';
+import { PARTICLE_SUBCIRCUITS } from './particleSubcircuits.js';
+import { PROCESS_SUBCIRCUITS } from './processSubcircuits.js';
+import { applyAiPcDepth } from './aiPcDepth.js';
 // SILICON // LOGIC STUDIO - HIERARCHICAL DRILL-DOWN
 //
 // Every level is a real circuit that the engine (logicEngine.js) simulates, built the way the hardware is built:
@@ -1462,7 +1466,34 @@ H.adder_pipe = H.FULL_ADDER; // used by components/Nv1DiagnosticModal.jsx
 
 // Parts with nothing (simulable) inside: I/O, sources, wiring, connectors, off-board equipment, layers, atoms
 // AI PC: díly napájení (pcSubcircuits.js)
-Object.assign(H, PC_SUBCIRCUITS, PC_DEEP_SUBCIRCUITS, derivePcSubcircuits(H));
+Object.assign(H, PC_SUBCIRCUITS, PC_DEEP_SUBCIRCUITS, derivePcSubcircuits(H), MY_PC_SUBCIRCUITS, PARTICLE_SUBCIRCUITS, PROCESS_SUBCIRCUITS);
+applyAiPcDepth(H); // AI PC: bloky až dolů, procesy čipů, druhy 3D scén
+// měď: konektory, kabely, vodiče, vinutí a relé vedou na krystal mědi → atom Cu → jádro → kvarky
+const COPPER_TYPES = new Set(['CONN_PCIE8', 'CONN_EPS8', 'CONN_SATA', 'CONN_ATX24', 'CONN_FAN4', 'RELAY']);
+const COPPER_BLOCKS = {
+  mypc_board: ['atx'], mypc_gpu_board: ['p8a', 'p8b'], mypc_psu: ['cab'], fury_module: ['edge'], evo_plus_ssd: ['m2'], pwm_fan_inside: ['stator'],
+  mypc_keyboard: ['hub'], cell_buck: ['lc'], cell_serdes: ['pair'], p100_board: ['eps', 'edge'], atx_psu_inside: ['mod'], psu_primary: ['tank'],
+  psu_secondary: ['out'], psu_standby: ['tr'], rdimm_module: ['edge'],
+};
+for (const sub of new Set(Object.values(H))) {
+  const blocks = COPPER_BLOCKS[sub.key] || [];
+  for (const cmp of sub.components || []) if (!cmp.drill && (COPPER_TYPES.has(cmp.type) || blocks.includes(cmp.id))) cmp.drill = 'cu_lattice';
+}
+// pod atomy: atomy rozhraní Si/SiO₂ vedou do obalu a jádra (L9–L11)
+for (const cmp of H.sio2_lattice.components) {
+  if (cmp.id === 'si_atom') cmp.drill = 'atom_si';
+  if (cmp.id === 'o_atom') cmp.drill = 'atom_o';
+}
+const MAX_LEVEL = 11; // kvarky
+
+/** Výrobní proces nejbližšího předka (cfl_die → 'intel14', ga104_die → 'samsung8n' …), nebo null (karta NV1 = 0,5 µm). */
+function processOf(stack) {
+  for (let i = (stack || []).length - 1; i >= 0; i--) {
+    const p = H[stack[i].key]?.process;
+    if (p) return p;
+  }
+  return null;
+}
 
 export const TERMINAL_TYPES = new Set([
   'INPUT', 'OUTPUT', 'PROBE', 'CONSTANT', 'CLOCK', 'VDD', 'GND', 'LAYER', 'ATOM', 'TUNNEL_IN', 'TUNNEL_OUT',
@@ -1492,10 +1523,13 @@ export function currentLevelOf(stack) {
 export function findSubcircuit(comp, currentStack = null) {
   if (!comp) return null;
   const currentLevel = currentLevelOf(currentStack);
-  if (currentLevel >= 8) return null; // atoms: physical limit
+  if (currentLevel >= MAX_LEVEL) return null; // kvarky: elementární částice
 
   const ancestors = new Set((currentStack || []).map((e) => e.key).filter(Boolean));
   const keys = [comp.drill];
+  // tranzistor podle skutečného procesu čipu, ve kterém leží (FinFET Intel 14 nm, Samsung 8N, výkonový MOSFET …)
+  const proc = !comp.drill && (comp.type === 'NMOS' || comp.type === 'PMOS') && processOf(currentStack);
+  if (proc) keys.push(H[`${comp.type}_${proc}`] ? `${comp.type}_${proc}` : `${comp.type}_unknown`);
   if (!TERMINAL_TYPES.has(comp.type)) keys.push(comp.id, comp.type, `${comp.type}_cmos`);
 
   for (const key of keys) {

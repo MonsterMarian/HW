@@ -7,6 +7,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { disposeTree, declutterLabels } from '../physics/common.js';
 import { buildAnatomyScene } from './scene3d.js';
+import { createComposer } from '../physics/viewQuality.js';
 
 export function Anatomy3D({ project, explode, focus, onFocus }) {
   const ref = useRef(null);
@@ -41,7 +42,7 @@ export function Anatomy3D({ project, explode, focus, onFocus }) {
     key.shadow.mapSize.set(2048, 2048);
     scene.add(key, key.target);
 
-    const { root, parts, clash } = buildAnatomyScene(project);
+    const { root, parts, clash, camera: camDir } = buildAnatomyScene(project);
     scene.add(root);
     const box = new THREE.Box3().setFromObject(root);
     const size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
@@ -54,7 +55,7 @@ export function Anatomy3D({ project, explode, focus, onFocus }) {
     Object.assign(key.shadow.camera, { left: -R, right: R, top: R, bottom: -R, near: 1, far: R * 4 });
     key.position.copy(centre).add(new THREE.Vector3(R * 0.5, R * 1.2, R * 0.8));
     key.target.position.copy(centre);
-    camera.position.copy(centre).add(new THREE.Vector3(R * 0.75, R * 0.55, R * 0.75));
+    camera.position.copy(centre).add(new THREE.Vector3(...camDir).multiplyScalar(R));
     controls.target.copy(centre);
 
     // čísla dílů: jedno na položku kusovníku, u nejvyššího kusu
@@ -89,6 +90,8 @@ export function Anatomy3D({ project, explode, focus, onFocus }) {
     };
     renderer.domElement.addEventListener('pointermove', onMove);
 
+    const q = createComposer(renderer, scene, camera, el.clientWidth, el.clientHeight);
+    q.setRadius(R / 2);
     const st = { renderer, labels, scene, camera, controls, parts, clash, labelList, highlighted: null };
     three.current = st;
     if (import.meta.env.DEV) window.__an3d = st;
@@ -96,7 +99,7 @@ export function Anatomy3D({ project, explode, focus, onFocus }) {
     const loop = () => {
       raf = requestAnimationFrame(loop);
       controls.update();
-      renderer.render(scene, camera);
+      q.render();
       labels.render(scene, camera);
       if (frame++ % 8 === 0) declutterLabels(labelList, camera, el);
     };
@@ -106,6 +109,7 @@ export function Anatomy3D({ project, explode, focus, onFocus }) {
       camera.aspect = el.clientWidth / el.clientHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(el.clientWidth, el.clientHeight);
+      q.setSize(el.clientWidth, el.clientHeight);
       labels.setSize(el.clientWidth, el.clientHeight);
     });
     ro.observe(el);
@@ -114,6 +118,7 @@ export function Anatomy3D({ project, explode, focus, onFocus }) {
       ro.disconnect();
       renderer.domElement.removeEventListener('pointermove', onMove);
       controls.dispose();
+      q.composer.dispose();
       disposeTree(scene);
       scene.environment?.dispose();
       renderer.dispose();

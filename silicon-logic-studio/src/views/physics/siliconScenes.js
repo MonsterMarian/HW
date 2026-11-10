@@ -134,7 +134,62 @@ const PACKAGES = {
   dram_inside: { pkg: 'SOJ-40', mark: 'KM416C256 · DIE ≈ 4,8 × 11,6 mm (odhad)', body: [10.16, 26.03, 3.5], die: [4.8, 11.6], pins: [0, 20, 0, 20], pitch: 1.27, lead: 'j' },
   ad1845_inside: { pkg: 'PLCC-68', mark: 'AD1845 · DIE ≈ 5,4 × 5,4 mm (odhad)', body: [24.2, 24.2, 4.4], die: [5.4, 5.4], pins: [17, 17, 17, 17], pitch: 1.27, lead: 'j' },
   eprom_inside: { pkg: 'CERDIP-28 s okénkem', mark: '27C256 · DIE ≈ 4,4 × 5,2 mm (odhad)', body: [37, 15.2, 4.2], die: [4.4, 5.2], pins: [14, 0, 14, 0], pitch: 2.54, lead: 'dip', ceramic: true },
+  // MŮJ PC: flip-chip (die obráceně na substrátu, bez drátků) – BGA kuličky nebo LGA plošky
+  cfl_die: { pkg: 'FCLGA1151 37,5 × 37,5 mm', mark: 'i7-9700 · DIE ≈ 180 mm² (strany odhad) · IHS SUNDANÝ', body: [37.5, 37.5, 1.1], die: [19.6, 9.2], flip: 'lga', pitch: 0.9 },
+  b360_pch: { pkg: 'FCBGA 23 × 24 mm', mark: 'B360 · VELIKOST DIE NEZVEŘEJNĚNA (ODHAD)', body: [23, 24, 1.2], die: [6.5, 6.5], flip: 'bga', pitch: 0.8 },
+  ga104_die: { pkg: 'FCBGA (rozměry pouzdra odhad)', mark: 'GA104 · DIE 392,5 mm² (strany odhad)', body: [37.5, 37.5, 1.4], die: [19.8, 19.8], flip: 'bga', pitch: 1.0 },
+  phoenix_ctl: { pkg: 'FCBGA (rozměry odhad)', mark: 'SAMSUNG S4LR020 PHOENIX · DIE ODHAD', body: [12, 12, 1.0], die: [5, 5], flip: 'bga', pitch: 0.65 },
+  // AI PC
+  xeon_die: { pkg: 'FCLGA2011-3 52,5 × 45 mm', mark: 'XEON E5-1650 v3 · HASWELL-EP LCC 354 mm² (strany odhad) · IHS SUNDANÝ', body: [52.5, 45, 1.2], die: [18.8, 18.8], flip: 'lga', pitch: 1.0 },
+  gp100_die: { pkg: 'CoWoS: křemíkový interposer + 4× HBM2 (substrát odhad)', mark: 'GP100 610 mm² · INTERPOSER ~1200 mm² · HBM2 7,75 × 11,87 mm', body: [55, 55, 1.4], die: [23.3, 26.2], flip: 'bga', pitch: 1.0, cowos: { iw: 40, id: 30, hbm: [7.75, 11.87, 0.72] } }, // 40 × 30 = 1200 mm² interposer, strany die odhad
+  gm107_die: { pkg: 'FCBGA-908 (rozměry odhad)', mark: 'GM107 · 148 mm² (strany odhad)', body: [27, 27, 1.2], die: [12.2, 12.2], flip: 'bga', pitch: 0.8 },
+  ddr4_chip: { pkg: 'FBGA-78 (9 × 13, střed bez kuliček)', mark: 'K4A4G045WE 4 Gb x4 · ROZMĚRY TYPICKÉ', body: [7.5, 11, 1.0], die: [6, 9.5], flip: 'bga', pitch: 0.8, grid: [9, 13], gapCols: [3, 4, 5] },
+  ddr4_8g_x8: { pkg: 'FBGA-78 (9 × 13, střed bez kuliček)', mark: 'DDR4 8 Gb x8 · ROZMĚRY TYPICKÉ, NE TVÉHO ČIPU', body: [7.5, 11, 1.0], die: [6, 9.5], flip: 'bga', pitch: 0.8, grid: [9, 13], gapCols: [3, 4, 5] },
 };
+
+/** Flip-chip pouzdro (moderní čipy): substrát, kuličky BGA / plošky LGA dole, die obráceně s podvýplní, SMD kondenzátory. */
+function buildFlipPackage(group, pk) {
+  const [BW, BD, BH] = pk.body;
+  const [DW, DD] = pk.die;
+  const sub = new THREE.Mesh(boxGeo(-BW / 2, BW / 2, 0.45, 0.45 + BH, -BD / 2, BD / 2), std(0x3b4a33, { roughness: 0.55 }));
+  sub.receiveShadow = true;
+  group.add(sub);
+  // spodní strana: mřížka kuliček (BGA) nebo zlacených plošek (LGA)
+  const [nx, nz] = pk.grid || [Math.floor(BW / pk.pitch) - 1, Math.floor(BD / pk.pitch) - 1];
+  const pts = [];
+  for (let i = 0; i < nx; i++) for (let k = 0; k < nz; k++) {
+    if (pk.gapCols?.includes(i)) continue;
+    pts.push([(i - (nx - 1) / 2) * pk.pitch, (k - (nz - 1) / 2) * pk.pitch]);
+  }
+  const r = pk.pitch * 0.3;
+  const ball = pk.flip === 'lga' ? new THREE.BoxGeometry(r * 1.6, 0.05, r * 1.6) : new THREE.SphereGeometry(r, 10, 8);
+  group.add(instanced(ball, pk.flip === 'lga' ? MAT.gold() : std(0xc9ccd0, { metalness: 0.9, roughness: 0.3 }), pts.map(([x, z]) => mat4(x, pk.flip === 'lga' ? 0.43 : 0.45 - r * 0.6, z))));
+  // podvýplň (underfill) a die
+  let top = 0.45 + BH;
+  if (pk.cowos) { // CoWoS: křemíkový interposer na substrátu, na něm GPU a 4 stacky HBM2 (bázový die + 4 paměťové vrstvy)
+    const { iw, id, hbm: [hw, hd, hh] } = pk.cowos;
+    group.add(new THREE.Mesh(boxGeo(-iw / 2, iw / 2, top + 0.1, top + 0.2, -id / 2, id / 2), std(0x5d6470, { metalness: 0.5, roughness: 0.3 })));
+    top += 0.2;
+    const layerMat = [std(0x3a3f47, { metalness: 0.4, roughness: 0.4 }), std(0x8c8c8c, { metalness: 0.2, roughness: 0.5 })];
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const x = sx * (DW / 2 + 0.6 + hw / 2), z = sz * (hd / 2 + 0.3);
+      for (let L = 0; L < 5; L++) { // bázový logický die + 4× 8 Gb DRAM, propojené TSV
+        const h = hh / 5;
+        group.add(new THREE.Mesh(boxGeo(x - hw / 2, x + hw / 2, top + 0.03 + L * h, top + 0.03 + (L + 0.9) * h, z - hd / 2, z + hd / 2), layerMat[L ? 1 : 0]));
+      }
+    }
+  }
+  group.add(new THREE.Mesh(boxGeo(-DW / 2 - 0.35, DW / 2 + 0.35, top, top + 0.12, -DD / 2 - 0.35, DD / 2 + 0.35), std(0x1c1b19, { roughness: 0.6 })));
+  // keramické kondenzátory kolem die
+  const caps = [];
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    const x = Math.cos(a) * (DW / 2 + Math.min(3, (BW - DW) / 4)), z = Math.sin(a) * (DD / 2 + Math.min(3, (BD - DD) / 4));
+    if (Math.abs(x) < BW / 2 - 0.6 && Math.abs(z) < BD / 2 - 0.6) caps.push(mat4(x, top + 0.25, z));
+  }
+  group.add(instanced(new THREE.BoxGeometry(1.0, 0.5, 0.5), std(0x9a8466, { roughness: 0.5 }), caps));
+  return { dieTop: top + 0.12 + 0.45, dieY: top + 0.12 };
+}
 
 function blockKind(c) {
   const s = `${c.label || ''} ${c.drill || ''}`;
@@ -435,6 +490,7 @@ export function buildDieScene(ctx) {
   const pk = PACKAGES[entry?.key] || PACKAGES.nv1_die;
   const [BW, BD, BH] = pk.body;
   const [DW, DD] = pk.die;
+  if (pk.flip) return buildFlipDie(ctx, pk);
   const y0 = pk.lead === 'dip' ? 0.9 : 0.25;
   const floorY = y0 + BH * 0.42;
   const PADDLE_T = 0.15, DIE_T = 0.45, FINGER_T = 0.12;
@@ -570,6 +626,42 @@ export function buildDieScene(ctx) {
   const op = meshOf(otherPads, PM.al());
   if (op) group.add(op);
 
+  placeBlocks(ctx, blocks, DW, DD, RING, dieTop, padAnchor);
+
+  const bar = BW > 20 ? 5 : 2;
+  scaleBar(group, { x: -bar / 2, y: 0.15, z: BD / 2 + (pk.lead === 'dip' ? 1.2 : 2.0), length: bar, label: `${bar} mm`, size: 0.9 });
+  const k = Math.max(CW, CD) * 1.15 + 3;
+  return { camera: [0, dieTop + k * 0.82, k * 0.72], target: [0, dieTop, 0.4], floorY: pk.lead === 'dip' ? -3.25 : -0.01 };
+}
+
+/** Flip-chip: pouzdro + die s bloky podobvodu (tranzistory jsou ve skutečnosti na spodní straně die, k substrátu). */
+function buildFlipDie(ctx, pk) {
+  const { group, entry, engine } = ctx;
+  const [BW, BD] = pk.body;
+  const [DW, DD] = pk.die;
+  const { dieTop, dieY } = buildFlipPackage(group, pk);
+  const RING = Math.min(DW, DD) * 0.04;
+  const sideMat = std(0x2f3338, { metalness: 0.4, roughness: 0.42 });
+  const topMat = std(0x8c8c8c, { map: dieBaseTexture(DW, DD, RING, hashStr(entry?.key || 'die')), metalness: 0.1, roughness: 0.72 });
+  const die = new THREE.Mesh(new THREE.BoxGeometry(DW, dieTop - dieY, DD), [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]);
+  die.position.y = (dieTop + dieY) / 2;
+  group.add(die);
+  placeBlocks(ctx, [...engine.components.values()], DW, DD, RING, dieTop, new Map());
+  const mark = textPlane(`${pk.pkg} · ${pk.mark}`, BW * 0.95, { flat: true, color: '#c9c4b8' });
+  mark.position.set(0, 0.45 + pk.body[2] + 0.02, BD / 2 - Math.min(2.2, (BD - DD) / 4));
+  group.add(mark);
+  const note = textPlane('flip-chip: die je obráceně, tranzistory jsou na jeho spodní straně – bloky ukázány jako průhled', BW * 0.95, { color: '#a9a6a0' });
+  note.position.set(0, dieTop + Math.max(BW, BD) * 0.18, -BD / 2);
+  group.add(note);
+  const bar = BW > 20 ? 5 : 2;
+  scaleBar(group, { x: -bar / 2, y: 0.15, z: BD / 2 + 2, length: bar, label: `${bar} mm`, size: 0.9 });
+  const k = Math.max(BW, BD) * 1.1 + 3;
+  return { camera: [0, dieTop + k * 0.8, k * 0.75], target: [0, dieTop, 0.4], floorY: -0.01 };
+}
+
+/** Bloky podobvodu jako floorplan na povrchu die + horní kov mezi nimi (svítí podle sítě). */
+function placeBlocks(ctx, blocks, DW, DD, RING, dieTop, padAnchor) {
+  const { engine, group } = ctx;
   const rects = floorplan(blocks, -DW / 2 + RING, DW / 2 - RING, -DD / 2 + RING, DD / 2 - RING, Math.min(DW, DD) * 0.012);
   for (const c of blocks) {
     const r = rects.get(c.id);
@@ -600,11 +692,6 @@ export function buildDieScene(ctx) {
     group.add(meshOf(segs.map(([p, q]) => barGeo(p, q, Math.min(DW, DD) * 0.004, 0.008, dieTop + 0.006)), mat));
     ctx.addTrace(mat, wire);
   }
-
-  const bar = BW > 20 ? 5 : 2;
-  scaleBar(group, { x: -bar / 2, y: 0.15, z: BD / 2 + (pk.lead === 'dip' ? 1.2 : 2.0), length: bar, label: `${bar} mm`, size: 0.9 });
-  const k = Math.max(CW, CD) * 1.15 + 3;
-  return { camera: [0, dieTop + k * 0.82, k * 0.72], target: [0, dieTop, 0.4], floorY: pk.lead === 'dip' ? -3.25 : -0.01 };
 }
 
 // ===========================================================================

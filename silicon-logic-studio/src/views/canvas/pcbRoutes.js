@@ -21,19 +21,24 @@ function insidePolygon(poly, x, y) {
  * Cesty všech spojů na kartě: Map(wire.id -> body cesty), nebo null u spoje, který router nenašel.
  * `pinOf(comp, pin, isOutput)` = poloha pinu ({x, y, side}) z geometrie plátna.
  */
-export function pcbRoutes(engine, layout, pinOf) {
+/** Karta NV1: obrys s jazýčkem PCI, kontakty konektoru nejsou místo pro cesty. */
+export function nv1Board() {
+  const card = NV1_CARD;
+  const outline = nv1CardOutline();
+  const bottom = card.y + card.h - 1;
+  return { id: 'nv1', x: card.x, y: card.y, w: card.w, h: card.h, inside: (x, y) => y < bottom && insidePolygon(outline, x, y), skip: (c) => c.type === 'PCI_EDGE' };
+}
+
+export function pcbRoutes(engine, layout, pinOf, board = nv1Board()) {
   const comps = [...engine.components.values()];
-  const key = `${engine.wires.length}|${comps.map((c) => `${c.id}:${c.x},${c.y}`).join(';')}`;
+  const key = `${board.id}|${engine.wires.length}|${comps.map((c) => `${c.id}:${c.x},${c.y}`).join(';')}`;
   const hit = cache.get(engine);
   if (hit && hit.key === key && hit.wires === engine.wires) return hit.routes;
 
-  const card = NV1_CARD;
-  const outline = nv1CardOutline();
-  const bottom = card.y + card.h - 1; // kontakty konektoru PCI nejsou místo pro cesty
   const cell = 3.7; // mřížka 1 mm
-  const router = createRouter({ x0: card.x, y0: card.y, w: card.w, h: card.h, cell, inside: (x, y) => y < bottom && insidePolygon(outline, x, y), erode: 2 });
+  const router = createRouter({ x0: board.x, y0: board.y, w: board.w, h: board.h, cell, inside: board.inside, erode: 2 });
   for (const c of comps) {
-    if (isOffBoard(c) || c.type === 'PCI_EDGE') continue;
+    if (isOffBoard(c) || board.skip(c)) continue;
     const g = layout(c);
     router.block({ x: g.x, y: g.y, w: g.w, h: g.h }, 0.5);
   }

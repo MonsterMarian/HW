@@ -5,10 +5,14 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Cpu, ShieldCheck, ArrowLeft, Tag } from 'lucide-react';
 import { audioEngine } from '../engine/audioEngine';
-import { findSubcircuit, currentLevelOf } from '../engine/hierarchicalSubcircuits';
+import { findSubcircuit, currentLevelOf, HIERARCHICAL_SUBCIRCUITS } from '../engine/hierarchicalSubcircuits';
 import { disposeTree, signalStyle, declutterLabels } from './physics/common.js';
 import { DEVICES } from '../engine/devices/index.js';
 import { buildBoardScene } from './physics/boardScene.js';
+import { buildMyPcScene } from './physics/myPcScene.js';
+import { buildAiPcScene } from './physics/aiPcScene.js';
+import { createComposer, addEdges, contentBounds, fitView } from './physics/viewQuality.js';
+import { buildFinfetScene, buildVnandScene, buildTrenchScene, buildPlanarScene, buildLatticeScene, buildAtomModelScene, buildNucleusScene, buildNucleonScene } from './physics/deepScenes.js';
 import { buildChipCloseUp, buildDieScene, buildCellScene, buildCmosScene, buildMosfetScene, buildAtomScene } from './physics/siliconScenes.js';
 
 // Which physical representation fits a hierarchy level
@@ -28,7 +32,16 @@ const KIND_INFO = {
   cells: { head: 'LAYOUT STANDARDNÍCH BUNĚK', lines: ['Řady buněk: VDD/GND v M1, n-well (PMOS) u VDD', 'Poly-Si hradla svisle, difuze, W kontakty', 'Propoje M2 vodorovně, M3 svisle · výšky zvětšené'] },
   cmos: { head: 'CMOS BUŇKA Z TRANZISTORŮ', lines: ['PMOS v n-wellu u VDD, NMOS v p-substrátu u GND', 'Společné poly hradlo, výstupní uzel M1/M2 · měřítko µm', 'Kanál svítí jantarem, když tranzistor vede'] },
   mosfet: { head: 'PRŮŘEZ MOSFETEM 0,5 µm', lines: ['LOCOS s ptačím zobákem, S/D + LDD, oxidové spacery', 'Oxid hradla 10 nm, poly N+, W kontakty, 3× Al', 'Měřítko 1:1 v µm · nosiče jen při sepnutém kanálu'] },
-  atoms: { head: 'ATOMY: ROZHRANÍ Si / SiO₂', lines: ['Si: diamantová mřížka a = 5,431 Å, Si–Si 2,35 Å', 'SiO₂ amorfní: tetraedry SiO₄, Si–O 1,61 Å, ∠ ≈ 144°', 'Měřítko v Å · fyzikální limit'] },
+  atoms: { head: 'ATOMY: ROZHRANÍ Si / SiO₂', lines: ['Si: diamantová mřížka a = 5,431 Å, Si–Si 2,35 Å', 'SiO₂ amorfní: tetraedry SiO₄, Si–O 1,61 Å, ∠ ≈ 144°', 'Měřítko v Å · dvojklik na atom → obal a jádro'] },
+  flipdie: { head: 'POUZDRO FLIP-CHIP A DIE', lines: ['Substrát, dole kuličky BGA / plošky LGA', 'Die obráceně na mikrokuličkách, bez drátků', 'Bloky = floorplan podobvodu (model)'] },
+  finfet: { head: 'FinFET (SKUTEČNÝ PROCES ČIPU)', lines: ['Žebra Si, hradlo obepíná 3 strany kanálu', 'High-k HfO₂ + kovové hradlo, epitaxní S/D', 'Rozměry v nm podle publikace výrobce'] },
+  trench: { head: 'VÝKONOVÝ TRENCH MOSFET', lines: ['Proud teče svisle: source nahoře, drain = substrát', 'Hradlo v zákopu, pod ním stínicí elektroda', 'Typické rozměry v µm (výrobce MOSFETů neověřen)'] },
+  planar: { head: 'TRANZISTOR – PRINCIP', lines: ['Proces tohoto čipu výrobce nezveřejnil', 'nebo jde o TFT panelu LCD', 'Rozměry ilustrativní'] },
+  vnand: { head: 'BUŇKA V-NAND', lines: ['Svislý kanál, wordline obepíná ze všech stran', 'Náboj zachycený v nevodivé vrstvě SiN', 'Výřez 6 vrstev, rozměry ilustrativní'] },
+  lattice: { head: 'ATOMY VRSTEV TRANZISTORU', lines: ['Složení a tloušťky podle procesu', 'Krystal Si, amorfní oxidy, kovové hradlo', 'Měřítko v Å · dvojklik na prvek → atom'] },
+  atom: { head: 'ATOM: OBAL A JÁDRO', lines: ['Elektrony ve slupkách, valenční jantarově', 'Jádro zvětšené – jinak by nebylo vidět', 'Dvojklik na jádro → protony a neutrony'] },
+  nucleus: { head: 'ATOMOVÉ JÁDRO', lines: ['Protony (jantar) a neutrony (šedé)', 'R ≈ 1,2 fm · A^(1/3), 1 fm = 10⁻¹⁵ m', 'Dvojklik na proton / neutron → kvarky'] },
+  nucleon: { head: 'NUKLEON: KVARKY A GLUONY', lines: ['Proton u u d, neutron u d d', 'Barvy = barevný náboj (konvence)', 'Elementární částice – konec cesty'] },
 };
 
 export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrillDown }) {
@@ -43,7 +56,8 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
   const level = currentLevelOf(hierarchyStack);
   const entry = hierarchyStack[hierarchyStack.length - 1] || { id: 'root', title: 'NVIDIA NV1 (1995)', level: 1 };
   const hasNv1 = engine.components.has('nv1_core');
-  const kind = level <= 1 && modelMode === 'chip' && hasNv1 ? 'chip' : sceneKindFor(level);
+  // podobvod si může říct o druh scény (deska zařízení / die čipu), jinak podle úrovně
+  const kind = level <= 1 && modelMode === 'chip' && hasNv1 ? 'chip' : HIERARCHICAL_SUBCIRCUITS[entry.key]?.scene || sceneKindFor(level);
 
   // Keep fresh values for the long-lived event handlers
   const live = useRef({});
@@ -132,7 +146,9 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
     highlight.visible = false;
     scene.add(highlight);
 
-    const state = { renderer, labelRenderer, scene, camera, controls, content, grid, highlight, pickables: [], signals: [], frameFns: [], labels: [] };
+    scene.add(key.target);
+    const q = createComposer(renderer, scene, camera, container.clientWidth, container.clientHeight);
+    const state = { renderer, labelRenderer, scene, camera, controls, content, grid, highlight, key, rim, warm, q, pickables: [], signals: [], frameFns: [], labels: [] };
     three.current = state;
     if (import.meta.env.DEV) Object.assign(window, { __engine: engine, __three: state }); // dev only: hidden screenshot tool drives sim + camera
 
@@ -207,7 +223,7 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
       }
       for (const f of state.frameFns) f(time);
       for (const l of state.labels) l.update();
-      renderer.render(scene, camera);
+      q.render();
       labelRenderer.render(scene, camera);
       if (state.labels.length && frame++ % 8 === 0) declutterLabels(state.labels, camera, container);
     };
@@ -220,6 +236,7 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      q.setSize(w, h);
       labelRenderer.setSize(w, h);
     });
     ro.observe(container);
@@ -232,6 +249,7 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
       dom.removeEventListener('pointerup', onUp);
       dom.removeEventListener('dblclick', onDbl);
       controls.dispose();
+      q.composer.dispose();
       disposeTree(content);
       scene.environment?.dispose();
       renderer.dispose();
@@ -272,7 +290,7 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
           const el = document.createElement('div');
           el.className = 'phys-label';
           const drill = !!findSubcircuit(comp, hierarchyStack);
-          el.style.cssText = `font:700 10px/1.4 "Courier New",monospace;letter-spacing:.06em;color:${drill ? '#FFA909' : '#ADAAA7'};background:rgba(1,1,2,.8);border:1px solid ${drill ? 'rgba(255,169,9,.5)' : 'rgba(113,117,121,.35)'};padding:1px 6px;white-space:nowrap;transform:translateY(-50%)`;
+          el.style.cssText = `font:700 11px/1.4 "Courier New",monospace;letter-spacing:.06em;color:${drill ? '#FFA909' : '#ADAAA7'};background:rgba(1,1,2,.8);border:1px solid ${drill ? 'rgba(255,169,9,.5)' : 'rgba(113,117,121,.35)'};padding:1px 6px;white-space:nowrap;transform:translateY(-50%)`;
           const lbl = new CSS2DObject(el);
           lbl.position.copy(label);
           st.content.add(lbl);
@@ -284,7 +302,7 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
             obj: lbl,
             el,
             update() {
-              const text = isProbe ? `${base}: ${fmt(comp.inputs.in)}` : comp.type === 'INPUT' ? `${base} [${comp.outputs.out}]` : base;
+              const text = isProbe ? `${base}: ${/OT\/MIN/.test(base) ? `${comp.inputs.in} ot/min` : fmt(comp.inputs.in)}` : comp.type === 'INPUT' ? `${base} [${comp.outputs.out}]` : base;
               if (text !== lastText) { el.textContent = (drill ? '▸ ' : '') + text; lastText = text; }
             },
           });
@@ -295,7 +313,10 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
       onFrame(fn) { st.frameFns.push(fn); },
     };
 
-    const builders = { board: buildBoardScene, chip: buildChipCloseUp, die: buildDieScene, cells: buildCellScene, cmos: buildCmosScene, mosfet: buildMosfetScene, atoms: buildAtomScene };
+    const types = new Set([...engine.components.values()].map((c) => c.type));
+    const rootBoard = types.has('MYPC_BOARD') ? buildMyPcScene : types.has('DELL_T5810') ? buildAiPcScene : buildBoardScene;
+    const builders = { board: level <= 1 ? rootBoard : buildBoardScene, chip: buildChipCloseUp, die: buildDieScene, cells: buildCellScene, cmos: buildCmosScene, mosfet: buildMosfetScene, atoms: buildAtomScene,
+      flipdie: buildDieScene, finfet: buildFinfetScene, trench: buildTrenchScene, vnand: buildVnandScene, planar: buildPlanarScene, lattice: buildLatticeScene, atom: buildAtomModelScene, nucleus: buildNucleusScene, nucleon: buildNucleonScene };
     let info;
     try {
       info = builders[kind](ctx);
@@ -305,10 +326,11 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
     }
     st.grid.position.y = (info.floorY ?? 0) - 0.01;
     st.grid.visible = kind !== 'board'; // the board scene has its own desk
-    sceneInfo.current = info;
-    st.camera.position.set(...info.camera);
-    st.controls.target.set(...info.target);
-    st.controls.update();
+    // čitelnost: obrysy hran, světla / stíny / kamera / mlha podle velikosti scény, stínění GTAO
+    addEdges(st.content);
+    const R = fitView({ scene: st.scene, camera: st.camera, controls: st.controls, key: st.key, rim: st.rim, warm: st.warm, grid: st.grid, box: contentBounds(st.content), cameraPos: info.camera, target: info.target, aspect: st.camera.aspect });
+    st.q.setRadius(R);
+    sceneInfo.current = { ...info, camera: st.camera.position.toArray() };
     setCameraView('iso');
     // labels visibility
     st.labelRenderer.domElement.style.display = showLabels ? '' : 'none';
@@ -385,8 +407,8 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
                 );
               })}
             </div>
-            <span className={`flex items-center px-3 border-l border-(--line) whitespace-nowrap shrink-0 ${level >= 8 ? 'text-(--accent-amber)' : 'text-gray-500'}`}>
-              ÚROVEŇ&nbsp;<b className="text-(--accent-amber)">{level}</b>&nbsp;/ 8
+            <span className={`flex items-center px-3 border-l border-(--line) whitespace-nowrap shrink-0 ${level >= 11 ? 'text-(--accent-amber)' : 'text-gray-500'}`}>
+              ÚROVEŇ&nbsp;<b className="text-(--accent-amber)">{level}</b>&nbsp;/ 11
             </span>
           </div>
           {entry.subtitle && (
@@ -435,7 +457,7 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
         <div className="text-gray-400 space-y-0.5 text-[11px]">
           {info.lines.map((l) => <div key={l}>{l}</div>)}
         </div>
-        {drillable.length > 0 && level < 8 ? (
+        {drillable.length > 0 && level < 11 ? (
           <div className="meta leading-snug">▸ Dvojklikem dovnitř: <span className="text-gray-300">{drillable.slice(0, 6).join(', ')}{drillable.length > 6 ? ' …' : ''}</span></div>
         ) : (
           <div className="meta text-(--accent-amber)">Nejnižší úroveň – dál už nelze</div>

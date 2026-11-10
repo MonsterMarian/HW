@@ -187,12 +187,17 @@ export const PC_DEVICES = {
 // Názvy sítí podle pinů (plátno pak ukazuje volty, střídu PWM a otáčky místo logických 0/1)
 const netNameOf = (pin) => /\+12V/.test(pin) ? '+12V' : /\+5VSB/.test(pin) ? '+5VSB' : /\+5V/.test(pin) ? '+5V' : /\+3,3V/.test(pin) ? '+3,3V'
   : /GND|COM/.test(pin) ? 'GND' : /PWM/.test(pin) ? 'PWM %' : /OT\/MIN/.test(pin) ? 'OT/MIN' : null;
-for (const dev of Object.values(PC_DEVICES)) {
-  const names = {};
-  for (const pin of [...Object.keys(dev.pins.inputs || {}), ...Object.keys(dev.pins.outputs || {})]) {
-    const n = netNameOf(pin);
-    if (n) names[pin] = n;
+/** Doplní zařízením netNames podle názvů pinů (vlastní netNames zařízení mají přednost). */
+export function nameNets(devices) {
+  for (const dev of Object.values(devices)) {
+    const names = {};
+    for (const pin of [...Object.keys(dev.pins.inputs || {}), ...Object.keys(dev.pins.outputs || {})]) {
+      const n = netNameOf(pin);
+      if (n) names[pin] = n;
+    }
+    dev.netNames = { ...names, ...dev.netNames };
   }
-  dev.netNames = { ...names, ...dev.netNames };
+  return devices;
 }
+nameNets(PC_DEVICES);
 

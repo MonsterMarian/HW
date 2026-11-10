@@ -22,6 +22,9 @@ const SCHEMATIC_DIMS = {
   PWM_HUB: [220, 140], BLOWER_9733: [210, 90],
   CONN_PCIE8: [200, 160], CONN_EPS8: [200, 160], CONN_SATA: [210, 120], CONN_ATX24: [220, 110], CONN_FAN4: [200, 104],
   RELAY: [210, 104], DIODE: [150, 70],
+  // MŮJ PC (schéma L1)
+  MYPC_PSU: [240, 250], MYPC_BOARD: [260, 440], MYPC_CPU: [240, 150], MYPC_DIMM: [220, 60], MYPC_GPU: [250, 170],
+  MYPC_SSD: [220, 70], MYPC_FAN: [220, 80], MYPC_MONITOR: [220, 60], MYPC_USB_DEV: [220, 60],
 };
 
 // Real package outlines (incl. leads) on the PCB, in world px
@@ -40,6 +43,10 @@ const HARDWARE_DIMS = {
   PCI_HOST: [300, 110], VGA_MONITOR: [300, 270], AUDIO_SPEAKERS: [220, 120], SATURN_PAD: [170, 110],
   VIRTUAL_SCREEN: [190, 200], SEVEN_SEGMENT: [92, 112], INPUT: [110, 94], CLOCK: [130, 84], PROBE: [110, 78],
   RAM: [174, 126], ROM: [174, 126], REGISTER_8BIT: [174, 126],
+  // MŮJ PC: deska a díly na ní 1 : 1 (myPcLayout.js), zařízení mimo desku ne v měřítku
+  MYPC_BOARD: [mm(221), mm(305)], MYPC_CPU: [mm(37.5), mm(37.5)], MYPC_DIMM: [mm(7), mm(133.35)], MYPC_GPU: [mm(230), mm(42)],
+  MYPC_SSD: [mm(80.15), mm(22.15)],
+  MYPC_PSU: [240, 150], MYPC_FAN: [220, 90], MYPC_MONITOR: [300, 170], MYPC_USB_DEV: [230, 80],
 };
 
 export function componentDims(comp, mode = 'hardware') {

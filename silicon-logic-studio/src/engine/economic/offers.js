@@ -136,6 +136,113 @@ export const OFFERS = {
     ],
   },
 
+  // ---------------------------------------------------------------- můj PC (diagnostika 10. 11. 2026)
+  my_mobo: {
+    note: 'Deska se v ČR už nevyrábí ani neprodává; všechny nalezené nabídky jsou vyprodané nebo ukončené – ceny jsou jen orientační (bazarová hodnota ~1 700–2 300 Kč).',
+    offers: [
+      o('HelloComp', 'ASUS PRIME B360-Plus (použité zboží)', 'https://www.hellocomp.cz/asus-prime-b360-plus-intel-b360/', 1690, 'CZK', 1690, 'použité', 'fetched', 'vyprodáno, cena bez DPH'),
+      o('eBay.de', 'ASUS Prime B360-Plus', 'https://www.ebay.de/itm/335087553259', 99.99, 'USD', 2176, 'použité', 'snippet', 'prodáno 25. 8., referenční cena'),
+      o('Aukro.sk', 'Základní deska ASUS PRIME B360-PLUS – Intel B360 – LGA 1151', 'https://aukro.sk/zakladni-deska-asus-prime-b360-plus-intel-b360-lga-1151-7057355575', 94.73, 'EUR', 2308, 'použité', 'snippet', 'aukce skončila 3/2024'),
+      o('asusbymacman.es', 'Asus Prime B360-PLUS Intel Socket 1151 ATX', 'https://www.asusbymacman.es/placa-base-asus-prime-b360-plus-socket-1151c-663.html', 104.89, 'EUR', 2555, 'nové', 'snippet', 'vyprodáno'),
+    ],
+  },
+  my_cpu: {
+    note: 'Použitý i7-9700 je na Bazoši za 2 800–3 300 Kč; nový boxovaný už jen ze zahraničí a předražený.',
+    offers: [
+      o('Bazoš.cz', 'i7-9700 (Vyškov)', 'https://www.bazos.cz/inzerat/225433232/i7-9700.php', 2799, 'CZK', 2799, 'použité', 'fetched'),
+      o('Bazoš.cz', 'Procesor Intel Core i7-9700 / i7-9700K (Liberec, i7-9700 za 3 200 Kč)', 'https://pc.bazos.cz/inzerat/224469545/procesor-intel-core-i7-9700-i7-9700k-6c12t-soket-1151.php', 3200, 'CZK', 3200, 'použité', 'fetched'),
+      o('Bazoš.cz', 'Intel Core i7-9700 (Teplice, bez příslušenství)', 'https://pc.bazos.cz/inzerat/225991287/intel-core-i7-9700.php', 3299, 'CZK', 3299, 'použité', 'fetched'),
+      o('Componix Global přes Amazon (Geizhals)', 'Intel Core i7-9700 boxed BX80684I79700', 'https://geizhals.de/2057517', 271.74, 'EUR', 6620, 'nové', 'fetched'),
+    ],
+  },
+  my_cooler: {
+    note: 'Boxové chladiče Intel E97379 se na Bazoši prodávají za 60–80 Kč.',
+    offers: [
+      o('Bazoš.cz', 'Chladič Intel pro patici LGA (hliníkový, bez P/N)', 'https://www.bazos.cz/inzerat/226255059/chladic-intel-pro-patici-lga.php', 60, 'CZK', 60, 'nové', 'snippet', 'cena z výpisu kategorie'),
+      o('Bazoš.cz', 'CPU chladiče Intel – E97379-001 / E97379-003 (Plzeň)', 'https://pc.bazos.cz/inzerat/225798178/cpu-chladice-intel-lga-1150-1155-1156.php', 70, 'CZK', 70, 'použité', 'fetched', 'E97379-003 za 70 Kč'),
+      o('Bazoš.cz', 'BOX chladič procesoru Intel pro patici LGA 115x/1200 – nový (E97379-003)', 'https://pc.bazos.cz/inzerat/226017459/box-chladic-procesoru-intel-pro-patici-lga-1155-novy.php', 80, 'CZK', 80, 'nové', 'fetched'),
+    ],
+  },
+  my_ram: {
+    note: 'Použité HyperX Fury 8 GB DDR4-2666 na Bazoši 875–1 200 Kč za modul; nejlevnější je sada 4× 8 GB (přesně tvých 32 GB) za 3 500 Kč.',
+    offers: [
+      o('Bazoš.cz', '2× 2×8 GB HyperX Fury DDR4 2666 CL16 (4 moduly HX426C16FB3, cena za kus)', 'https://pc.bazos.cz/inzerat/224136155/28gb-hyperx-fury-ddr4-2666-cl16.php', 875, 'CZK', 875, 'použité', 'fetched', 'sada 4 ks za 3 500 Kč'),
+      o('Bazoš.cz', 'HyperX Fury 16GB kit 2666MHz (cena za kus)', 'https://pc.bazos.cz/inzerat/225306379/hyperx-fury-16gb-kit-2666mhz.php', 1000, 'CZK', 1000, 'použité', 'fetched', 'sada 2 ks za 2 000 Kč'),
+      o('Bazoš.cz', 'RAM Kingston 8GB DDR4 2666MHz HyperX Fury', 'https://pc.bazos.cz/inzerat/226226658/ram-kingston-8gb-ddr4-2666mhz-hyperx-fury.php', 1200, 'CZK', 1200, 'použité', 'fetched'),
+      o('Aztek Computers (US)', 'Kingston HyperX Fury Black 8GB DDR4 2666MHz CL16 (HX426C16FB2/8)', 'https://www.aztekcomputers.com/hx426c16fb2-8-hyperx-fury-black-8gb-ddr4-2666mhz-cl16-memory-kingston/p', 103.07, 'USD', 2243, 'nové', 'fetched', 'na objednávku'),
+    ],
+  },
+  my_gpu: {
+    note: 'Přesná GDDR6X verze se v ČR už neprodává a na Bazoši teď není; použité kusy v Německu 300–350 €. Bazoš má jen starší verzi s GDDR6 (stejný výkon ±3 %).',
+    offers: [
+      o('Bazoš.cz', 'ASUS DUAL GeForce RTX 3060 Ti 8G (verze GDDR6 V2 – náhrada)', 'https://pc.bazos.cz/inzerat/226130486/asus-dual-geforce-rtx-3060-ti-8g.php', 8000, 'CZK', 8000, 'použité', 'fetched', 'jiná paměť než tvoje karta'),
+      o('kleinanzeigen.de', 'ASUS RTX 3060 Ti Dual OC 8GB Grafikkarte (GDDR6X)', 'https://www.kleinanzeigen.de/s-anzeige/asus-rtx-3060-ti-dual-oc-8gb-grafikkarte/3558762024-225-3475', 300, 'EUR', 7308, 'použité', 'fetched'),
+      o('jawa.gg', 'ASUS Dual GeForce RTX 3060 Ti GDDR6X (mint)', 'https://www.jawa.gg/product/138774/asus-dual-geforce-rtx-3060-ti-gddr6x', 385, 'USD', 8378, 'použité', 'snippet'),
+      o('kleinanzeigen.de', 'ASUS Dual GeForce RTX 3060 Ti 8GB GDDR6X (DUAL-RTX3060TI-8GD6X, ne-OC, stejná karta)', 'https://www.kleinanzeigen.de/s-anzeige/asus-dual-geforce-rtx-3060-oc-ti-8gb-ddr6-gddr6x-nvidia/3263667185-225-9032', 349, 'EUR', 8502, 'použité', 'fetched'),
+      o('NVIDIA Marketplace ES', 'ASUS Dual GeForce RTX 3060 Ti OC Edition 8GB GDDR6X', 'https://marketplace.nvidia.com/es-es/consumer/graphics-cards/asus-dual-geforce-rtx-3060-ti-oc-edition-8gb-gddr6x/', 510.45, 'EUR', 12435, 'nové', 'snippet'),
+    ],
+  },
+  my_ssd: {
+    note: '970 EVO Plus dobíhá – e-shopy ho mají „na dotaz“ nebo „již se neprodává“; použitý na Bazoši 1 590 Kč.',
+    offers: [
+      o('iSpace', 'Samsung 970 EVO PLUS 500GB (MZ-V7S500BW)', 'https://www.ispace.cz/p/samsung-970-evo-plus-500gb/', 1299, 'CZK', 1299, 'nové', 'fetched', 'produkt se již neprodává'),
+      o('Bazoš.cz', 'Samsung 970 EVO Plus 500GB NVMe M.2 SSD (Praha 1)', 'https://pc.bazos.cz/inzerat/224734080/samsung-970-evo-plus-500gb-nvme-m2-ssd.php', 1590, 'CZK', 1590, 'použité', 'fetched'),
+      o('AB-com', 'Samsung 970 EVO PLUS 500GB, MZ-V7S500BW', 'https://www.ab-com.cz/samsung-970-evo-plus-500gb-mz-v7s500bw/', 1925, 'CZK', 1925, 'nové', 'fetched', 'dostupnost na dotaz'),
+      o('office-partner.de', 'Samsung SSD 970 EVO PLUS 500 GB', 'https://www.office-partner.de/samsung-970-evo-plus-mz-v7s500bw-10898609', 91.68, 'EUR', 2233, 'nové', 'snippet', 'nedostupné'),
+    ],
+  },
+  my_case: {
+    note: 'ODHAD modelu skříně. Endorfy Signum 300 Air je běžná skříň s okem a 4 ventilátory, nová za 1 100–1 600 Kč.',
+    offers: [
+      o('arvutitark.ee', 'ENDORFY Signum 300 Air', 'https://arvutitark.ee/en/pc-components/cases/obudowa-endorfy-signum-300-air-1168856', 45.25, 'EUR', 1102, 'nové', 'fetched'),
+      o('Datart', 'Case ENDORFY Signum 300 Air černá', 'https://www.datart.cz/case-endorfy-signum-300-air-ey2a005-cerna.html', 1129, 'CZK', 1129, 'nové', 'fetched'),
+      o('goodio.be', 'PC Case Endorfy Signum 300 Air with mesh front and glass', 'https://goodio.be/en/product/208684-pc-case-endorfy-signum-300-air-with-mesh-front-and-glass', 64.5, 'EUR', 1571, 'nové', 'fetched'),
+      o('Alza.cz', 'Endorfy Signum 300 Air Black', 'https://www.alza.cz/endorfy-signum-300-air-black-d7617312.htm', 2629, 'CZK', 2629, 'nové', 'snippet', 'cena z výpisu, nejspíš stará'),
+    ],
+  },
+  my_psu: {
+    note: 'ODHAD modelu zdroje. Endorfy Vero L5 Bronze 600 W stačí (karta 225 W + CPU 65 W), nový ~1 500 Kč.',
+    offers: [
+      o('Datart', 'ENDORFY Vero L5 600W Bronze černý', 'https://www.datart.cz/zdroj-endorfy-vero-l5-600w-bronze-ey7a005-cerny', 1479, 'CZK', 1479, 'nové', 'fetched', 'poslední kus'),
+      o('Alza.cz', 'Endorfy Vero L5 Bronze 600W', 'https://www.alza.cz/endorfy-vero-l5-bronze-600w-d7745637.htm', 1479, 'CZK', 1479, 'nové', 'snippet'),
+      o('arvutitark.ee', 'Endorfy Vero L5 Bronze 600W PSU', 'https://arvutitark.ee/ru/pc-components/power-supplies-psu/psu-endorfy-vero-l5-bronze-600-w-1248487', 67.5, 'EUR', 1644, 'nové', 'fetched'),
+      o('dateks.lv', 'Endorfy Vero L5 Bronze, 600W, 80PLUS Bronze', 'https://dateks.lv/en/cenas/psu-barosanas-bloki/969735-endorfy-vero-l5-bronze-600w-80plus-bronze', 67.6, 'EUR', 1647, 'nové', 'snippet'),
+    ],
+  },
+  my_monitor: {
+    note: 'VA249HE se už neprodává a na Bazoši teď není; poslední ceny nového kusu 2 500–4 000 Kč (staré výpisy).',
+    offers: [
+      o('Heureka.cz', 'Asus VA249HE (nejnižší nabídka)', 'https://monitory.heureka.cz/asus-va249he/', 2458, 'CZK', 2458, 'nové', 'snippet', 'nejspíš stará cena'),
+      o('ox.ee', 'ASUS VA249HE 60.5 cm Full HD', 'https://www.ox.ee/en/product/1280500', 164, 'EUR', 3995, 'nové', 'snippet', 'nedostupné od 2023'),
+    ],
+  },
+  my_keyboard: {
+    note: 'Původní Strix Flare (Cherry MX) se už neprodává; v ČR jen vyprodané nabídky kolem 5 000 Kč, použitá na eBay ~1 200 Kč.',
+    offers: [
+      o('eBay.de', 'ASUS ROG Strix Flare RGB Cherry MX (turecké rozložení)', 'https://www.ebay.de/itm/204330470974', 49.99, 'EUR', 1218, 'použité', 'snippet', 'jiné rozložení'),
+      o('Comfor.cz', 'ASUS ROG STRIX FLARE CZ', 'https://www.comfor.cz/asus-rog-strix-flare-cz', 4916, 'CZK', 4916, 'nové', 'fetched', 'není skladem'),
+      o('office-partner.de', 'ASUS ROG Strix Flare mechanische Gaming-Tastatur (QWERTZ)', 'https://www.office-partner.de/asus-rog-strix-flare-mechanische-gaming-tastatur-8666549', 211.76, 'EUR', 5158, 'nové', 'fetched', 'ukončený prodej'),
+      o('Heureka.cz', 'Asus ROG Strix Flare 90MP00M0-B0ZA00', 'https://klavesnice.heureka.cz/asus-rog-strix-flare-90mp00m0-b0za00/', 6003, 'CZK', 6003, 'nové', 'snippet', 'stará cena'),
+    ],
+  },
+  my_mouse: {
+    note: 'Myš s USB ID 30FA:1440 je bezejmenný čínský OEM („INSTANT“), prodává se pod mnoha značkami. Nabídky jsou podobné drátové RGB herní myši.',
+    offers: [
+      o('Datart', 'Myš DISPEL GM5B černá', 'https://www.datart.cz/mys-dispel-gm5b-gm5b-cerna', 199, 'CZK', 199, 'nové', 'fetched', 'ekvivalent'),
+      o('Datart', 'Myš Genius GX Gaming Scorpion M705', 'https://www.datart.cz/mys-genius-gx-gaming-scorpion-m705-31040008400-cerna.html', 299, 'CZK', 299, 'nové', 'fetched', 'ekvivalent'),
+      o('Datart', 'Myš YENKEE YMS 3030BK Shotgun USB', 'https://www.datart.cz/mys-yenkee-yms-3030bk-shotgun-usb-45015501-cerna.html', 399, 'CZK', 399, 'nové', 'fetched', 'ekvivalent'),
+    ],
+  },
+  my_mic: {
+    note: 'USB ID 0D8C:0134 (C-Media) mají levné USB kondenzátorové mikrofony (TONOR TC-777, TC310, Auna CM900); Windows ho vidí jen jako mikrofon. Nabídky jsou podobné USB mikrofony.',
+    offers: [
+      o('Datart', 'Mikrofon Marvo MIC-01 černý', 'https://www.datart.cz/marvo-herni-mikrofon-mic-01-mikrofon-bez-regulace-hlasitosti-cerny-rgb-podsviceny-mic-01.html', 290, 'CZK', 290, 'nové', 'fetched', 'ekvivalent'),
+      o('Datart', 'Mikrofon Trust GXT 232 Mantis', 'https://www.datart.cz/mikrofon-trust-gxt-232-mantis-cerny-22656.html', 499, 'CZK', 499, 'nové', 'fetched', 'ekvivalent'),
+      o('Datart', 'Mikrofon Connect IT YouMic s POP filtrem, USB', 'https://www.datart.cz/mikrofon-connect-it-youmic-s-pop-filtrem-usb-cmi-8001-bk-cerny.html', 599, 'CZK', 599, 'nové', 'fetched', 'ekvivalent'),
+      o('eBay.de', 'Tonor TC-777 USB Kondensatormikrofon', 'https://www.ebay.de/itm/197364853856', 25, 'EUR', 609, 'nové', 'snippet', 'stejné USB ID; cena nejistá'),
+    ],
+  },
+
   // ---------------------------------------------------------------- karta NV1 (1995) a periferie
   nv1: {
     note: 'Samotný čip NV1 / STG2000X se nikde neprodává (Utsource, Win-source, AliExpress, eBay). Jediná cesta je celá karta Diamond Edge 3D 2120 jako sběratelský kus.',

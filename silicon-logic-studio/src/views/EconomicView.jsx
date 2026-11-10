@@ -10,8 +10,8 @@ import { disposeTree, declutterLabels } from './physics/common.js';
 import { buildModel, ruler } from './economic/models.js';
 import { packRows } from './economic/layout.js';
 import { bomTotal, fmtKc, fmtRange } from '../engine/economic/catalog.js';
+import { CHECKED, RATES } from '../engine/economic/offers.js';
 
-const SRC_TEXT = { doc: 'cena z dokumentu PCYoutubeborce.md', odhad: 'odhad 11/2026 (bazar, eBay)' };
 const fmtMm = (v) => (Math.round(v * 100) / 100).toLocaleString('cs-CZ');
 
 export function EconomicView({ project }) {
@@ -198,7 +198,7 @@ export function EconomicView({ project }) {
       const b = new THREE.Box3().setFromObject(g);
       const el = document.createElement('div');
       el.style.cssText = 'font:700 10px/1.4 "Courier New",monospace;letter-spacing:.05em;color:#ADAAA7;background:rgba(1,1,2,.82);border:1px solid rgba(113,117,121,.35);padding:1px 6px;white-space:nowrap;transform:translateY(-50%)';
-      el.innerHTML = `${item.qty > 1 ? item.qty + '× ' : ''}${item.name.slice(0, 30)} <span style="color:#FFA909">${fmtRange(item.price)}</span>`;
+      el.innerHTML = `${item.qty > 1 ? item.qty + '× ' : ''}${item.name.slice(0, 30)} <span style="color:${item.price ? '#FFA909' : '#DE3B3D'}">${item.price ? 'od ' + fmtKc(item.price[0]) : 'nedostupné'}</span>`;
       const lbl = new CSS2DObject(el);
       lbl.position.set((b.min.x + b.max.x) / 2, b.max.y + 8, (b.min.z + b.max.z) / 2);
       lbl.userData.priority = b.max.x - b.min.x; // větší díl má přednost
@@ -288,7 +288,7 @@ export function EconomicView({ project }) {
         {hovered && hovered.id !== selected && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-(--bg-dark) border border-gray-700 px-5 py-2.5 pointer-events-none max-w-xl">
             <div className="panel-title">{hovered.qty > 1 ? `${hovered.qty}× ` : ''}{hovered.name}</div>
-            <div className="text-gray-400 text-[11px] mt-0.5">{fmtRange(hovered.price)} / ks · klik = detail a odkazy</div>
+            <div className="text-gray-400 text-[11px] mt-0.5">{fmtRange(hovered.price)} / ks · {hovered.offers.length} nabídek · klik = detail a odkazy</div>
           </div>
         )}
       </div>
@@ -297,8 +297,14 @@ export function EconomicView({ project }) {
       <aside className="w-[25rem] shrink-0 h-full border-l border-(--line) bg-(--bg-dark) flex flex-col select-text">
         <div className="px-4 py-3 border-b border-(--line)">
           <div className="flex items-center gap-2 meta"><ShoppingCart size={13} /> KUSOVNÍK · {project.bom.length} položek · {pieces} ks</div>
-          <div className="mt-1.5 text-(--text-light) text-[18px] font-bold font-sans">{fmtKc(total.min)} – {fmtKc(total.max)}</div>
-          <div className="text-gray-500 text-[11px]">orientačně, bez dopravy · ceny {project.bom.some((i) => i.src === 'doc') ? 'z dokumentu a odhady' : 'odhady'} 11/2026</div>
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-(--text-light) text-[18px] font-bold font-sans">{fmtKc(total.min)}</span>
+            <span className="text-gray-500 text-[11px]">nejlevněji · medián {fmtKc(total.median)}</span>
+          </div>
+          <div className="text-gray-500 text-[11px]">
+            součet skutečných nabídek {CHECKED.split('-').reverse().join('. ')} bez poštovného · kurz ČNB 1 € = {RATES.EUR.toLocaleString('cs-CZ')} Kč, 1 $ = {RATES.USD.toLocaleString('cs-CZ')} Kč
+          </div>
+          {total.missing.length > 0 && <div className="text-(--conflict) text-[11px]">Bez nabídky: {total.missing.join(', ')}</div>}
           {project.source && (
             <a href={project.source.url} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-(--accent-amber) hover:underline">
               <ExternalLink size={11} /> {project.source.label}
@@ -313,20 +319,33 @@ export function EconomicView({ project }) {
                 <button onClick={() => setSelected(isSel ? null : it.id)} data-bom={it.id} className="w-full text-left px-4 py-2 flex items-baseline gap-3 hover:bg-(--bg-card-light)">
                   <span className={`text-[11px] w-7 shrink-0 ${isSel ? 'text-(--accent-amber)' : 'text-gray-500'}`}>{it.qty}×</span>
                   <span className="flex-1 min-w-0 font-sans font-semibold text-[13px] text-gray-200 truncate">{it.name}</span>
-                  <span className="text-[11px] text-(--accent-amber) shrink-0">{fmtRange([it.price[0] * it.qty, it.price[1] * it.qty])}</span>
+                  <span className={`text-[11px] shrink-0 ${it.price ? 'text-(--accent-amber)' : 'text-(--conflict)'}`}>{it.price ? `od ${fmtKc(it.price[0] * it.qty)}` : 'nedostupné'}</span>
                 </button>
                 {isSel && (
                   <div className="px-4 pb-3 pl-14 space-y-1.5 text-[11px]">
                     <div className="text-gray-300 font-sans text-[12px]">{it.part}</div>
-                    <div className="text-gray-400">Rozměr: {it.dims.map(fmtMm).join(' × ')} mm</div>
-                    <div className="text-gray-400">Cena: {fmtRange(it.price)} / ks · <span className="text-gray-500">{SRC_TEXT[it.src]}</span></div>
+                    <div className="text-gray-400">Rozměr: {it.dims.map(fmtMm).join(' × ')} mm <span className="text-gray-600">· {it.dimsSrc}</span></div>
+                    <div className="text-gray-400">Cena / ks: {fmtRange(it.price)}{it.median !== null && <span className="text-gray-500"> · medián {fmtKc(it.median)}</span>}</div>
+                    {it.offerNote && <div className="text-gray-400 font-sans text-[12px] leading-snug">{it.offerNote}</div>}
                     {it.note && <div className="text-gray-400 font-sans text-[12px] leading-snug">{it.note}</div>}
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {it.links.map((l) => (
-                        <a key={l.url} href={l.url} target="_blank" rel="noreferrer" title={l.url} className="inline-flex items-center gap-1 px-2 py-1 border border-(--line) text-gray-300 hover:text-(--accent-amber) hover:border-(--accent-amber)">
-                          <ExternalLink size={11} /> {l.shop}
+                    <div className="pt-1 space-y-1">
+                      {it.offers.map((o) => (
+                        <a key={o.url + o.title} href={o.url} target="_blank" rel="noreferrer" title={o.url} className="flex items-start gap-2 px-2 py-1.5 border border-(--line) hover:border-(--accent-amber) group">
+                          <ExternalLink size={11} className="mt-0.5 shrink-0 text-gray-500 group-hover:text-(--accent-amber)" />
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-gray-200 font-bold">{o.shop}{o.alt && <span className="text-(--conflict) font-normal"> · jen alternativa</span>}</span>
+                            <span className="block text-gray-400 font-sans text-[11px] leading-snug">{o.title}</span>
+                            <span className="block text-gray-600">
+                              {o.condition} · {o.verified === 'fetched' ? 'cena ověřena na stránce' : 'cena z výpisu vyhledávače'}{o.remark ? ` · ${o.remark}` : ''}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-right">
+                            <span className="block text-(--accent-amber) font-bold">{fmtKc(o.priceCzk)}</span>
+                            {o.currency !== 'CZK' && <span className="block text-gray-600">{o.price.toLocaleString('cs-CZ')} {o.currency}</span>}
+                          </span>
                         </a>
                       ))}
+                      {it.offers.length === 0 && <div className="text-(--conflict)">Žádná nabídka – díl se dnes neprodává.</div>}
                     </div>
                   </div>
                 )}

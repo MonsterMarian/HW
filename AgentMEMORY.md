@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-10 14:01
+Aktualizováno: 2026-11-10 14:29
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -43,8 +43,10 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - `src/engine/projects.js`: po startu 2 projekty (karty v titulní liště, `data-project`), otevře se 1. = NV1.
   2. = AI PC z `PCYoutubeborce.md` (Dell T5810 + 2× Tesla P100) – jen kusovník (`circuit: null`, `views: ['economic']`),
   ostatní pohledy jsou v liště zakázané. Přepnutí projektu ukládá stav enginu + hierarchii + pohled (App `savedProjects`).
-- ECONOMIC view (`views/EconomicView.jsx`): díly z kusovníku `engine/economic/catalog.js` (cena [min,max] Kč/ks,
-  `src` doc/odhad, `dims` mm, odkazy = vyhledávací URL obchodů), modely v mm `views/economic/models.js`
+- ECONOMIC view (`views/EconomicView.jsx`): díly z kusovníku `engine/economic/catalog.js` (`dims` mm + `dimsSrc`
+  ověřeno/odhad); ceny se počítají JEN ze skutečných nabídek v `engine/economic/offers.js` (rešerše 10. 11. 2026,
+  přímé URL produktů/inzerátů, `verified` fetched/snippet, kurz ČNB 9. 11.; `alt` = jen alternativa, nepočítá se).
+  Test zakazuje vyhledávací URL. Modely v mm `views/economic/models.js` (zdroje rozměrů v hlavičce souboru)
   (čipy NV1 přes `buildRealPart` z boardScene), rozložení `economic/layout.js` (vysoké díly dozadu).
   Electron otevírá odkazy přes `shell.openExternal` (setWindowOpenHandler).
 - Rozhodnutí: sestava PC = varianta z videa + kritické doplňky z dokumentu (Add2PSU, EPS redukce, chlazení, pasta,
@@ -52,8 +54,10 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - Pasti: `window.__eco` (DEV) = stav 3D scény pro screenshoty; v node testech musí mít importy přípony `.js`.
 
 ## Další kroky / známé vady
-- PC projekt nemá schéma/PCB/3D simulaci, jen ECONOMIC. Ceny jsou odhady (RAM/SSD v 2026 drahé, kolísají);
-  vyhledávací URL obchodů nebyly ověřeny otevřením. Modely jsou zjednodušené (rozměry sedí, detaily ne).
+- PC projekt nemá schéma/PCB/3D simulaci, jen ECONOMIC. Nabídky stárnou (inzeráty z Bazoše zmizí) – při další
+  práci přerešeršovat. eBay/Alza/Heureka blokují stahování (403): jejich ceny jsou jen z výpisu vyhledávače.
+  NV1 a STG1764X se dnes neprodávají (jen celé karty ~16–23 tis. Kč). Odhady rozměrů: čelo Dellu ±5 mm, IHS Xeonu,
+  poloha kontaktů PCIe od záslepky, MX-6, Axagon PCEM2-N, periferie NV1.
 - Rychlost: ~3 µs na hranu; profil ukazuje režii v `_settle`/`step` + modely čipů. Vyzkoušeno bez efektu:
   rychlá cesta pro sestupné hrany, pole místo Set. Další nápad: Web Worker nebo jemnější sensitivity listy.
 - Breadcrumb/HUD ve 3D na hlubokých úrovních přetéká; na L2 schématu se překrývá blok PCI TARGET s pady.
@@ -77,3 +81,6 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   zařízení za bracketem, README přepsané; 115/115 testů, build OK.
 - 2026-11-10 14:01 — „ECONOMIC view (díly z obchodu, ceny, odkazy) + projekt AI PC z PCYoutubeborce.md, projekty po startu“
   → projects.js, catalog, EconomicView + modely, karty projektů, 120/120 testů.
+- 2026-11-10 14:29 — „skutečné ceny z více e-shopů s URL, přesné modely PC, oprav varování, pokračuj“ → rešerše 5 agentů
+  (offers.js, 16+13 položek), modely podle manuálu Dell / NVIDIA PB / Samsung datasheetu, oxlint 0 varování,
+  L2 floorplan bez překryvu, kompaktní 3D breadcrumb; 121/121 testů.

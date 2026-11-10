@@ -15,6 +15,7 @@ import {
   ChevronDown,
   FolderOpen,
   ShieldCheck,
+  ShoppingCart,
 } from 'lucide-react';
 import { audioEngine } from '../engine/audioEngine';
 import { DEVICES } from '../engine/devices/index.js';
@@ -30,8 +31,9 @@ function fmtRatio(r, running) {
 
 export function Toolbar({
   engine,
-  viewMode, // 'schematic' | 'hardware' | 'physics'
+  viewMode, // 'schematic' | 'hardware' | 'physics' | 'economic'
   setViewMode,
+  allowedViews, // pohledy, které otevřený projekt má (projekt jen s kusovníkem má jen 'economic')
   showGallery,
   setShowGallery,
   showAsm,
@@ -175,6 +177,7 @@ export function Toolbar({
     { id: 'schematic', label: 'SCHEMATIC', Icon: Grid, title: 'Schéma – IEEE/ANSI značky hradel' },
     { id: 'hardware', label: 'PCB', Icon: Cpu, title: 'Hardware PCB – deska s pouzdry DIP/QFP' },
     { id: 'physics', label: 'DIE 3D', Icon: Layers, title: 'Silicon Die 3D – vrstvy křemíku a teplotní mapa' },
+    { id: 'economic', label: 'ECONOMIC', Icon: ShoppingCart, title: 'Economic – díly jak z obchodu ve skutečné velikosti, ceny a odkazy na nákup' },
   ];
 
   // Jednotný vzhled tlačítek lišty: ostré hrany, tenká linka, jantar jen pro aktivní stav
@@ -201,19 +204,23 @@ export function Toolbar({
 
       {/* Režim zobrazení */}
       <div className="flex items-center" role="group" aria-label="Režim zobrazení">
-        {VIEWS.map(({ id, label, Icon, title }, i) => (
+        {VIEWS.map(({ id, label, Icon, title }, i) => {
+          const allowed = !allowedViews || allowedViews.includes(id);
+          return (
           <button
             key={id}
             data-view={id}
             aria-pressed={viewMode === id}
+            disabled={!allowed}
             onClick={() => setViewMode(id)}
-            className={`${btn(viewMode === id)} ${i > 0 ? '-ml-px' : ''}`}
-            title={title}
+            className={`${btn(viewMode === id)} ${i > 0 ? '-ml-px' : ''} disabled:opacity-30 disabled:pointer-events-none`}
+            title={allowed ? title : 'Tento projekt má zatím jen kusovník – jen ECONOMIC view'}
           >
             <Icon size={13} />
             <span>{label}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {sep}

@@ -37,6 +37,19 @@ Co se děje po spuštění (RUN, rychlost MAX):
 
 Simulace je přesná na takty, a proto pomalá: celý snímek 640×480 trvá v reálném čase zhruba minutu.
 
+## Projekty a ECONOMIC view
+Po spuštění jsou nahoře v liště dva projekty a otevře se první:
+1. **NV1 KARTA**: tahle karta, ve všech pohledech (SCHEMATIC, PCB, DIE 3D, ECONOMIC).
+2. **AI PC 2× P100**: sestava z videa Junk GPU Lab (podle `PCYoutubeborce.md`). Má zatím jen kusovník,
+   takže jen ECONOMIC view. Obsahuje Dell T5810, Xeon E5-1650 v3, 4× 8 GB DDR4 ECC RDIMM, 2× Tesla P100,
+   2× chlazení 9733, Quadro K620, 1TB NVMe s redukcí, druhý zdroj s Add2PSU, EPS redukce, ventilátory a pastu.
+
+**ECONOMIC** ukazuje díly ve 3D tak, jak přijdou z obchodu, ve skutečných rozměrech v mm. Na stole je pravítko
+30 cm a mřížka 10 cm. Dovnitř dílů se nevstupuje. Klik na díl nebo na řádek kusovníku ukáže cenu, rozměry
+a odkazy na nákup. Odkazy vedou na vyhledávání (Heureka, Alza, Bazoš, eBay, AliExpress, Mouser) a otevírají se
+v systémovém prohlížeči. Ceny jsou orientační rozpětí z dokumentu nebo odhady k 11/2026. Data jsou
+v `src/engine/economic/catalog.js`, modely v `src/views/economic/models.js`.
+
 ## Proklikávání (dvojklik)
 L1 deska → L2 bloky uvnitř čipu → L3 RTL (CRTC, kvadratické dopředné diference, fázový akumulátor, PCI dekodér…)
 → L4 registry a sčítačky → L5 hradla → L6 CMOS z tranzistorů → L7 průřez tranzistorem 0,5 µm

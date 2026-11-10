@@ -1,20 +1,18 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { LogicEngine } from './engine/logicEngine';
-import { PRESET_CIRCUITS } from './engine/aiCopilot';
+import { PROJECTS, projectById } from './engine/projects';
 import { audioEngine } from './engine/audioEngine';
 import { findSubcircuit } from './engine/hierarchicalSubcircuits';
 import { Titlebar } from './components/Titlebar';
 import { Toolbar } from './components/Toolbar';
 import { LogicCanvas } from './views/LogicCanvas';
 import { PhysicsView } from './views/PhysicsView';
+import { EconomicView } from './views/EconomicView';
 import { WaveformViewer } from './components/WaveformViewer';
 import { AsmEditor } from './components/AsmEditor';
 import { AiPanel } from './components/AiPanel';
 import { GalleryDrawer } from './components/GalleryDrawer';
 import { Nv1DiagnosticModal } from './components/Nv1DiagnosticModal';
-
-const ROOT_TITLE = 'Diamond Edge 3D 2120 · NV1 (1995)';
-const ROOT_SUBTITLE = 'NVIDIA NV1 / STG2000X, 2 MB DRAM, PCI';
 
 // Karta NV1 běží na reálných taktech 33/50/25 MHz: při pomalé rychlosti by se nic viditelného nestalo
 const defaultSpeedFor = (engine) => {
@@ -24,8 +22,12 @@ const makeRootEntry = (title, subtitle) => ({ id: 'root', key: 'root', title, su
 
 export default function App() {
   const engine = useMemo(() => new LogicEngine(), []);
-  // 3 distinct schematic views: 'schematic' (IEEE Gate Symbols) | 'hardware' (PCB DIP Chips) | 'physics' (3D Silicon Die)
-  const [viewMode, setViewMode] = useState('hardware');
+  // Po spuštění jsou založené všechny projekty (engine/projects.js), otevře se první
+  const [projectId, setProjectId] = useState(PROJECTS[0].id);
+  const project = projectById(projectId);
+  const savedProjects = useRef({}); // id -> { state, stack, viewMode } projektu, který není otevřený
+  // 'schematic' (IEEE značky) | 'hardware' (PCB) | 'physics' (3D křemík) | 'economic' (díly z obchodu)
+  const [viewMode, setViewMode] = useState(PROJECTS[0].defaultView);
   const [showGallery, setShowGallery] = useState(false);
   const [showAsm, setShowAsm] = useState(false);
   const [showWaveform, setShowWaveform] = useState(false);
@@ -35,14 +37,32 @@ export default function App() {
   const [selectedComponentId, setSelectedComponentId] = useState(null);
 
   // Hierarchical Drill-Down Circuit Stack
-  const [hierarchyStack, setHierarchyStack] = useState(() => [makeRootEntry(ROOT_TITLE, ROOT_SUBTITLE)]);
+  const [hierarchyStack, setHierarchyStack] = useState(() => [makeRootEntry(PROJECTS[0].title, PROJECTS[0].subtitle)]);
   const [drillHint, setDrillHint] = useState(null);
 
-  // Initialize with Nvidia NV1 (1995) PCI architecture demo circuit
+  // První projekt (karta NV1) se načte do enginu při spuštění
   useEffect(() => {
-    engine.loadCircuit(PRESET_CIRCUITS.nvidia_nv1);
+    engine.loadCircuit(PROJECTS[0].circuit);
     defaultSpeedFor(engine);
   }, [engine]);
+
+  // Přepnutí projektu: rozpracovaný stav (obvod, úroveň zanoření, pohled) se uloží a při návratu obnoví
+  const handleSelectProject = useCallback((id) => {
+    if (id === projectId) return;
+    engine.stop();
+    savedProjects.current[projectId] = { state: project.circuit ? engine.exportState() : null, stack: hierarchyStack, viewMode };
+    const next = projectById(id);
+    const saved = savedProjects.current[id];
+    if (next.circuit) {
+      if (saved?.state) engine.importState(saved.state);
+      else engine.loadCircuit(next.circuit);
+      defaultSpeedFor(engine);
+    } else engine.clear();
+    setHierarchyStack(saved?.stack || [makeRootEntry(next.title, next.subtitle)]);
+    setViewMode(saved?.viewMode || next.defaultView);
+    setSelectedComponentId(null);
+    setProjectId(id);
+  }, [engine, projectId, project, hierarchyStack, viewMode]);
 
   useEffect(() => {
     if (!drillHint) return;
@@ -89,8 +109,8 @@ export default function App() {
 
     const target = hierarchyStack[targetIdx];
     if (target.state) engine.importState(target.state);
-    else {
-      engine.loadCircuit(PRESET_CIRCUITS.nvidia_nv1);
+    else if (project.circuit) {
+      engine.loadCircuit(project.circuit);
       defaultSpeedFor(engine);
     }
 
@@ -98,7 +118,7 @@ export default function App() {
     audioEngine.playRelayClick(1.3);
     setHierarchyStack(hierarchyStack.slice(0, targetIdx + 1));
     setSelectedComponentId(null);
-  }, [engine, hierarchyStack]);
+  }, [engine, hierarchyStack, project]);
 
   // A new top-level circuit was loaded (gallery, import, AI copilot): restart the hierarchy at it
   const handleCircuitReplaced = useCallback((name) => {
@@ -110,13 +130,19 @@ export default function App() {
   return (
     <div className="w-screen h-screen bg-(--bg-dark) text-(--text-light) flex flex-col overflow-hidden font-sans border border-(--line)">
       {/* Sleek Custom Desktop Titlebar */}
-      <Titlebar circuitTitle={hierarchyStack[hierarchyStack.length - 1].title} />
+      <Titlebar
+        circuitTitle={hierarchyStack[hierarchyStack.length - 1].title}
+        projects={PROJECTS}
+        projectId={projectId}
+        onSelectProject={handleSelectProject}
+      />
 
       {/* Top Engineering Controls Toolbar */}
       <Toolbar
         engine={engine}
         viewMode={viewMode}
         setViewMode={setViewMode}
+        allowedViews={project.views}
         showGallery={showGallery}
         setShowGallery={setShowGallery}
         showAsm={showAsm}
@@ -143,7 +169,9 @@ export default function App() {
 
         {/* Central Viewport: Schematic vs Hardware PCB vs Physics 3D Die */}
         <div className="flex-1 h-full relative">
-          {viewMode === 'physics' ? (
+          {viewMode === 'economic' ? (
+            <EconomicView project={project} />
+          ) : viewMode === 'physics' ? (
             <PhysicsView
               engine={engine}
               hierarchyStack={hierarchyStack}

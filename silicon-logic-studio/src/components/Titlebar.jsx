@@ -1,7 +1,7 @@
 import React from 'react';
 import { Minus, Square, X } from 'lucide-react';
 
-export function Titlebar({ circuitTitle }) {
+export function Titlebar({ circuitTitle, projects = [], projectId, onSelectProject }) {
   const handleMinimize = () => {
     if (window.require) {
       try {
@@ -49,9 +49,28 @@ export function Titlebar({ circuitTitle }) {
         <span className="serif-accent text-[15px]">studio</span>
       </div>
 
-      {/* Middle: aktuální obvod */}
-      <div className="meta hidden md:block truncate px-4 min-w-0">
-        {circuitTitle && <><span className="text-gray-600">Obvod&nbsp;/&nbsp;</span><span className="text-gray-300">{circuitTitle}</span></>}
+      {/* Middle: projekty (karty) a aktuální obvod */}
+      <div className="flex items-center gap-3 min-w-0 px-4">
+        <div className="flex items-stretch h-6 shrink-0" role="tablist" aria-label="Projekty" style={{ WebkitAppRegion: 'no-drag' }}>
+          {projects.map((p, i) => (
+            <button
+              key={p.id}
+              role="tab"
+              data-project={p.id}
+              aria-selected={p.id === projectId}
+              onClick={() => onSelectProject?.(p.id)}
+              title={p.title}
+              className={`px-2.5 border text-[10px] font-mono font-bold tracking-[0.08em] whitespace-nowrap transition-colors ${i > 0 ? '-ml-px' : ''} ${
+                p.id === projectId ? 'bg-(--accent-amber) border-(--accent-amber) text-(--bg-dark)' : 'border-(--line) text-gray-400 hover:text-(--text-light)'
+              }`}
+            >
+              <span className="opacity-60 mr-1">{i + 1}</span>{p.tab}
+            </button>
+          ))}
+        </div>
+        <div className="meta hidden lg:block truncate min-w-0">
+          {circuitTitle && <><span className="text-gray-600">Obvod&nbsp;/&nbsp;</span><span className="text-gray-300">{circuitTitle}</span></>}
+        </div>
       </div>
 
       {/* Right: Window Controls */}

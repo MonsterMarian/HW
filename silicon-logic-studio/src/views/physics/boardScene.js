@@ -4,7 +4,7 @@
 // For the Diamond Edge 3D the parts are modelled from their datasheet outlines (packages.js, in mm),
 // copper traces are routed from the engine's nets (pcbRouter.js) and glow with the net value.
 import * as THREE from 'three';
-import { componentDims, hardwarePinPos, NV1_CARD, nv1CardOutline, isOnNv1Card, isBracketPart, crystalFrequency, PX_PER_MM } from '../../engine/boardLayout';
+import { componentDims, hardwarePinPos, NV1_CARD, nv1CardOutline, isOnNv1Card, isBracketPart, crystalFrequency, PX_PER_MM } from '../../engine/boardLayout.js';
 import { DEVICES } from '../../engine/devices/index.js';
 import { std, textTexture, ribbonGeometry, mergeGeos, isActive } from './common.js';
 import * as P from './packages.js';
@@ -73,7 +73,7 @@ function fitMarking(model, bw, bd, rotate) {
 }
 
 // ---------------------------------------------------------------- real NV1 card parts (mm)
-function buildRealPart(comp) {
+export function buildRealPart(comp) {
   const t = comp.type;
   const ic = (builder, bw, bd, opts, rotate = false) => {
     const m = builder({ bw, bd, marking: rotate ? partMarking(comp, bd, bw) : partMarking(comp, bw, bd), ...opts });

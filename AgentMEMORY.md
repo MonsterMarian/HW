@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-10 11:34
+Aktualizováno: 2026-11-10 14:01
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -39,7 +39,21 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - Externí zařízení (monitor, repro, pad) jsou vlevo za bracketem (kabely nevedou přes kartu).
 - Diagnostika (DIAG) spouští vlastní engine v režimu TINY a hlásí 7 skutečných kontrol.
 
+## Projekty + ECONOMIC view (2026-11-10)
+- `src/engine/projects.js`: po startu 2 projekty (karty v titulní liště, `data-project`), otevře se 1. = NV1.
+  2. = AI PC z `PCYoutubeborce.md` (Dell T5810 + 2× Tesla P100) – jen kusovník (`circuit: null`, `views: ['economic']`),
+  ostatní pohledy jsou v liště zakázané. Přepnutí projektu ukládá stav enginu + hierarchii + pohled (App `savedProjects`).
+- ECONOMIC view (`views/EconomicView.jsx`): díly z kusovníku `engine/economic/catalog.js` (cena [min,max] Kč/ks,
+  `src` doc/odhad, `dims` mm, odkazy = vyhledávací URL obchodů), modely v mm `views/economic/models.js`
+  (čipy NV1 přes `buildRealPart` z boardScene), rozložení `economic/layout.js` (vysoké díly dozadu).
+  Electron otevírá odkazy přes `shell.openExternal` (setWindowOpenHandler).
+- Rozhodnutí: sestava PC = varianta z videa + kritické doplňky z dokumentu (Add2PSU, EPS redukce, chlazení, pasta,
+  P12); alternativy (Ryzen, P40, 3060) nejsou. NV1 kusovník = jednotlivé součástky + monitor/repro/pad (bez host PC).
+- Pasti: `window.__eco` (DEV) = stav 3D scény pro screenshoty; v node testech musí mít importy přípony `.js`.
+
 ## Další kroky / známé vady
+- PC projekt nemá schéma/PCB/3D simulaci, jen ECONOMIC. Ceny jsou odhady (RAM/SSD v 2026 drahé, kolísají);
+  vyhledávací URL obchodů nebyly ověřeny otevřením. Modely jsou zjednodušené (rozměry sedí, detaily ne).
 - Rychlost: ~3 µs na hranu; profil ukazuje režii v `_settle`/`step` + modely čipů. Vyzkoušeno bez efektu:
   rychlá cesta pro sestupné hrany, pole místo Set. Další nápad: Web Worker nebo jemnější sensitivity listy.
 - Breadcrumb/HUD ve 3D na hlubokých úrovních přetéká; na L2 schématu se překrývá blok PCI TARGET s pady.
@@ -61,3 +75,5 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   modely karty, hierarchie, 2D/3D, restyle.
 - 2026-11-10 11:34 — dokončení: 3D L2–L8, 5V klíč PCI opraven (kontakty 50/51), bracket na hraně karty,
   zařízení za bracketem, README přepsané; 115/115 testů, build OK.
+- 2026-11-10 14:01 — „ECONOMIC view (díly z obchodu, ceny, odkazy) + projekt AI PC z PCYoutubeborce.md, projekty po startu“
+  → projects.js, catalog, EconomicView + modely, karty projektů, 120/120 testů.

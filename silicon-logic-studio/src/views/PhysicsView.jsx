@@ -459,7 +459,7 @@ function fmt(v) {
 
 // Hide CSS2D labels that would overlap a more important / nearer one (screen-space greedy placement)
 const _lp = new THREE.Vector3();
-function declutterLabels(labels, camera, container) {
+export function declutterLabels(labels, camera, container) {
   const W = container.clientWidth, H = container.clientHeight;
   const items = labels.map((l) => {
     l.obj.getWorldPosition(_lp);

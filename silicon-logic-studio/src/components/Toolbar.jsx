@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -27,6 +27,15 @@ function fmtRatio(r, running) {
   if (!r) return '—';
   if (r >= 1) return `×${r.toFixed(1)} REÁL`;
   return `1/${Math.round(1 / r).toLocaleString('cs-CZ')} REÁL`;
+}
+
+// Nová součástka: náhodné id a pozice kousek od levého horního rohu, ať se nové kusy nepřekrývají
+function newPlacement(type) {
+  return {
+    id: `${type.toLowerCase()}_${Math.random().toString(36).substring(2, 6)}`,
+    x: 140 + Math.random() * 120,
+    y: 120 + Math.random() * 90,
+  };
 }
 
 export function Toolbar({
@@ -73,19 +82,7 @@ export function Toolbar({
     return () => clearInterval(id);
   }, [engine]);
 
-  // Spacebar shortcut to Start/Stop simulation clock
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-        handleToggleRun();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handleToggleRun = () => {
+  const handleToggleRun = useCallback(() => {
     if (engine.isRunning) {
       engine.stop();
       setIsRunning(false);
@@ -97,7 +94,19 @@ export function Toolbar({
       audioEngine.playRelayClick(1.4);
       audioEngine.updateClockHum(engine.clockFrequency, true);
     }
-  };
+  }, [engine]);
+
+  // Spacebar shortcut to Start/Stop simulation clock
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        handleToggleRun();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleToggleRun]);
 
   const handleStep = () => {
     if (engine.isRunning) {
@@ -116,16 +125,7 @@ export function Toolbar({
   // Piny i výchozí stav doplní engine (ensurePins / init zařízení)
   const addComponent = (type, label) => {
     audioEngine.playRelayClick(1.0);
-    const id = `${type.toLowerCase()}_${Math.random().toString(36).substring(2, 6)}`;
-    const comp = {
-      id,
-      type,
-      label: label || type,
-      x: 140 + Math.random() * 120,
-      y: 120 + Math.random() * 90,
-      inputs: {},
-      outputs: {},
-    };
+    const comp = { ...newPlacement(type), type, label: label || type, inputs: {}, outputs: {} };
     if (type === 'CRYSTAL') comp.freqHz = 14.31818e6;
     engine.addComponent(comp);
     setActiveCategory(null);

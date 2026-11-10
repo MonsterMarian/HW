@@ -227,3 +227,23 @@ export function fitLayout(rects, targetW, targetD) {
     depth: (maxY - minY) * s,
   };
 }
+
+// Hide CSS2D labels that would overlap a more important / nearer one (screen-space greedy placement)
+const _lp = new THREE.Vector3();
+export function declutterLabels(labels, camera, container) {
+  const W = container.clientWidth, H = container.clientHeight;
+  const items = labels.map((l) => {
+    l.obj.getWorldPosition(_lp);
+    const d = _lp.distanceTo(camera.position);
+    _lp.project(camera);
+    return { l, d, x: ((_lp.x + 1) / 2) * W, y: ((1 - _lp.y) / 2) * H, front: _lp.z < 1 };
+  }).sort((a, b) => (b.l.obj.userData.priority || 0) - (a.l.obj.userData.priority || 0) || a.d - b.d);
+  const placed = [];
+  for (const it of items) {
+    const w = it.l.el.offsetWidth, h = it.l.el.offsetHeight;
+    const r = { x0: it.x - w / 2 - 3, x1: it.x + w / 2 + 3, y0: it.y - h - 2, y1: it.y + 2 }; // label is lifted by translateY(-50%)
+    const free = it.front && !placed.some((p) => r.x0 < p.x1 && r.x1 > p.x0 && r.y0 < p.y1 && r.y1 > p.y0);
+    it.l.el.style.visibility = free ? 'visible' : 'hidden';
+    if (free) placed.push(r);
+  }
+}

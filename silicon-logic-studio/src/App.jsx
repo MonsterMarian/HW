@@ -170,7 +170,7 @@ export default function App() {
         {/* Central Viewport: Schematic vs Hardware PCB vs Physics 3D Die */}
         <div className="flex-1 h-full relative">
           {viewMode === 'economic' ? (
-            <EconomicView project={project} />
+            <EconomicView key={project.id} project={project} />
           ) : viewMode === 'physics' ? (
             <PhysicsView
               engine={engine}

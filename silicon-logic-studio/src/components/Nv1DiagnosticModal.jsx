@@ -247,9 +247,11 @@ export function Nv1DiagnosticModal({ isOpen, onClose }) {
     setTimeout(tick, 30);
   }, []);
 
+  // Spuštění až v dalším tasku: první snímek modalu se vykreslí hned a stav se nemění uvnitř efektu
   useEffect(() => {
-    if (isOpen) runAllTests();
-    return () => { if (runRef.current) runRef.current.cancelled = true; };
+    if (!isOpen) return undefined;
+    const t = setTimeout(runAllTests, 0);
+    return () => { clearTimeout(t); if (runRef.current) runRef.current.cancelled = true; };
   }, [isOpen, runAllTests]);
 
   if (!isOpen) return null;

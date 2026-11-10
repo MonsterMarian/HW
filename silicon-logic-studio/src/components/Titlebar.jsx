@@ -29,7 +29,7 @@ export function Titlebar({ circuitTitle, projects = [], projectId, onSelectProje
       try {
         const { ipcRenderer } = window.require('electron');
         ipcRenderer.send('window-close');
-      } catch (e) {
+      } catch {
         window.close();
       }
     } else {

@@ -6,11 +6,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ExternalLink, Tag, ShoppingCart } from 'lucide-react';
-import { disposeTree } from './physics/common.js';
+import { disposeTree, declutterLabels } from './physics/common.js';
 import { buildModel, ruler } from './economic/models.js';
 import { packRows } from './economic/layout.js';
 import { bomTotal, fmtKc, fmtRange } from '../engine/economic/catalog.js';
-import { declutterLabels } from './PhysicsView.jsx';
 
 const SRC_TEXT = { doc: 'cena z dokumentu PCYoutubeborce.md', odhad: 'odhad 11/2026 (bazar, eBay)' };
 const fmtMm = (v) => (Math.round(v * 100) / 100).toLocaleString('cs-CZ');
@@ -21,8 +20,6 @@ export function EconomicView({ project }) {
   const [selected, setSelected] = useState(null);
   const [hovered, setHovered] = useState(null);
   const [showLabels, setShowLabels] = useState(true);
-  const live = useRef({});
-  live.current = { setSelected, setHovered };
 
   // ---- renderer (jednou) ----
   useEffect(() => {
@@ -94,13 +91,13 @@ export function EconomicView({ project }) {
       hoverBox.visible = !!o;
       if (o) hoverBox.box.setFromObject(o).expandByScalar(2);
       renderer.domElement.style.cursor = o ? 'pointer' : 'grab';
-      live.current.setHovered(o?.userData.item || null);
+      setHovered(o?.userData.item || null);
     };
     let down = null;
     const onDown = (e) => { down = { x: e.clientX, y: e.clientY }; };
     const onUp = (e) => {
       if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) return;
-      live.current.setSelected(pick(e)?.userData.item.id ?? null);
+      setSelected(pick(e)?.userData.item.id ?? null);
     };
     const dom = renderer.domElement;
     dom.addEventListener('pointermove', onMove);
@@ -155,9 +152,7 @@ export function EconomicView({ project }) {
     for (const c of [...st.content.children]) { st.content.remove(c); disposeTree(c); }
     st.pickables = [];
     st.labels = [];
-    st.byId.clear();
-    setSelected(null);
-    setHovered(null);
+    st.byId.clear(); // výběr se nuluje přes key={project.id} v App
 
     // jedna skupina na položku: qty kusů vedle sebe
     const groups = project.bom.map((item) => {

@@ -10,7 +10,9 @@ const logFile = path.join(__dirname, '../electron-debug.log');
 function log(msg) {
   try {
     fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
-  } catch (e) {}
+  } catch {
+    // log je jen pomůcka, chyba zápisu nesmí shodit aplikaci
+  }
 }
 
 let mainWindow = null;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   FolderOpen,
   Save,
@@ -7,33 +7,27 @@ import {
   Trash2,
   X,
   Play,
-  Cpu,
-  Layers,
-  Sparkles,
-  FileCode,
   Image,
   CheckCircle,
 } from 'lucide-react';
 import { PRESET_CIRCUITS } from '../engine/aiCopilot';
 import { audioEngine } from '../engine/audioEngine';
 
+function loadSavedCircuits() {
+  try {
+    return JSON.parse(localStorage.getItem('silicon_saved_circuits') || '[]');
+  } catch (e) {
+    console.warn('Failed to load saved circuits from localStorage:', e);
+    return [];
+  }
+}
+
 export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () => {} }) {
-  const [savedCircuits, setSavedCircuits] = useState([]);
+  // Uložené obvody zapisuje jen tento panel, stačí je načíst jednou při vytvoření
+  const [savedCircuits, setSavedCircuits] = useState(loadSavedCircuits);
   const [circuitName, setCircuitName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [notification, setNotification] = useState(null);
-
-  // Load user saved circuits from localStorage
-  useEffect(() => {
-    try {
-      const data = localStorage.getItem('silicon_saved_circuits');
-      if (data) {
-        setSavedCircuits(JSON.parse(data));
-      }
-    } catch (e) {
-      console.warn('Failed to load saved circuits from localStorage:', e);
-    }
-  }, [isOpen]);
 
   const showNotify = (msg) => {
     setNotification(msg);
@@ -118,7 +112,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
         } else {
           showNotify('Chyba: Neplatný formát souboru obvodu.');
         }
-      } catch (err) {
+      } catch {
         showNotify('Chyba při čtení JSON souboru.');
       }
     };
@@ -311,7 +305,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
                   </div>
 
                   <div className="text-[9px] text-gray-500 mb-2 font-mono">
-                    Uloženo: {new Date(c.createdAt || Date.now()).toLocaleDateString()}
+                    Uloženo: {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}
                   </div>
 
                   <div className="flex items-center justify-between pt-1 border-t border-(--line)">

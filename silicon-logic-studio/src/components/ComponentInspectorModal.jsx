@@ -4,14 +4,9 @@ import {
   Layers,
   Table,
   Zap,
-  Activity,
   X,
-  ShieldCheck,
-  Check,
-  ChevronRight,
   Info,
   Grid,
-  Sliders,
 } from 'lucide-react';
 import { COMPONENT_DETAILS } from '../engine/componentDetails';
 import { WireState } from '../engine/logicEngine';

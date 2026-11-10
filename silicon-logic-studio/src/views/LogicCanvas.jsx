@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { audioEngine } from '../engine/audioEngine';
 import { WireState } from '../engine/logicEngine';
 import { componentDims, NV1_CARD } from '../engine/boardLayout';
@@ -160,6 +160,1059 @@ export function LogicCanvas({
   }, [engine, selectedComponentId, onSelectComponent]);
 
   // Main Render Routine
+  // Kreslicí funkce plátna: závisí na enginu, rozvržení a úrovni hierarchie, proto jeden useMemo
+  const painters = useMemo(() => {
+    // ==========================================
+    // ULTRA-REALISTIC HARDWARE PCB RENDERER
+    // ==========================================
+    function drawRealisticHardwarePCB(ctx, comp, isSelected, time) {
+      const { w, h } = getDims(comp);
+      ctx.save();
+
+      // Solder Mask Component Silkscreen Outline (White Legend on PCB)
+      ctx.strokeStyle = 'rgba(235, 240, 245, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(comp.x - 6, comp.y - 6, w + 12, h + 12);
+      ctx.setLineDash([]);
+
+      // Silkscreen Component Reference Name (e.g. U1, U2, SW1)
+      ctx.fillStyle = THEME.text;
+      ctx.font = `700 9px ${THEME.mono}`;
+      ctx.fillText(comp.label || comp.type, comp.x - 4, comp.y - 10);
+
+      if (comp.type === 'INPUT') {
+        drawRealisticToggleSwitch(ctx, comp, w, h, isSelected);
+        ctx.restore();
+        return;
+      }
+      if (comp.type === 'CLOCK') {
+        drawRealisticCrystalOscillator(ctx, comp, w, h, isSelected);
+        ctx.restore();
+        return;
+      }
+      if (comp.type === 'VIRTUAL_SCREEN') {
+        drawRealisticCRT(ctx, comp, w, h, isSelected, time);
+        ctx.restore();
+        return;
+      }
+      if (comp.type === 'PROBE') {
+        drawRealisticProbe(ctx, comp, w, h, isSelected);
+        ctx.restore();
+        return;
+      }
+      if (comp.type === 'SEVEN_SEGMENT') {
+        drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, true);
+        ctx.restore();
+        return;
+      }
+      // DIP Integrated Circuit Package (e.g. 74LS08, 74LS86, etc.)
+      drawPhotorealisticDIPChip(ctx, comp, w, h, isSelected);
+      ctx.restore();
+    }
+
+    function drawPhotorealisticDIPChip(ctx, comp, w, h, isSelected) {
+      const meta = CHIP_PROFILES[comp.type] || { code: comp.type, desc: 'LOGIC IC', family: 'TTL', mfr: 'TI' };
+      const temp = engine.thermalMap.get(comp.id) || 28.5;
+
+      // 1. Draw Soldered Metallic Pins & Pads on PCB FIRST (behind chip body)
+      drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+
+      // 2. Heavy Drop Shadow under the IC Body
+      ctx.shadowColor = isSelected ? `rgba(${THEME.highRgb}, 0.55)` : 'rgba(0, 0, 0, 0.9)';
+      ctx.shadowBlur = isSelected ? 18 : 12;
+      ctx.shadowOffsetY = 6;
+
+      // 3. Molded Black Epoxy Resin Body #121418
+      const chipGrad = ctx.createLinearGradient(comp.x, comp.y, comp.x + w, comp.y + h);
+      chipGrad.addColorStop(0, '#1C2029');
+      chipGrad.addColorStop(0.2, '#12141A');
+      chipGrad.addColorStop(0.8, '#0C0E13');
+      chipGrad.addColorStop(1, '#07080B');
+      ctx.fillStyle = chipGrad;
+
+      roundRect(ctx, comp.x, comp.y, w, h, 4);
+      ctx.fill();
+
+      ctx.shadowColor = 'transparent';
+
+      // 4. Subtle 3D Chamfer / Bevel around edges
+      ctx.strokeStyle = isSelected ? THEME.high : '#2B3342';
+      ctx.lineWidth = isSelected ? 2 : 1;
+      roundRect(ctx, comp.x, comp.y, w, h, 4);
+      ctx.stroke();
+
+      // 5. Longitudinal Center Recessed Channel (typical on DIP ICs)
+      ctx.fillStyle = '#090B0E';
+      ctx.fillRect(comp.x + 10, comp.y + h / 2 - 1, w - 20, 2);
+
+      // 6. Semicircular Orientation Notch at Pin 1 side (Left)
+      ctx.fillStyle = '#07090C';
+      ctx.strokeStyle = '#1D2533';
+      ctx.beginPath();
+      ctx.arc(comp.x, comp.y + h / 2, 7, -Math.PI / 2, Math.PI / 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 7. Pin 1 Indentation Dot
+      ctx.fillStyle = '#080A0D';
+      ctx.beginPath();
+      ctx.arc(comp.x + 12, comp.y + 14, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 8. Laser Etched Silkscreen Print (Manufacturer Logo & Part Number)
+      // Stylized Texas Instruments / Logo Mark
+      ctx.fillStyle = THEME.text;
+      ctx.font = `700 12px ${THEME.mono}`;
+      ctx.fillText(meta.code, comp.x + 22, comp.y + 24);
+
+      ctx.fillStyle = '#718096';
+      ctx.font = `600 8px ${THEME.sans}`;
+      ctx.fillText(`${meta.mfr} // ${meta.desc}`, comp.x + 22, comp.y + 38);
+
+      ctx.fillStyle = '#4A5568';
+      ctx.font = `500 7px ${THEME.mono}`;
+      ctx.fillText(`MALAYSIA 2442B // ${meta.family}`, comp.x + 22, comp.y + h - 14);
+
+      // 9. Real-time Silicon Thermal Sensor Gauge
+      const heatColor = temp > 75 ? '#FF003C' : temp > 45 ? '#FF8400' : '#10B981';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      roundRect(ctx, comp.x + w - 48, comp.y + 8, 42, 14, 3);
+      ctx.fill();
+      ctx.fillStyle = heatColor;
+      ctx.font = `700 8px ${THEME.mono}`;
+      ctx.fillText(`${temp.toFixed(1)}°C`, comp.x + w - 44, comp.y + 18);
+    }
+
+    // Pájecí plošky přesně tam, kde končí spoje (stejná geometrie jako vedení cest)
+    function drawPhotorealisticPadsAndLeads(ctx, comp) {
+      for (const [pin, p] of geomOf(comp).pins) {
+        const isOut = p.side === 'R';
+        drawSinglePCBPad(ctx, p.x, p.y, pin, isOut, engine.pinValue(comp.id, pin));
+      }
+    }
+
+    function drawSinglePCBPad(ctx, x, y, name, isOutput, value) {
+      const isHigh = value === 1;
+
+      ctx.save();
+
+      // 1. Oval ENIG Gold Solder Pad on PCB
+      ctx.fillStyle = isHigh ? `rgba(${THEME.highRgb}, 0.45)` : '#C59B27';
+      ctx.beginPath();
+      ctx.ellipse(x, y, 6.5, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Shiny Solder Joint Meniscus (Tin-Lead alloy droplet)
+      const solderGrad = ctx.createRadialGradient(x - 1, y - 1, 0, x, y, 4);
+      solderGrad.addColorStop(0, '#FFFFFF');
+      solderGrad.addColorStop(0.4, isHigh ? THEME.high : THEME.text);
+      solderGrad.addColorStop(0.8, isHigh ? THEME.highDim : THEME.label);
+      solderGrad.addColorStop(1, '#475569');
+      ctx.fillStyle = solderGrad;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 4, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3. Bent Metallic Alloy Lead (Stamping from chip body to pad)
+      ctx.fillStyle = isHigh ? THEME.high : THEME.text;
+      if (isHigh) {
+        ctx.shadowColor = THEME.high;
+        ctx.shadowBlur = 10;
+      }
+      const leadW = 7;
+      const leadX = isOutput ? x - leadW : x;
+      ctx.fillRect(leadX, y - 2, leadW, 4);
+
+      ctx.restore();
+
+      // 4. White Silkscreen Pin Label on Board
+      ctx.fillStyle = isHigh ? THEME.high : THEME.label;
+      ctx.font = `600 8px ${THEME.mono}`;
+      const textW = ctx.measureText(name.toUpperCase()).width;
+      ctx.fillText(name.toUpperCase(), isOutput ? x - textW - 12 : x + 12, y + 3);
+    }
+
+    function drawRealisticToggleSwitch(ctx, comp, w, h, isSelected) {
+      const isOn = comp.outputs.out === 1;
+
+      // Metal Base Plate
+      ctx.fillStyle = '#0E121A';
+      roundRect(ctx, comp.x, comp.y, w, h, 6);
+      ctx.fill();
+
+      ctx.strokeStyle = isSelected ? THEME.high : '#2A3446';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, comp.x, comp.y, w, h, 6);
+      ctx.stroke();
+
+      ctx.fillStyle = THEME.label;
+      ctx.font = `700 9px ${THEME.mono}`;
+      ctx.fillText('HEAVY TOGGLE', comp.x + 10, comp.y + 16);
+
+      // Chrome Bezel Nut with knurling
+      const cx = comp.x + 38;
+      const cy = comp.y + 54;
+      ctx.fillStyle = '#1E2533';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#4A5568';
+      ctx.stroke();
+
+      // Chrome Bat Lever
+      const handleY = isOn ? cy - 10 : cy + 10;
+      ctx.save();
+      ctx.shadowColor = isOn ? `rgba(${THEME.highRgb}, 0.8)` : 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = isOn ? 14 : 4;
+      const leverGrad = ctx.createLinearGradient(cx - 10, handleY - 10, cx + 10, handleY + 10);
+      leverGrad.addColorStop(0, '#FFFFFF');
+      leverGrad.addColorStop(0.5, isOn ? THEME.highDim : THEME.muted);
+      leverGrad.addColorStop(1, '#1E293B');
+      ctx.fillStyle = leverGrad;
+      ctx.beginPath();
+      ctx.arc(cx, handleY, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Pilot LED Lens
+      const ledX = comp.x + 84;
+      const ledY = comp.y + 54;
+      ctx.save();
+      if (isOn) {
+        ctx.shadowColor = THEME.high;
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = THEME.high;
+        ctx.beginPath();
+        ctx.arc(ledX, ledY, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(ledX - 2.5, ledY - 2.5, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#151D2A';
+        ctx.beginPath();
+        ctx.arc(ledX, ledY, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = THEME.low;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.fillStyle = isOn ? THEME.high : '#475569';
+      ctx.font = `700 8px ${THEME.mono}`;
+      ctx.fillText(isOn ? 'ON' : 'OFF', ledX - 6, ledY + 20);
+
+      drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+    }
+
+    function drawRealisticCrystalOscillator(ctx, comp, w, h, isSelected) {
+      const isHigh = comp.outputs.out === 1;
+
+      // Brushed Aluminum Can
+      const grad = ctx.createLinearGradient(comp.x, comp.y, comp.x + w, comp.y);
+      grad.addColorStop(0, '#4B5563');
+      grad.addColorStop(0.2, '#9CA3AF');
+      grad.addColorStop(0.6, '#D1D5DB');
+      grad.addColorStop(1, '#374151');
+      ctx.fillStyle = grad;
+      roundRect(ctx, comp.x, comp.y, w, h, 12);
+      ctx.fill();
+
+      ctx.strokeStyle = isSelected ? THEME.high : '#E5E7EB';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, comp.x, comp.y, w, h, 12);
+      ctx.stroke();
+
+      ctx.fillStyle = '#111827';
+      ctx.font = `700 11px ${THEME.mono}`;
+      ctx.fillText(`FOX ${crystalFrequency(comp)} MHz`, comp.x + 14, comp.y + 28);
+      ctx.font = `600 8px ${THEME.mono}`;
+      ctx.fillText('HC-49/U QUARTZ CRYSTAL', comp.x + 14, comp.y + 44);
+
+      // Blinking Pulse LED
+      const ledX = comp.x + w - 24;
+      const ledY = comp.y + 32;
+      if (isHigh) {
+        ctx.shadowColor = THEME.high;
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = THEME.high;
+        ctx.beginPath();
+        ctx.arc(ledX, ledY, 6, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#1F2937';
+        ctx.beginPath();
+        ctx.arc(ledX, ledY, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+    }
+
+    function drawRealisticCRT(ctx, comp, w, h, isSelected, time) {
+      ctx.fillStyle = '#0E121A';
+      roundRect(ctx, comp.x, comp.y, w, h, 8);
+      ctx.fill();
+      ctx.strokeStyle = isSelected ? THEME.high : THEME.low;
+      roundRect(ctx, comp.x, comp.y, w, h, 8);
+      ctx.stroke();
+
+      ctx.fillStyle = THEME.label;
+      ctx.font = `700 9px ${THEME.mono}`;
+      ctx.fillText('VIRTUAL CRT-64 // DUAL-PORT', comp.x + 12, comp.y + 16);
+
+      const scrX = comp.x + 12;
+      const scrY = comp.y + 26;
+      ctx.fillStyle = '#020406';
+      roundRect(ctx, scrX, scrY, 128, 128, 4);
+      ctx.fill();
+
+      if (comp.label?.includes('NV1') || comp.label?.includes('3D') || engine.components.has('nv1_core')) {
+        // Live 1995 NV1 3D Quadratic Curved Mesh Demo
+        const cx = scrX + 64;
+        const cy = scrY + 54;
+        const t = (time || 0) * 0.0018;
+
+        ctx.save();
+        ctx.strokeStyle = THEME.high;
+        ctx.lineWidth = 1.4;
+        ctx.shadowColor = THEME.high;
+        ctx.shadowBlur = 8;
+
+        const numLines = 5;
+        for (let i = -numLines; i <= numLines; i++) {
+          const u = i / numLines;
+          ctx.beginPath();
+          for (let j = -numLines; j <= numLines; j++) {
+            const v = j / numLines;
+            // Quadratic curved surface (saddle hyperboloid)
+            const x3d = u * 36;
+            const y3d = v * 36;
+            const z3d = (u * u - v * v) * 20;
+
+            const cosY = Math.cos(t);
+            const sinY = Math.sin(t);
+            const rx = x3d * cosY + z3d * sinY;
+            const rz = -x3d * sinY + z3d * cosY;
+            const ry = y3d * Math.cos(0.5) - rz * Math.sin(0.5);
+
+            const projX = cx + rx;
+            const projY = cy + ry;
+
+            if (j === -numLines) ctx.moveTo(projX, projY);
+            else ctx.lineTo(projX, projY);
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Retro 1995 3D Demo Overlay
+        ctx.fillStyle = THEME.high;
+        ctx.font = `800 8px ${THEME.mono}`;
+        ctx.fillText('NVIDIA NV1 (1995)', scrX + 6, scrY + 112);
+        ctx.fillStyle = '#10B981';
+        ctx.font = `600 7px ${THEME.mono}`;
+        ctx.fillText('QTM 3D ENGINE: 60 FPS', scrX + 6, scrY + 122);
+      } else if (comp.vram) {
+        for (let y = 0; y < 64; y++) {
+          for (let x = 0; x < 64; x++) {
+            const pixel = comp.vram[y * 64 + x];
+            if (pixel) {
+              const r = ((pixel >> 5) & 7) * 36;
+              const g = ((pixel >> 2) & 7) * 36;
+              const b = (pixel & 3) * 85;
+              ctx.fillStyle = `rgb(${r},${g},${b})`;
+              ctx.fillRect(scrX + x * 2, scrY + y * 2, 2, 2);
+            }
+          }
+        }
+      }
+
+      // CRT Scanlines
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      for (let sy = scrY; sy < scrY + 128; sy += 3) {
+        ctx.fillRect(scrX, sy, 128, 1.2);
+      }
+      drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+    }
+
+    function drawRealisticProbe(ctx, comp, w, h, isSelected) {
+      ctx.fillStyle = '#0B0F17';
+      roundRect(ctx, comp.x, comp.y, w, h, 6);
+      ctx.fill();
+      ctx.strokeStyle = isSelected ? THEME.high : '#243042';
+      roundRect(ctx, comp.x, comp.y, w, h, 6);
+      ctx.stroke();
+
+      const val = shownValue(comp);
+      const strVal = val === WireState.HIGH_Z ? 'Z' : val !== undefined ? `${val}` : '-';
+
+      ctx.fillStyle = '#030508';
+      roundRect(ctx, comp.x + 30, comp.y + 24, 48, 38, 4);
+      ctx.fill();
+
+      ctx.fillStyle = val === 1 ? THEME.high : '#475569';
+      ctx.font = `700 24px ${THEME.mono}`;
+      ctx.fillText(strVal, comp.x + 46, comp.y + 51);
+
+      drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+    }
+
+    function drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, isHardware) {
+      const raw = comp.value;
+      const val = typeof raw === 'number' ? raw & 0x0F : 0;
+      const hexChar = typeof raw === 'number' ? val.toString(16).toUpperCase() : String(raw ?? '-');
+
+      ctx.save();
+      // Chassis Body
+      ctx.fillStyle = isHardware ? '#0E121A' : THEME.bg;
+      roundRect(ctx, comp.x, comp.y, w, h, 6);
+      ctx.fill();
+
+      ctx.strokeStyle = isSelected ? THEME.high : isHardware ? '#2B3548' : '#334155';
+      ctx.lineWidth = isSelected ? 2 : 1.2;
+      roundRect(ctx, comp.x, comp.y, w, h, 6);
+      ctx.stroke();
+
+      // Module Title
+      ctx.fillStyle = THEME.muted;
+      ctx.font = `700 8px ${THEME.mono}`;
+      ctx.fillText('7-SEG DISPLAY', comp.x + 8, comp.y + 14);
+
+      // Bezel Display Window
+      const boxX = comp.x + 18;
+      const boxY = comp.y + 20;
+      const boxW = 54;
+      const boxH = 70;
+
+      ctx.fillStyle = '#040203';
+      roundRect(ctx, boxX, boxY, boxW, boxH, 4);
+      ctx.fill();
+
+      // Segment Bitmask (0-F)
+      const SEG_MAP = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71];
+      const mask = SEG_MAP[val & 0x0F] || 0;
+      const activeColor = '#FF0055'; // Glowing Ruby Red LED
+      const dimColor = 'rgba(60, 10, 25, 0.35)';
+
+      const sx = boxX + 14;
+      const sy = boxY + 10;
+      const segW = 20;
+      const segH = 20;
+      const t = 3.2;
+
+      function drawH(x, y, on) {
+        ctx.save();
+        ctx.fillStyle = on ? activeColor : dimColor;
+        if (on) {
+          ctx.shadowColor = activeColor;
+          ctx.shadowBlur = 8;
+        }
+        ctx.fillRect(x, y, segW, t);
+        ctx.restore();
+      }
+
+      function drawV(x, y, on) {
+        ctx.save();
+        ctx.fillStyle = on ? activeColor : dimColor;
+        if (on) {
+          ctx.shadowColor = activeColor;
+          ctx.shadowBlur = 8;
+        }
+        ctx.fillRect(x, y, t, segH);
+        ctx.restore();
+      }
+
+      // Segments: a, b, c, d, e, f, g
+      drawH(sx, sy, (mask & 0x01) !== 0); // a
+      drawV(sx + segW, sy + t, (mask & 0x02) !== 0); // b
+      drawV(sx + segW, sy + segH + t * 2, (mask & 0x04) !== 0); // c
+      drawH(sx, sy + segH * 2 + t * 2, (mask & 0x08) !== 0); // d
+      drawV(sx - t, sy + segH + t * 2, (mask & 0x10) !== 0); // e
+      drawV(sx - t, sy + t, (mask & 0x20) !== 0); // f
+      drawH(sx, sy + segH + t, (mask & 0x40) !== 0); // g
+
+      // Decimal Point DP
+      ctx.save();
+      ctx.fillStyle = activeColor;
+      ctx.shadowColor = activeColor;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(boxX + boxW - 8, boxY + boxH - 8, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Value read-out label at bottom
+      ctx.fillStyle = THEME.high;
+      ctx.font = `700 9px ${THEME.mono}`;
+      ctx.fillText(`HEX: ${hexChar} (DEC: ${val})`, comp.x + 8, comp.y + h - 4);
+
+      if (isHardware) {
+        drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
+      } else {
+        drawSchematicLeads(ctx, comp, w, h, isSelected ? THEME.high : THEME.stroke);
+      }
+
+      ctx.restore();
+    }
+
+    function drawSchematicComponent(ctx, comp, isSelected) {
+      const { w, h } = getDims(comp);
+      ctx.save();
+
+      const strokeColor = isSelected ? THEME.high : THEME.stroke;
+      const fillColor = isSelected ? `rgba(${THEME.highRgb}, 0.08)` : THEME.panel;
+      ctx.strokeStyle = strokeColor;
+      ctx.fillStyle = fillColor;
+      ctx.lineWidth = isSelected ? 2.5 : 1.8;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      if (comp.type === 'AND') {
+        const lead = 14;
+        const x = comp.x + lead;
+        const y = comp.y;
+        const sw = w - lead * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + sw * 0.45, y);
+        ctx.arc(x + sw * 0.45, y + h / 2, h / 2, -Math.PI / 2, Math.PI / 2);
+        ctx.lineTo(x, y + h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        drawSchematicLeads(ctx, comp, w, h, strokeColor);
+
+        ctx.fillStyle = isSelected ? THEME.high : THEME.label;
+        ctx.font = `700 11px ${THEME.mono}`;
+        ctx.fillText('&', x + 12, y + h / 2 + 4);
+
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `600 8px ${THEME.mono}`;
+        ctx.fillText(comp.label || 'AND', comp.x, comp.y - 4);
+      } else if (comp.type === 'NAND') {
+        const lead = 14;
+        const bubbleR = 4;
+        const x = comp.x + lead;
+        const y = comp.y;
+        const sw = w - lead * 2 - bubbleR * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + sw * 0.45, y);
+        ctx.arc(x + sw * 0.45, y + h / 2, h / 2, -Math.PI / 2, Math.PI / 2);
+        ctx.lineTo(x, y + h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(x + sw + bubbleR, y + h / 2, bubbleR, 0, Math.PI * 2);
+        ctx.fillStyle = THEME.bg;
+        ctx.fill();
+        ctx.stroke();
+
+        drawSchematicLeads(ctx, comp, w, h, strokeColor);
+
+        ctx.fillStyle = isSelected ? THEME.high : THEME.label;
+        ctx.font = `700 11px ${THEME.mono}`;
+        ctx.fillText('&', x + 10, y + h / 2 + 4);
+
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `600 8px ${THEME.mono}`;
+        ctx.fillText(comp.label || 'NAND', comp.x, comp.y - 4);
+      } else if (comp.type === 'OR') {
+        const lead = 14;
+        const x = comp.x + lead;
+        const y = comp.y;
+        const sw = w - lead * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + sw * 0.55, y, x + sw, y + h / 2);
+        ctx.quadraticCurveTo(x + sw * 0.55, y + h, x, y + h);
+        ctx.quadraticCurveTo(x + 12, y + h / 2, x, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        drawSchematicLeads(ctx, comp, w, h, strokeColor);
+
+        ctx.fillStyle = isSelected ? THEME.high : THEME.label;
+        ctx.font = `700 11px ${THEME.mono}`;
+        ctx.fillText('≥1', x + 18, y + h / 2 + 4);
+
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `600 8px ${THEME.mono}`;
+        ctx.fillText(comp.label || 'OR', comp.x, comp.y - 4);
+      } else if (comp.type === 'NOR') {
+        const lead = 14;
+        const bubbleR = 4;
+        const x = comp.x + lead;
+        const y = comp.y;
+        const sw = w - lead * 2 - bubbleR * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + sw * 0.55, y, x + sw, y + h / 2);
+        ctx.quadraticCurveTo(x + sw * 0.55, y + h, x, y + h);
+        ctx.quadraticCurveTo(x + 12, y + h / 2, x, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(x + sw + bubbleR, y + h / 2, bubbleR, 0, Math.PI * 2);
+        ctx.fillStyle = THEME.bg;
+        ctx.fill();
+        ctx.stroke();
+
+        drawSchematicLeads(ctx, comp, w, h, strokeColor);
+
+        ctx.fillStyle = isSelected ? THEME.high : THEME.label;
+        ctx.font = `700 11px ${THEME.mono}`;
+        ctx.fillText('≥1', x + 16, y + h / 2 + 4);
+
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `600 8px ${THEME.mono}`;
+        ctx.fillText(comp.label || 'NOR', comp.x, comp.y - 4);
+      } else if (comp.type === 'XOR') {
+        const lead = 14;
+        const x = comp.x + lead;
+        const y = comp.y;
+        const sw = w - lead * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x - 5, y);
+        ctx.quadraticCurveTo(x + 7, y + h / 2, x - 5, y + h);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + sw * 0.55, y, x + sw, y + h / 2);
+        ctx.quadraticCurveTo(x + sw * 0.55, y + h, x, y + h);
+        ctx.quadraticCurveTo(x + 12, y + h / 2, x, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        drawSchematicLeads(ctx, comp, w, h, strokeColor);
+
+        ctx.fillStyle = isSelected ? THEME.high : THEME.label;
+        ctx.font = `700 11px ${THEME.mono}`;
+        ctx.fillText('=1', x + 18, y + h / 2 + 4);
+
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `600 8px ${THEME.mono}`;
+        ctx.fillText(comp.label || 'XOR', comp.x, comp.y - 4);
+      } else if (comp.type === 'NOT') {
+        const lead = 12;
+        const bubbleR = 4;
+        const x = comp.x + lead;
+        const y = comp.y;
+        const sw = w - lead * 2 - bubbleR * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + sw, y + h / 2);
+        ctx.lineTo(x, y + h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(x + sw + bubbleR, y + h / 2, bubbleR, 0, Math.PI * 2);
+        ctx.fillStyle = THEME.bg;
+        ctx.fill();
+        ctx.stroke();
+
+        drawSchematicLeads(ctx, comp, w, h, strokeColor);
+
+        ctx.fillStyle = isSelected ? THEME.high : THEME.label;
+        ctx.font = `700 11px ${THEME.mono}`;
+        ctx.fillText('1', x + 8, y + h / 2 + 4);
+
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `600 8px ${THEME.mono}`;
+        ctx.fillText(comp.label || 'INV', comp.x, comp.y - 4);
+      } else if (comp.type === 'D_FF') {
+        const lead = 12;
+        const x = comp.x + lead;
+        const y = comp.y;
+        const sw = w - lead * 2;
+
+        ctx.fillRect(x, y, sw, h);
+        ctx.strokeRect(x, y, sw, h);
+
+        const clkY = y + 54;
+        ctx.beginPath();
+        ctx.moveTo(x, clkY - 6);
+        ctx.lineTo(x + 8, clkY);
+        ctx.lineTo(x, clkY + 6);
+        ctx.stroke();
+
+        drawSchematicLeads(ctx, comp, w, h, strokeColor);
+
+        ctx.fillStyle = THEME.text;
+        ctx.font = `700 9px ${THEME.mono}`;
+        ctx.fillText('D', x + 6, y + 23);
+        ctx.fillText('Q', x + sw - 14, y + 23);
+        ctx.fillText('Q̄', x + sw - 14, y + 57);
+
+        ctx.fillStyle = isSelected ? THEME.high : THEME.muted;
+        ctx.font = `700 9px ${THEME.mono}`;
+        ctx.fillText('D-FF', x + sw / 2 - 12, y + 38);
+      } else if (comp.type === 'INPUT') {
+        const isOn = comp.outputs.out === 1;
+        const boxW = w - 16;
+        ctx.save();
+        ctx.fillStyle = isOn ? `rgba(${THEME.highRgb}, 0.15)` : '#0A0E17';
+        ctx.strokeStyle = isOn ? THEME.high : THEME.low;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(comp.x, comp.y, boxW, h);
+        ctx.fillRect(comp.x, comp.y, boxW, h);
+
+        ctx.fillStyle = isOn ? THEME.high : THEME.muted;
+        ctx.font = `700 8px ${THEME.mono}`;
+        ctx.fillText(isOn ? 'SRC: HIGH' : 'SRC: LOW', comp.x + 8, comp.y + 16);
+
+        ctx.fillStyle = isOn ? THEME.high : THEME.text;
+        ctx.font = `700 20px ${THEME.mono}`;
+        ctx.fillText(isOn ? '1' : '0', comp.x + 18, comp.y + 42);
+
+        ctx.strokeStyle = isOn ? THEME.high : THEME.low;
+        ctx.beginPath();
+        ctx.moveTo(comp.x + boxW, comp.y + h / 2);
+        ctx.lineTo(comp.x + w, comp.y + h / 2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(comp.x + w, comp.y + h / 2, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = isOn ? THEME.high : THEME.low;
+        ctx.fill();
+        ctx.restore();
+      } else if (comp.type === 'CLOCK') {
+        const isHigh = comp.outputs.out === 1;
+        const boxW = w - 16;
+        ctx.strokeRect(comp.x, comp.y, boxW, h);
+        ctx.fillRect(comp.x, comp.y, boxW, h);
+
+        ctx.strokeStyle = isHigh ? THEME.high : THEME.muted;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const wy = comp.y + 36;
+        ctx.moveTo(comp.x + 12, wy);
+        ctx.lineTo(comp.x + 22, wy);
+        ctx.lineTo(comp.x + 22, wy - 14);
+        ctx.lineTo(comp.x + 36, wy - 14);
+        ctx.lineTo(comp.x + 36, wy);
+        ctx.lineTo(comp.x + 48, wy);
+        ctx.stroke();
+
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `700 8px ${THEME.mono}`;
+        ctx.fillText('CLK GEN', comp.x + 8, comp.y + 14);
+
+        ctx.strokeStyle = isHigh ? THEME.high : THEME.low;
+        ctx.beginPath();
+        ctx.moveTo(comp.x + boxW, comp.y + h / 2);
+        ctx.lineTo(comp.x + w, comp.y + h / 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(comp.x + w, comp.y + h / 2, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = isHigh ? THEME.high : THEME.low;
+        ctx.fill();
+      } else if (comp.type === 'PROBE') {
+        const val = shownValue(comp);
+        const str = val === WireState.HIGH_Z ? 'Z' : val !== undefined ? `${val}` : '-';
+        const isHigh = val === 1;
+
+        const cx = comp.x + w / 2;
+        const cy = comp.y + h / 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+        ctx.fillStyle = THEME.bg;
+        ctx.fill();
+        ctx.strokeStyle = isHigh ? THEME.high : THEME.stroke;
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(comp.x, cy);
+        ctx.lineTo(cx - 18, cy);
+        ctx.stroke();
+
+        ctx.fillStyle = isHigh ? THEME.high : THEME.text;
+        ctx.font = `700 16px ${THEME.mono}`;
+        ctx.fillText(str, cx - 5, cy + 5);
+
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `700 7px ${THEME.mono}`;
+        ctx.fillText('PROBE', comp.x + 4, comp.y + 8);
+      } else if (comp.type === 'VIRTUAL_SCREEN') {
+        ctx.strokeRect(comp.x, comp.y, w, h);
+        ctx.fillRect(comp.x, comp.y, w, h);
+
+        ctx.fillStyle = THEME.label;
+        ctx.font = `700 9px ${THEME.mono}`;
+        ctx.fillText('GPU DISPLAY // 64x64', comp.x + 10, comp.y + 16);
+
+        const scrX = comp.x + 12;
+        const scrY = comp.y + 24;
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(scrX, scrY, 128, 128);
+
+        if (comp.vram) {
+          for (let y = 0; y < 64; y++) {
+            for (let x = 0; x < 64; x++) {
+              const pixel = comp.vram[y * 64 + x];
+              if (pixel) {
+                const r = ((pixel >> 5) & 7) * 36;
+                const g = ((pixel >> 2) & 7) * 36;
+                const b = (pixel & 3) * 85;
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                ctx.fillRect(scrX + x * 2, scrY + y * 2, 2, 2);
+              }
+            }
+          }
+        }
+
+        drawSchematicLeads(ctx, comp, w, h, strokeColor);
+      } else if (comp.type === 'SEVEN_SEGMENT') {
+        drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, false);
+      } else if (comp.type === 'NMOS' || comp.type === 'PMOS') {
+        // Značka MOSFET: hradlo vlevo, kanál svisle, D/S nahoře a dole; vedoucí kanál = jantar
+        const pmos = comp.type === 'PMOS';
+        const on = !!comp.conducting;
+        const pins = geomOf(comp).pins;
+        const g = pins.get('g');
+        const top = pins.get(pmos ? 's' : 'd');
+        const bot = pins.get(pmos ? 'd' : 's');
+        const chX = top.x - 10; // svislý kanál
+        const gX = chX - 6; // deska hradla
+        const y0 = comp.y + h * 0.26;
+        const y1 = comp.y + h * 0.74;
+        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = strokeColor;
+        ctx.beginPath();
+        ctx.moveTo(g.x, g.y);
+        ctx.lineTo(pmos ? gX - 7 : gX, g.y);
+        ctx.moveTo(gX, y0);
+        ctx.lineTo(gX, y1);
+        ctx.stroke();
+        if (pmos) {
+          ctx.beginPath();
+          ctx.arc(gX - 3.5, g.y, 3.5, 0, Math.PI * 2);
+          ctx.fillStyle = THEME.bg;
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.strokeStyle = on ? THEME.high : strokeColor;
+        ctx.lineWidth = on ? 2.4 : 1.6;
+        ctx.beginPath();
+        ctx.moveTo(chX, y0 - 3);
+        ctx.lineTo(chX, y1 + 3);
+        ctx.moveTo(chX, y0);
+        ctx.lineTo(top.x, y0);
+        ctx.lineTo(top.x, top.y);
+        ctx.moveTo(chX, y1);
+        ctx.lineTo(bot.x, y1);
+        ctx.lineTo(bot.x, bot.y);
+        ctx.stroke();
+        // šipka na source (NMOS dovnitř, PMOS ven)
+        const sy = pmos ? y0 : y1;
+        const dir = pmos ? 1 : -1;
+        ctx.fillStyle = on ? THEME.high : strokeColor;
+        ctx.beginPath();
+        ctx.moveTo(chX + (pmos ? 9 : 1), sy);
+        ctx.lineTo(chX + (pmos ? 9 : 1) - dir * 6, sy - 3.5);
+        ctx.lineTo(chX + (pmos ? 9 : 1) - dir * 6, sy + 3.5);
+        ctx.fill();
+        ctx.font = `700 7px ${THEME.mono}`;
+        ctx.fillStyle = THEME.muted;
+        ctx.fillText(pmos ? 'S' : 'D', top.x + 4, comp.y + 9);
+        ctx.fillText(pmos ? 'D' : 'S', bot.x + 4, comp.y + h - 3);
+        ctx.fillText('G', comp.x + 2, g.y - 4);
+        ctx.fillStyle = on ? THEME.high : THEME.label;
+        ctx.font = `700 8px ${THEME.mono}`;
+        const name = String(comp.label || comp.type);
+        ctx.fillText(name.length > 16 ? name.slice(0, 15) + '…' : name, comp.x, comp.y + h + 11);
+      } else if (comp.type === 'VDD' || comp.type === 'GND') {
+        // Značky napájení: VDD = vodorovná čárka nad vývodem, GND = tři zkracující se čárky
+        const p = geomOf(comp).pins.get('out');
+        const cx = p.x;
+        ctx.strokeStyle = comp.type === 'VDD' ? THEME.high : strokeColor;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        if (comp.type === 'VDD') {
+          const by = comp.y + 12;
+          ctx.moveTo(cx, p.y);
+          ctx.lineTo(cx, by);
+          ctx.moveTo(cx - 14, by);
+          ctx.lineTo(cx + 14, by);
+        } else {
+          const by = comp.y + h - 16;
+          ctx.moveTo(cx, p.y);
+          ctx.lineTo(cx, by);
+          [14, 9, 4].forEach((half, i) => { ctx.moveTo(cx - half, by + i * 5); ctx.lineTo(cx + half, by + i * 5); });
+        }
+        ctx.stroke();
+        ctx.fillStyle = comp.type === 'VDD' ? THEME.high : THEME.label;
+        ctx.font = `700 9px ${THEME.mono}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(comp.type === 'VDD' ? 'VDD +5 V' : 'GND', cx, comp.type === 'VDD' ? comp.y + 6 : comp.y + h + 6);
+        ctx.textAlign = 'left';
+      } else if (comp.type === 'LAYER' || comp.type === 'ATOM') {
+        // Popisný štítek (vrstva výrobního procesu / atom) – bez logiky
+        const tag = labelTag(comp);
+        ctx.fillStyle = THEME.panel;
+        ctx.fillRect(comp.x, comp.y, tag.w, tag.h);
+        ctx.strokeStyle = isSelected ? THEME.high : 'rgba(138, 142, 147, 0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.strokeRect(comp.x + 0.5, comp.y + 0.5, tag.w - 1, tag.h - 1);
+        ctx.setLineDash([]);
+        ctx.fillStyle = THEME.high;
+        ctx.fillRect(comp.x, comp.y, 3, tag.h);
+        ctx.fillStyle = THEME.text;
+        ctx.font = `700 8px ${THEME.mono}`;
+        tag.lines.forEach((l, i) => ctx.fillText(l, comp.x + 8, comp.y + 13 + i * 11));
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `700 6.5px ${THEME.mono}`;
+        ctx.fillText(comp.type === 'LAYER' ? 'VRSTVA' : 'ATOM', comp.x + tag.w - 34, comp.y - 3);
+        if (comp.drill) {
+          ctx.fillStyle = THEME.high;
+          ctx.fillText('DVOJKLIK ↓', comp.x + 4, comp.y - 3);
+        }
+        drawSchematicLeads(ctx, comp, tag.w, tag.h, strokeColor);
+      } else {
+        ctx.strokeRect(comp.x, comp.y, w, h);
+        ctx.fillRect(comp.x, comp.y, w, h);
+
+        ctx.fillStyle = isSelected ? THEME.high : THEME.text;
+        ctx.font = `700 10px ${THEME.mono}`;
+        ctx.fillText((comp.label || comp.type).toUpperCase(), comp.x + 10, comp.y + 18);
+
+        ctx.fillStyle = THEME.muted;
+        ctx.font = `600 8px ${THEME.mono}`;
+        ctx.fillText(comp.type, comp.x + 10, comp.y + 30);
+
+        drawSchematicLeads(ctx, comp, w, h, strokeColor);
+      }
+
+      ctx.restore();
+    }
+
+    function drawSchematicLeads(ctx, comp, w, h, strokeColor) {
+      const inPins = Object.keys(comp.inputs || {});
+      inPins.forEach((pin) => {
+        const pos = getPinPos(comp, pin, false);
+        const isHigh = comp.inputs[pin] === 1;
+
+        ctx.save();
+        ctx.strokeStyle = isHigh ? THEME.high : strokeColor;
+        ctx.lineWidth = 1.5;
+
+        ctx.fillStyle = isHigh ? THEME.high : THEME.bg;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = isHigh ? THEME.high : THEME.muted;
+        ctx.font = `600 8px ${THEME.mono}`;
+        ctx.fillText(pin.toUpperCase(), pos.x + 6, pos.y + 3);
+        ctx.restore();
+      });
+
+      const outPins = Object.keys(comp.outputs || {});
+      outPins.forEach((pin) => {
+        const pos = getPinPos(comp, pin, true);
+        const isHigh = comp.outputs[pin] === 1;
+
+        ctx.save();
+        ctx.strokeStyle = isHigh ? THEME.high : strokeColor;
+        ctx.lineWidth = 1.5;
+
+        ctx.fillStyle = isHigh ? THEME.high : THEME.bg;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = isHigh ? THEME.high : THEME.muted;
+        ctx.font = `600 8px ${THEME.mono}`;
+        const tw = ctx.measureText(pin.toUpperCase()).width;
+        ctx.fillText(pin.toUpperCase(), pos.x - tw - 6, pos.y + 3);
+        ctx.restore();
+      });
+    }
+
+    function drawSchematicTitleBlock(ctx, canvasW, canvasH, eng) {
+      const boxW = 280;
+      const boxH = 68;
+      const pad = 16;
+      const x = canvasW - boxW - pad;
+      const y = canvasH - boxH - pad;
+
+      ctx.save();
+      ctx.fillStyle = THEME.panel;
+      ctx.strokeStyle = THEME.low;
+      ctx.lineWidth = 1;
+      ctx.fillRect(x, y, boxW, boxH);
+      ctx.strokeRect(x + 0.5, y + 0.5, boxW - 1, boxH - 1);
+
+      ctx.beginPath();
+      ctx.moveTo(x, y + 22);
+      ctx.lineTo(x + boxW, y + 22);
+      ctx.moveTo(x + 190, y + 22);
+      ctx.lineTo(x + 190, y + boxH);
+      ctx.stroke();
+
+      const level = hierarchyStack?.[hierarchyStack.length - 1];
+      const title = (level?.title || 'Vlastní obvod').toUpperCase();
+
+      ctx.fillStyle = THEME.high;
+      ctx.font = `700 9px ${THEME.mono}`;
+      ctx.fillText('SILICON LOGIC STUDIO · IEEE SCHÉMA', x + 10, y + 15);
+
+      ctx.fillStyle = THEME.text;
+      ctx.font = `700 9px ${THEME.mono}`;
+      ctx.fillText(title.length > 29 ? title.slice(0, 28) + '…' : title, x + 10, y + 38);
+      ctx.fillStyle = THEME.label;
+      ctx.fillText(`CLK ${Number.isFinite(eng.clockFrequency) ? `${eng.clockFrequency} Hz` : 'MAX'} · ${fmtTime(eng.simTime)}`, x + 10, y + 55);
+
+      ctx.fillStyle = THEME.muted;
+      ctx.fillText(`ÚROVEŇ ${level?.level || hierarchyStack?.length || 1}`, x + 200, y + 38);
+      ctx.fillText('LIST 1/1', x + 200, y + 55);
+
+      ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, width, height, radius = 5) {
+      if (typeof radius === 'number') {
+        radius = { tl: radius, tr: radius, br: radius, bl: radius };
+      }
+      ctx.beginPath();
+      ctx.moveTo(x + radius.tl, y);
+      ctx.lineTo(x + width - radius.tr, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+      ctx.lineTo(x + width, y + height - radius.br);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+      ctx.lineTo(x + radius.bl, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+      ctx.lineTo(x, y + radius.tl);
+      ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+      ctx.closePath();
+    }
+    return { drawRealisticHardwarePCB, drawSchematicComponent, drawSchematicTitleBlock };
+  }, [engine, hierarchyStack, getDims, getPinPos, geomOf]);
+
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -213,7 +1266,7 @@ export function LogicCanvas({
     const cardBottom = card.y + card.h + card.tab.h;
     const cables = [];
     const drawWire = (wd) => {
-      const { pts, st, bus, cable, label } = wd;
+      const { pts, st, bus, cable } = wd;
       ctx.save();
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
@@ -319,9 +1372,9 @@ export function LogicCanvas({
         else drawPcbPart(ctx, comp, g, engine, { selected: isSelected });
       } else if (schematic) {
         const p = viewPos(comp, 'schematic');
-        drawSchematicComponent(ctx, p.x === comp.x && p.y === comp.y ? comp : { ...comp, x: p.x, y: p.y }, isSelected);
+        painters.drawSchematicComponent(ctx, p.x === comp.x && p.y === comp.y ? comp : { ...comp, x: p.x, y: p.y }, isSelected);
       } else {
-        drawRealisticHardwarePCB(ctx, comp, isSelected, animTime);
+        painters.drawRealisticHardwarePCB(ctx, comp, isSelected, animTime);
       }
     };
     for (const comp of comps) if (schematic || !isOffBoard(comp)) drawComp(comp);
@@ -331,9 +1384,9 @@ export function LogicCanvas({
     ctx.restore();
 
     // Rohové razítko schématu
-    if (schematic) drawSchematicTitleBlock(ctx, width, height, engine);
+    if (schematic) painters.drawSchematicTitleBlock(ctx, width, height, engine);
     ctx.restore();
-  }, [engine, viewState, wiringFrom, mousePos, selectedComponentId, displayMode, freshLayout, getPinPos]);
+  }, [engine, viewState, wiringFrom, mousePos, selectedComponentId, displayMode, freshLayout, getPinPos, painters]);
 
   // Animation Loop
   useEffect(() => {
@@ -364,1054 +1417,6 @@ export function LogicCanvas({
     return () => window.removeEventListener('resize', handleResize);
   }, [renderCanvas]);
 
-  // ==========================================
-  // ULTRA-REALISTIC HARDWARE PCB RENDERER
-  // ==========================================
-  function drawRealisticHardwarePCB(ctx, comp, isSelected, time) {
-    const { w, h } = getDims(comp);
-    ctx.save();
-
-    // Solder Mask Component Silkscreen Outline (White Legend on PCB)
-    ctx.strokeStyle = 'rgba(235, 240, 245, 0.45)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 3]);
-    ctx.strokeRect(comp.x - 6, comp.y - 6, w + 12, h + 12);
-    ctx.setLineDash([]);
-
-    // Silkscreen Component Reference Name (e.g. U1, U2, SW1)
-    ctx.fillStyle = THEME.text;
-    ctx.font = `700 9px ${THEME.mono}`;
-    ctx.fillText(comp.label || comp.type, comp.x - 4, comp.y - 10);
-
-    if (comp.type === 'INPUT') {
-      drawRealisticToggleSwitch(ctx, comp, w, h, isSelected);
-      ctx.restore();
-      return;
-    }
-    if (comp.type === 'CLOCK') {
-      drawRealisticCrystalOscillator(ctx, comp, w, h, isSelected);
-      ctx.restore();
-      return;
-    }
-    if (comp.type === 'VIRTUAL_SCREEN') {
-      drawRealisticCRT(ctx, comp, w, h, isSelected, time);
-      ctx.restore();
-      return;
-    }
-    if (comp.type === 'PROBE') {
-      drawRealisticProbe(ctx, comp, w, h, isSelected);
-      ctx.restore();
-      return;
-    }
-    if (comp.type === 'SEVEN_SEGMENT') {
-      drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, true);
-      ctx.restore();
-      return;
-    }
-    // DIP Integrated Circuit Package (e.g. 74LS08, 74LS86, etc.)
-    drawPhotorealisticDIPChip(ctx, comp, w, h, isSelected);
-    ctx.restore();
-  }
-
-  function drawPhotorealisticDIPChip(ctx, comp, w, h, isSelected) {
-    const meta = CHIP_PROFILES[comp.type] || { code: comp.type, desc: 'LOGIC IC', family: 'TTL', mfr: 'TI' };
-    const temp = engine.thermalMap.get(comp.id) || 28.5;
-
-    // 1. Draw Soldered Metallic Pins & Pads on PCB FIRST (behind chip body)
-    drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
-
-    // 2. Heavy Drop Shadow under the IC Body
-    ctx.shadowColor = isSelected ? `rgba(${THEME.highRgb}, 0.55)` : 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = isSelected ? 18 : 12;
-    ctx.shadowOffsetY = 6;
-
-    // 3. Molded Black Epoxy Resin Body #121418
-    const chipGrad = ctx.createLinearGradient(comp.x, comp.y, comp.x + w, comp.y + h);
-    chipGrad.addColorStop(0, '#1C2029');
-    chipGrad.addColorStop(0.2, '#12141A');
-    chipGrad.addColorStop(0.8, '#0C0E13');
-    chipGrad.addColorStop(1, '#07080B');
-    ctx.fillStyle = chipGrad;
-
-    roundRect(ctx, comp.x, comp.y, w, h, 4);
-    ctx.fill();
-
-    ctx.shadowColor = 'transparent';
-
-    // 4. Subtle 3D Chamfer / Bevel around edges
-    ctx.strokeStyle = isSelected ? THEME.high : '#2B3342';
-    ctx.lineWidth = isSelected ? 2 : 1;
-    roundRect(ctx, comp.x, comp.y, w, h, 4);
-    ctx.stroke();
-
-    // 5. Longitudinal Center Recessed Channel (typical on DIP ICs)
-    ctx.fillStyle = '#090B0E';
-    ctx.fillRect(comp.x + 10, comp.y + h / 2 - 1, w - 20, 2);
-
-    // 6. Semicircular Orientation Notch at Pin 1 side (Left)
-    ctx.fillStyle = '#07090C';
-    ctx.strokeStyle = '#1D2533';
-    ctx.beginPath();
-    ctx.arc(comp.x, comp.y + h / 2, 7, -Math.PI / 2, Math.PI / 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // 7. Pin 1 Indentation Dot
-    ctx.fillStyle = '#080A0D';
-    ctx.beginPath();
-    ctx.arc(comp.x + 12, comp.y + 14, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 8. Laser Etched Silkscreen Print (Manufacturer Logo & Part Number)
-    // Stylized Texas Instruments / Logo Mark
-    ctx.fillStyle = THEME.text;
-    ctx.font = `700 12px ${THEME.mono}`;
-    ctx.fillText(meta.code, comp.x + 22, comp.y + 24);
-
-    ctx.fillStyle = '#718096';
-    ctx.font = `600 8px ${THEME.sans}`;
-    ctx.fillText(`${meta.mfr} // ${meta.desc}`, comp.x + 22, comp.y + 38);
-
-    ctx.fillStyle = '#4A5568';
-    ctx.font = `500 7px ${THEME.mono}`;
-    ctx.fillText(`MALAYSIA 2442B // ${meta.family}`, comp.x + 22, comp.y + h - 14);
-
-    // 9. Real-time Silicon Thermal Sensor Gauge
-    const heatColor = temp > 75 ? '#FF003C' : temp > 45 ? '#FF8400' : '#10B981';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    roundRect(ctx, comp.x + w - 48, comp.y + 8, 42, 14, 3);
-    ctx.fill();
-    ctx.fillStyle = heatColor;
-    ctx.font = `700 8px ${THEME.mono}`;
-    ctx.fillText(`${temp.toFixed(1)}°C`, comp.x + w - 44, comp.y + 18);
-  }
-
-  // Pájecí plošky přesně tam, kde končí spoje (stejná geometrie jako vedení cest)
-  function drawPhotorealisticPadsAndLeads(ctx, comp) {
-    for (const [pin, p] of geomOf(comp).pins) {
-      const isOut = p.side === 'R';
-      drawSinglePCBPad(ctx, p.x, p.y, pin, isOut, engine.pinValue(comp.id, pin));
-    }
-  }
-
-  function drawSinglePCBPad(ctx, x, y, name, isOutput, value) {
-    const isHigh = value === 1;
-
-    ctx.save();
-
-    // 1. Oval ENIG Gold Solder Pad on PCB
-    ctx.fillStyle = isHigh ? `rgba(${THEME.highRgb}, 0.45)` : '#C59B27';
-    ctx.beginPath();
-    ctx.ellipse(x, y, 6.5, 4.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 2. Shiny Solder Joint Meniscus (Tin-Lead alloy droplet)
-    const solderGrad = ctx.createRadialGradient(x - 1, y - 1, 0, x, y, 4);
-    solderGrad.addColorStop(0, '#FFFFFF');
-    solderGrad.addColorStop(0.4, isHigh ? THEME.high : THEME.text);
-    solderGrad.addColorStop(0.8, isHigh ? THEME.highDim : THEME.label);
-    solderGrad.addColorStop(1, '#475569');
-    ctx.fillStyle = solderGrad;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 4, 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 3. Bent Metallic Alloy Lead (Stamping from chip body to pad)
-    ctx.fillStyle = isHigh ? THEME.high : THEME.text;
-    if (isHigh) {
-      ctx.shadowColor = THEME.high;
-      ctx.shadowBlur = 10;
-    }
-    const leadW = 7;
-    const leadX = isOutput ? x - leadW : x;
-    ctx.fillRect(leadX, y - 2, leadW, 4);
-
-    ctx.restore();
-
-    // 4. White Silkscreen Pin Label on Board
-    ctx.fillStyle = isHigh ? THEME.high : THEME.label;
-    ctx.font = `600 8px ${THEME.mono}`;
-    const textW = ctx.measureText(name.toUpperCase()).width;
-    ctx.fillText(name.toUpperCase(), isOutput ? x - textW - 12 : x + 12, y + 3);
-  }
-
-  function drawRealisticToggleSwitch(ctx, comp, w, h, isSelected) {
-    const isOn = comp.outputs.out === 1;
-
-    // Metal Base Plate
-    ctx.fillStyle = '#0E121A';
-    roundRect(ctx, comp.x, comp.y, w, h, 6);
-    ctx.fill();
-
-    ctx.strokeStyle = isSelected ? THEME.high : '#2A3446';
-    ctx.lineWidth = 1.5;
-    roundRect(ctx, comp.x, comp.y, w, h, 6);
-    ctx.stroke();
-
-    ctx.fillStyle = THEME.label;
-    ctx.font = `700 9px ${THEME.mono}`;
-    ctx.fillText('HEAVY TOGGLE', comp.x + 10, comp.y + 16);
-
-    // Chrome Bezel Nut with knurling
-    const cx = comp.x + 38;
-    const cy = comp.y + 54;
-    ctx.fillStyle = '#1E2533';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 22, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#4A5568';
-    ctx.stroke();
-
-    // Chrome Bat Lever
-    const handleY = isOn ? cy - 10 : cy + 10;
-    ctx.save();
-    ctx.shadowColor = isOn ? `rgba(${THEME.highRgb}, 0.8)` : 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = isOn ? 14 : 4;
-    const leverGrad = ctx.createLinearGradient(cx - 10, handleY - 10, cx + 10, handleY + 10);
-    leverGrad.addColorStop(0, '#FFFFFF');
-    leverGrad.addColorStop(0.5, isOn ? THEME.highDim : THEME.muted);
-    leverGrad.addColorStop(1, '#1E293B');
-    ctx.fillStyle = leverGrad;
-    ctx.beginPath();
-    ctx.arc(cx, handleY, 11, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // Pilot LED Lens
-    const ledX = comp.x + 84;
-    const ledY = comp.y + 54;
-    ctx.save();
-    if (isOn) {
-      ctx.shadowColor = THEME.high;
-      ctx.shadowBlur = 18;
-      ctx.fillStyle = THEME.high;
-      ctx.beginPath();
-      ctx.arc(ledX, ledY, 8, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(ledX - 2.5, ledY - 2.5, 3, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = '#151D2A';
-      ctx.beginPath();
-      ctx.arc(ledX, ledY, 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = THEME.low;
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    ctx.fillStyle = isOn ? THEME.high : '#475569';
-    ctx.font = `700 8px ${THEME.mono}`;
-    ctx.fillText(isOn ? 'ON' : 'OFF', ledX - 6, ledY + 20);
-
-    drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
-  }
-
-  function drawRealisticCrystalOscillator(ctx, comp, w, h, isSelected) {
-    const isHigh = comp.outputs.out === 1;
-
-    // Brushed Aluminum Can
-    const grad = ctx.createLinearGradient(comp.x, comp.y, comp.x + w, comp.y);
-    grad.addColorStop(0, '#4B5563');
-    grad.addColorStop(0.2, '#9CA3AF');
-    grad.addColorStop(0.6, '#D1D5DB');
-    grad.addColorStop(1, '#374151');
-    ctx.fillStyle = grad;
-    roundRect(ctx, comp.x, comp.y, w, h, 12);
-    ctx.fill();
-
-    ctx.strokeStyle = isSelected ? THEME.high : '#E5E7EB';
-    ctx.lineWidth = 1.5;
-    roundRect(ctx, comp.x, comp.y, w, h, 12);
-    ctx.stroke();
-
-    ctx.fillStyle = '#111827';
-    ctx.font = `700 11px ${THEME.mono}`;
-    ctx.fillText(`FOX ${crystalFrequency(comp)} MHz`, comp.x + 14, comp.y + 28);
-    ctx.font = `600 8px ${THEME.mono}`;
-    ctx.fillText('HC-49/U QUARTZ CRYSTAL', comp.x + 14, comp.y + 44);
-
-    // Blinking Pulse LED
-    const ledX = comp.x + w - 24;
-    const ledY = comp.y + 32;
-    if (isHigh) {
-      ctx.shadowColor = THEME.high;
-      ctx.shadowBlur = 14;
-      ctx.fillStyle = THEME.high;
-      ctx.beginPath();
-      ctx.arc(ledX, ledY, 6, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = '#1F2937';
-      ctx.beginPath();
-      ctx.arc(ledX, ledY, 6, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
-  }
-
-  function drawRealisticCRT(ctx, comp, w, h, isSelected, time) {
-    ctx.fillStyle = '#0E121A';
-    roundRect(ctx, comp.x, comp.y, w, h, 8);
-    ctx.fill();
-    ctx.strokeStyle = isSelected ? THEME.high : THEME.low;
-    roundRect(ctx, comp.x, comp.y, w, h, 8);
-    ctx.stroke();
-
-    ctx.fillStyle = THEME.label;
-    ctx.font = `700 9px ${THEME.mono}`;
-    ctx.fillText('VIRTUAL CRT-64 // DUAL-PORT', comp.x + 12, comp.y + 16);
-
-    const scrX = comp.x + 12;
-    const scrY = comp.y + 26;
-    ctx.fillStyle = '#020406';
-    roundRect(ctx, scrX, scrY, 128, 128, 4);
-    ctx.fill();
-
-    if (comp.label?.includes('NV1') || comp.label?.includes('3D') || engine.components.has('nv1_core')) {
-      // Live 1995 NV1 3D Quadratic Curved Mesh Demo
-      const cx = scrX + 64;
-      const cy = scrY + 54;
-      const t = (time || 0) * 0.0018;
-
-      ctx.save();
-      ctx.strokeStyle = THEME.high;
-      ctx.lineWidth = 1.4;
-      ctx.shadowColor = THEME.high;
-      ctx.shadowBlur = 8;
-
-      const numLines = 5;
-      for (let i = -numLines; i <= numLines; i++) {
-        const u = i / numLines;
-        ctx.beginPath();
-        for (let j = -numLines; j <= numLines; j++) {
-          const v = j / numLines;
-          // Quadratic curved surface (saddle hyperboloid)
-          const x3d = u * 36;
-          const y3d = v * 36;
-          const z3d = (u * u - v * v) * 20;
-
-          const cosY = Math.cos(t);
-          const sinY = Math.sin(t);
-          const rx = x3d * cosY + z3d * sinY;
-          const rz = -x3d * sinY + z3d * cosY;
-          const ry = y3d * Math.cos(0.5) - rz * Math.sin(0.5);
-
-          const projX = cx + rx;
-          const projY = cy + ry;
-
-          if (j === -numLines) ctx.moveTo(projX, projY);
-          else ctx.lineTo(projX, projY);
-        }
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      // Retro 1995 3D Demo Overlay
-      ctx.fillStyle = THEME.high;
-      ctx.font = `800 8px ${THEME.mono}`;
-      ctx.fillText('NVIDIA NV1 (1995)', scrX + 6, scrY + 112);
-      ctx.fillStyle = '#10B981';
-      ctx.font = `600 7px ${THEME.mono}`;
-      ctx.fillText('QTM 3D ENGINE: 60 FPS', scrX + 6, scrY + 122);
-    } else if (comp.vram) {
-      for (let y = 0; y < 64; y++) {
-        for (let x = 0; x < 64; x++) {
-          const pixel = comp.vram[y * 64 + x];
-          if (pixel) {
-            const r = ((pixel >> 5) & 7) * 36;
-            const g = ((pixel >> 2) & 7) * 36;
-            const b = (pixel & 3) * 85;
-            ctx.fillStyle = `rgb(${r},${g},${b})`;
-            ctx.fillRect(scrX + x * 2, scrY + y * 2, 2, 2);
-          }
-        }
-      }
-    }
-
-    // CRT Scanlines
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-    for (let sy = scrY; sy < scrY + 128; sy += 3) {
-      ctx.fillRect(scrX, sy, 128, 1.2);
-    }
-    drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
-  }
-
-  function drawRealisticProbe(ctx, comp, w, h, isSelected) {
-    ctx.fillStyle = '#0B0F17';
-    roundRect(ctx, comp.x, comp.y, w, h, 6);
-    ctx.fill();
-    ctx.strokeStyle = isSelected ? THEME.high : '#243042';
-    roundRect(ctx, comp.x, comp.y, w, h, 6);
-    ctx.stroke();
-
-    const val = shownValue(comp);
-    const strVal = val === WireState.HIGH_Z ? 'Z' : val !== undefined ? `${val}` : '-';
-
-    ctx.fillStyle = '#030508';
-    roundRect(ctx, comp.x + 30, comp.y + 24, 48, 38, 4);
-    ctx.fill();
-
-    ctx.fillStyle = val === 1 ? THEME.high : '#475569';
-    ctx.font = `700 24px ${THEME.mono}`;
-    ctx.fillText(strVal, comp.x + 46, comp.y + 51);
-
-    drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
-  }
-
-  function drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, isHardware) {
-    const raw = comp.value;
-    const val = typeof raw === 'number' ? raw & 0x0F : 0;
-    const hexChar = typeof raw === 'number' ? val.toString(16).toUpperCase() : String(raw ?? '-');
-
-    ctx.save();
-    // Chassis Body
-    ctx.fillStyle = isHardware ? '#0E121A' : THEME.bg;
-    roundRect(ctx, comp.x, comp.y, w, h, 6);
-    ctx.fill();
-
-    ctx.strokeStyle = isSelected ? THEME.high : isHardware ? '#2B3548' : '#334155';
-    ctx.lineWidth = isSelected ? 2 : 1.2;
-    roundRect(ctx, comp.x, comp.y, w, h, 6);
-    ctx.stroke();
-
-    // Module Title
-    ctx.fillStyle = THEME.muted;
-    ctx.font = `700 8px ${THEME.mono}`;
-    ctx.fillText('7-SEG DISPLAY', comp.x + 8, comp.y + 14);
-
-    // Bezel Display Window
-    const boxX = comp.x + 18;
-    const boxY = comp.y + 20;
-    const boxW = 54;
-    const boxH = 70;
-
-    ctx.fillStyle = '#040203';
-    roundRect(ctx, boxX, boxY, boxW, boxH, 4);
-    ctx.fill();
-
-    // Segment Bitmask (0-F)
-    const SEG_MAP = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71];
-    const mask = SEG_MAP[val & 0x0F] || 0;
-    const activeColor = '#FF0055'; // Glowing Ruby Red LED
-    const dimColor = 'rgba(60, 10, 25, 0.35)';
-
-    const sx = boxX + 14;
-    const sy = boxY + 10;
-    const segW = 20;
-    const segH = 20;
-    const t = 3.2;
-
-    function drawH(x, y, on) {
-      ctx.save();
-      ctx.fillStyle = on ? activeColor : dimColor;
-      if (on) {
-        ctx.shadowColor = activeColor;
-        ctx.shadowBlur = 8;
-      }
-      ctx.fillRect(x, y, segW, t);
-      ctx.restore();
-    }
-
-    function drawV(x, y, on) {
-      ctx.save();
-      ctx.fillStyle = on ? activeColor : dimColor;
-      if (on) {
-        ctx.shadowColor = activeColor;
-        ctx.shadowBlur = 8;
-      }
-      ctx.fillRect(x, y, t, segH);
-      ctx.restore();
-    }
-
-    // Segments: a, b, c, d, e, f, g
-    drawH(sx, sy, (mask & 0x01) !== 0); // a
-    drawV(sx + segW, sy + t, (mask & 0x02) !== 0); // b
-    drawV(sx + segW, sy + segH + t * 2, (mask & 0x04) !== 0); // c
-    drawH(sx, sy + segH * 2 + t * 2, (mask & 0x08) !== 0); // d
-    drawV(sx - t, sy + segH + t * 2, (mask & 0x10) !== 0); // e
-    drawV(sx - t, sy + t, (mask & 0x20) !== 0); // f
-    drawH(sx, sy + segH + t, (mask & 0x40) !== 0); // g
-
-    // Decimal Point DP
-    ctx.save();
-    ctx.fillStyle = activeColor;
-    ctx.shadowColor = activeColor;
-    ctx.shadowBlur = 6;
-    ctx.beginPath();
-    ctx.arc(boxX + boxW - 8, boxY + boxH - 8, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // Value read-out label at bottom
-    ctx.fillStyle = THEME.high;
-    ctx.font = `700 9px ${THEME.mono}`;
-    ctx.fillText(`HEX: ${hexChar} (DEC: ${val})`, comp.x + 8, comp.y + h - 4);
-
-    if (isHardware) {
-      drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
-    } else {
-      drawSchematicLeads(ctx, comp, w, h, isSelected ? THEME.high : THEME.stroke);
-    }
-
-    ctx.restore();
-  }
-
-  function drawSchematicComponent(ctx, comp, isSelected) {
-    const { w, h } = getDims(comp);
-    ctx.save();
-
-    const strokeColor = isSelected ? THEME.high : THEME.stroke;
-    const fillColor = isSelected ? `rgba(${THEME.highRgb}, 0.08)` : THEME.panel;
-    ctx.strokeStyle = strokeColor;
-    ctx.fillStyle = fillColor;
-    ctx.lineWidth = isSelected ? 2.5 : 1.8;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-
-    if (comp.type === 'AND') {
-      const lead = 14;
-      const x = comp.x + lead;
-      const y = comp.y;
-      const sw = w - lead * 2;
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + sw * 0.45, y);
-      ctx.arc(x + sw * 0.45, y + h / 2, h / 2, -Math.PI / 2, Math.PI / 2);
-      ctx.lineTo(x, y + h);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      drawSchematicLeads(ctx, comp, w, h, strokeColor);
-
-      ctx.fillStyle = isSelected ? THEME.high : THEME.label;
-      ctx.font = `700 11px ${THEME.mono}`;
-      ctx.fillText('&', x + 12, y + h / 2 + 4);
-
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `600 8px ${THEME.mono}`;
-      ctx.fillText(comp.label || 'AND', comp.x, comp.y - 4);
-    } else if (comp.type === 'NAND') {
-      const lead = 14;
-      const bubbleR = 4;
-      const x = comp.x + lead;
-      const y = comp.y;
-      const sw = w - lead * 2 - bubbleR * 2;
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + sw * 0.45, y);
-      ctx.arc(x + sw * 0.45, y + h / 2, h / 2, -Math.PI / 2, Math.PI / 2);
-      ctx.lineTo(x, y + h);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(x + sw + bubbleR, y + h / 2, bubbleR, 0, Math.PI * 2);
-      ctx.fillStyle = THEME.bg;
-      ctx.fill();
-      ctx.stroke();
-
-      drawSchematicLeads(ctx, comp, w, h, strokeColor);
-
-      ctx.fillStyle = isSelected ? THEME.high : THEME.label;
-      ctx.font = `700 11px ${THEME.mono}`;
-      ctx.fillText('&', x + 10, y + h / 2 + 4);
-
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `600 8px ${THEME.mono}`;
-      ctx.fillText(comp.label || 'NAND', comp.x, comp.y - 4);
-    } else if (comp.type === 'OR') {
-      const lead = 14;
-      const x = comp.x + lead;
-      const y = comp.y;
-      const sw = w - lead * 2;
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.quadraticCurveTo(x + sw * 0.55, y, x + sw, y + h / 2);
-      ctx.quadraticCurveTo(x + sw * 0.55, y + h, x, y + h);
-      ctx.quadraticCurveTo(x + 12, y + h / 2, x, y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      drawSchematicLeads(ctx, comp, w, h, strokeColor);
-
-      ctx.fillStyle = isSelected ? THEME.high : THEME.label;
-      ctx.font = `700 11px ${THEME.mono}`;
-      ctx.fillText('≥1', x + 18, y + h / 2 + 4);
-
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `600 8px ${THEME.mono}`;
-      ctx.fillText(comp.label || 'OR', comp.x, comp.y - 4);
-    } else if (comp.type === 'NOR') {
-      const lead = 14;
-      const bubbleR = 4;
-      const x = comp.x + lead;
-      const y = comp.y;
-      const sw = w - lead * 2 - bubbleR * 2;
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.quadraticCurveTo(x + sw * 0.55, y, x + sw, y + h / 2);
-      ctx.quadraticCurveTo(x + sw * 0.55, y + h, x, y + h);
-      ctx.quadraticCurveTo(x + 12, y + h / 2, x, y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(x + sw + bubbleR, y + h / 2, bubbleR, 0, Math.PI * 2);
-      ctx.fillStyle = THEME.bg;
-      ctx.fill();
-      ctx.stroke();
-
-      drawSchematicLeads(ctx, comp, w, h, strokeColor);
-
-      ctx.fillStyle = isSelected ? THEME.high : THEME.label;
-      ctx.font = `700 11px ${THEME.mono}`;
-      ctx.fillText('≥1', x + 16, y + h / 2 + 4);
-
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `600 8px ${THEME.mono}`;
-      ctx.fillText(comp.label || 'NOR', comp.x, comp.y - 4);
-    } else if (comp.type === 'XOR') {
-      const lead = 14;
-      const x = comp.x + lead;
-      const y = comp.y;
-      const sw = w - lead * 2;
-
-      ctx.beginPath();
-      ctx.moveTo(x - 5, y);
-      ctx.quadraticCurveTo(x + 7, y + h / 2, x - 5, y + h);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.quadraticCurveTo(x + sw * 0.55, y, x + sw, y + h / 2);
-      ctx.quadraticCurveTo(x + sw * 0.55, y + h, x, y + h);
-      ctx.quadraticCurveTo(x + 12, y + h / 2, x, y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      drawSchematicLeads(ctx, comp, w, h, strokeColor);
-
-      ctx.fillStyle = isSelected ? THEME.high : THEME.label;
-      ctx.font = `700 11px ${THEME.mono}`;
-      ctx.fillText('=1', x + 18, y + h / 2 + 4);
-
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `600 8px ${THEME.mono}`;
-      ctx.fillText(comp.label || 'XOR', comp.x, comp.y - 4);
-    } else if (comp.type === 'NOT') {
-      const lead = 12;
-      const bubbleR = 4;
-      const x = comp.x + lead;
-      const y = comp.y;
-      const sw = w - lead * 2 - bubbleR * 2;
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + sw, y + h / 2);
-      ctx.lineTo(x, y + h);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(x + sw + bubbleR, y + h / 2, bubbleR, 0, Math.PI * 2);
-      ctx.fillStyle = THEME.bg;
-      ctx.fill();
-      ctx.stroke();
-
-      drawSchematicLeads(ctx, comp, w, h, strokeColor);
-
-      ctx.fillStyle = isSelected ? THEME.high : THEME.label;
-      ctx.font = `700 11px ${THEME.mono}`;
-      ctx.fillText('1', x + 8, y + h / 2 + 4);
-
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `600 8px ${THEME.mono}`;
-      ctx.fillText(comp.label || 'INV', comp.x, comp.y - 4);
-    } else if (comp.type === 'D_FF') {
-      const lead = 12;
-      const x = comp.x + lead;
-      const y = comp.y;
-      const sw = w - lead * 2;
-
-      ctx.fillRect(x, y, sw, h);
-      ctx.strokeRect(x, y, sw, h);
-
-      const clkY = y + 54;
-      ctx.beginPath();
-      ctx.moveTo(x, clkY - 6);
-      ctx.lineTo(x + 8, clkY);
-      ctx.lineTo(x, clkY + 6);
-      ctx.stroke();
-
-      drawSchematicLeads(ctx, comp, w, h, strokeColor);
-
-      ctx.fillStyle = THEME.text;
-      ctx.font = `700 9px ${THEME.mono}`;
-      ctx.fillText('D', x + 6, y + 23);
-      ctx.fillText('Q', x + sw - 14, y + 23);
-      ctx.fillText('Q̄', x + sw - 14, y + 57);
-
-      ctx.fillStyle = isSelected ? THEME.high : THEME.muted;
-      ctx.font = `700 9px ${THEME.mono}`;
-      ctx.fillText('D-FF', x + sw / 2 - 12, y + 38);
-    } else if (comp.type === 'INPUT') {
-      const isOn = comp.outputs.out === 1;
-      const boxW = w - 16;
-      ctx.save();
-      ctx.fillStyle = isOn ? `rgba(${THEME.highRgb}, 0.15)` : '#0A0E17';
-      ctx.strokeStyle = isOn ? THEME.high : THEME.low;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(comp.x, comp.y, boxW, h);
-      ctx.fillRect(comp.x, comp.y, boxW, h);
-
-      ctx.fillStyle = isOn ? THEME.high : THEME.muted;
-      ctx.font = `700 8px ${THEME.mono}`;
-      ctx.fillText(isOn ? 'SRC: HIGH' : 'SRC: LOW', comp.x + 8, comp.y + 16);
-
-      ctx.fillStyle = isOn ? THEME.high : THEME.text;
-      ctx.font = `700 20px ${THEME.mono}`;
-      ctx.fillText(isOn ? '1' : '0', comp.x + 18, comp.y + 42);
-
-      ctx.strokeStyle = isOn ? THEME.high : THEME.low;
-      ctx.beginPath();
-      ctx.moveTo(comp.x + boxW, comp.y + h / 2);
-      ctx.lineTo(comp.x + w, comp.y + h / 2);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(comp.x + w, comp.y + h / 2, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = isOn ? THEME.high : THEME.low;
-      ctx.fill();
-      ctx.restore();
-    } else if (comp.type === 'CLOCK') {
-      const isHigh = comp.outputs.out === 1;
-      const boxW = w - 16;
-      ctx.strokeRect(comp.x, comp.y, boxW, h);
-      ctx.fillRect(comp.x, comp.y, boxW, h);
-
-      ctx.strokeStyle = isHigh ? THEME.high : THEME.muted;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      const wy = comp.y + 36;
-      ctx.moveTo(comp.x + 12, wy);
-      ctx.lineTo(comp.x + 22, wy);
-      ctx.lineTo(comp.x + 22, wy - 14);
-      ctx.lineTo(comp.x + 36, wy - 14);
-      ctx.lineTo(comp.x + 36, wy);
-      ctx.lineTo(comp.x + 48, wy);
-      ctx.stroke();
-
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `700 8px ${THEME.mono}`;
-      ctx.fillText('CLK GEN', comp.x + 8, comp.y + 14);
-
-      ctx.strokeStyle = isHigh ? THEME.high : THEME.low;
-      ctx.beginPath();
-      ctx.moveTo(comp.x + boxW, comp.y + h / 2);
-      ctx.lineTo(comp.x + w, comp.y + h / 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(comp.x + w, comp.y + h / 2, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = isHigh ? THEME.high : THEME.low;
-      ctx.fill();
-    } else if (comp.type === 'PROBE') {
-      const val = shownValue(comp);
-      const str = val === WireState.HIGH_Z ? 'Z' : val !== undefined ? `${val}` : '-';
-      const isHigh = val === 1;
-
-      const cx = comp.x + w / 2;
-      const cy = comp.y + h / 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
-      ctx.fillStyle = THEME.bg;
-      ctx.fill();
-      ctx.strokeStyle = isHigh ? THEME.high : THEME.stroke;
-      ctx.lineWidth = 1.8;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(comp.x, cy);
-      ctx.lineTo(cx - 18, cy);
-      ctx.stroke();
-
-      ctx.fillStyle = isHigh ? THEME.high : THEME.text;
-      ctx.font = `700 16px ${THEME.mono}`;
-      ctx.fillText(str, cx - 5, cy + 5);
-
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `700 7px ${THEME.mono}`;
-      ctx.fillText('PROBE', comp.x + 4, comp.y + 8);
-    } else if (comp.type === 'VIRTUAL_SCREEN') {
-      ctx.strokeRect(comp.x, comp.y, w, h);
-      ctx.fillRect(comp.x, comp.y, w, h);
-
-      ctx.fillStyle = THEME.label;
-      ctx.font = `700 9px ${THEME.mono}`;
-      ctx.fillText('GPU DISPLAY // 64x64', comp.x + 10, comp.y + 16);
-
-      const scrX = comp.x + 12;
-      const scrY = comp.y + 24;
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(scrX, scrY, 128, 128);
-
-      if (comp.vram) {
-        for (let y = 0; y < 64; y++) {
-          for (let x = 0; x < 64; x++) {
-            const pixel = comp.vram[y * 64 + x];
-            if (pixel) {
-              const r = ((pixel >> 5) & 7) * 36;
-              const g = ((pixel >> 2) & 7) * 36;
-              const b = (pixel & 3) * 85;
-              ctx.fillStyle = `rgb(${r},${g},${b})`;
-              ctx.fillRect(scrX + x * 2, scrY + y * 2, 2, 2);
-            }
-          }
-        }
-      }
-
-      drawSchematicLeads(ctx, comp, w, h, strokeColor);
-    } else if (comp.type === 'SEVEN_SEGMENT') {
-      drawSevenSegmentDisplay(ctx, comp, w, h, isSelected, false);
-    } else if (comp.type === 'NMOS' || comp.type === 'PMOS') {
-      // Značka MOSFET: hradlo vlevo, kanál svisle, D/S nahoře a dole; vedoucí kanál = jantar
-      const pmos = comp.type === 'PMOS';
-      const on = !!comp.conducting;
-      const pins = geomOf(comp).pins;
-      const g = pins.get('g');
-      const top = pins.get(pmos ? 's' : 'd');
-      const bot = pins.get(pmos ? 'd' : 's');
-      const chX = top.x - 10; // svislý kanál
-      const gX = chX - 6; // deska hradla
-      const y0 = comp.y + h * 0.26;
-      const y1 = comp.y + h * 0.74;
-      ctx.lineWidth = 1.6;
-      ctx.strokeStyle = strokeColor;
-      ctx.beginPath();
-      ctx.moveTo(g.x, g.y);
-      ctx.lineTo(pmos ? gX - 7 : gX, g.y);
-      ctx.moveTo(gX, y0);
-      ctx.lineTo(gX, y1);
-      ctx.stroke();
-      if (pmos) {
-        ctx.beginPath();
-        ctx.arc(gX - 3.5, g.y, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = THEME.bg;
-        ctx.fill();
-        ctx.stroke();
-      }
-      ctx.strokeStyle = on ? THEME.high : strokeColor;
-      ctx.lineWidth = on ? 2.4 : 1.6;
-      ctx.beginPath();
-      ctx.moveTo(chX, y0 - 3);
-      ctx.lineTo(chX, y1 + 3);
-      ctx.moveTo(chX, y0);
-      ctx.lineTo(top.x, y0);
-      ctx.lineTo(top.x, top.y);
-      ctx.moveTo(chX, y1);
-      ctx.lineTo(bot.x, y1);
-      ctx.lineTo(bot.x, bot.y);
-      ctx.stroke();
-      // šipka na source (NMOS dovnitř, PMOS ven)
-      const sy = pmos ? y0 : y1;
-      const dir = pmos ? 1 : -1;
-      ctx.fillStyle = on ? THEME.high : strokeColor;
-      ctx.beginPath();
-      ctx.moveTo(chX + (pmos ? 9 : 1), sy);
-      ctx.lineTo(chX + (pmos ? 9 : 1) - dir * 6, sy - 3.5);
-      ctx.lineTo(chX + (pmos ? 9 : 1) - dir * 6, sy + 3.5);
-      ctx.fill();
-      ctx.font = `700 7px ${THEME.mono}`;
-      ctx.fillStyle = THEME.muted;
-      ctx.fillText(pmos ? 'S' : 'D', top.x + 4, comp.y + 9);
-      ctx.fillText(pmos ? 'D' : 'S', bot.x + 4, comp.y + h - 3);
-      ctx.fillText('G', comp.x + 2, g.y - 4);
-      ctx.fillStyle = on ? THEME.high : THEME.label;
-      ctx.font = `700 8px ${THEME.mono}`;
-      const name = String(comp.label || comp.type);
-      ctx.fillText(name.length > 16 ? name.slice(0, 15) + '…' : name, comp.x, comp.y + h + 11);
-    } else if (comp.type === 'VDD' || comp.type === 'GND') {
-      // Značky napájení: VDD = vodorovná čárka nad vývodem, GND = tři zkracující se čárky
-      const p = geomOf(comp).pins.get('out');
-      const cx = p.x;
-      ctx.strokeStyle = comp.type === 'VDD' ? THEME.high : strokeColor;
-      ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      if (comp.type === 'VDD') {
-        const by = comp.y + 12;
-        ctx.moveTo(cx, p.y);
-        ctx.lineTo(cx, by);
-        ctx.moveTo(cx - 14, by);
-        ctx.lineTo(cx + 14, by);
-      } else {
-        const by = comp.y + h - 16;
-        ctx.moveTo(cx, p.y);
-        ctx.lineTo(cx, by);
-        [14, 9, 4].forEach((half, i) => { ctx.moveTo(cx - half, by + i * 5); ctx.lineTo(cx + half, by + i * 5); });
-      }
-      ctx.stroke();
-      ctx.fillStyle = comp.type === 'VDD' ? THEME.high : THEME.label;
-      ctx.font = `700 9px ${THEME.mono}`;
-      ctx.textAlign = 'center';
-      ctx.fillText(comp.type === 'VDD' ? 'VDD +5 V' : 'GND', cx, comp.type === 'VDD' ? comp.y + 6 : comp.y + h + 6);
-      ctx.textAlign = 'left';
-    } else if (comp.type === 'LAYER' || comp.type === 'ATOM') {
-      // Popisný štítek (vrstva výrobního procesu / atom) – bez logiky
-      const tag = labelTag(comp);
-      ctx.fillStyle = THEME.panel;
-      ctx.fillRect(comp.x, comp.y, tag.w, tag.h);
-      ctx.strokeStyle = isSelected ? THEME.high : 'rgba(138, 142, 147, 0.55)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 3]);
-      ctx.strokeRect(comp.x + 0.5, comp.y + 0.5, tag.w - 1, tag.h - 1);
-      ctx.setLineDash([]);
-      ctx.fillStyle = THEME.high;
-      ctx.fillRect(comp.x, comp.y, 3, tag.h);
-      ctx.fillStyle = THEME.text;
-      ctx.font = `700 8px ${THEME.mono}`;
-      tag.lines.forEach((l, i) => ctx.fillText(l, comp.x + 8, comp.y + 13 + i * 11));
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `700 6.5px ${THEME.mono}`;
-      ctx.fillText(comp.type === 'LAYER' ? 'VRSTVA' : 'ATOM', comp.x + tag.w - 34, comp.y - 3);
-      if (comp.drill) {
-        ctx.fillStyle = THEME.high;
-        ctx.fillText('DVOJKLIK ↓', comp.x + 4, comp.y - 3);
-      }
-      drawSchematicLeads(ctx, comp, tag.w, tag.h, strokeColor);
-    } else {
-      ctx.strokeRect(comp.x, comp.y, w, h);
-      ctx.fillRect(comp.x, comp.y, w, h);
-
-      ctx.fillStyle = isSelected ? THEME.high : THEME.text;
-      ctx.font = `700 10px ${THEME.mono}`;
-      ctx.fillText((comp.label || comp.type).toUpperCase(), comp.x + 10, comp.y + 18);
-
-      ctx.fillStyle = THEME.muted;
-      ctx.font = `600 8px ${THEME.mono}`;
-      ctx.fillText(comp.type, comp.x + 10, comp.y + 30);
-
-      drawSchematicLeads(ctx, comp, w, h, strokeColor);
-    }
-
-    ctx.restore();
-  }
-
-  function drawSchematicLeads(ctx, comp, w, h, strokeColor) {
-    const inPins = Object.keys(comp.inputs || {});
-    inPins.forEach((pin) => {
-      const pos = getPinPos(comp, pin, false);
-      const isHigh = comp.inputs[pin] === 1;
-
-      ctx.save();
-      ctx.strokeStyle = isHigh ? THEME.high : strokeColor;
-      ctx.lineWidth = 1.5;
-
-      ctx.fillStyle = isHigh ? THEME.high : THEME.bg;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = isHigh ? THEME.high : THEME.muted;
-      ctx.font = `600 8px ${THEME.mono}`;
-      ctx.fillText(pin.toUpperCase(), pos.x + 6, pos.y + 3);
-      ctx.restore();
-    });
-
-    const outPins = Object.keys(comp.outputs || {});
-    outPins.forEach((pin) => {
-      const pos = getPinPos(comp, pin, true);
-      const isHigh = comp.outputs[pin] === 1;
-
-      ctx.save();
-      ctx.strokeStyle = isHigh ? THEME.high : strokeColor;
-      ctx.lineWidth = 1.5;
-
-      ctx.fillStyle = isHigh ? THEME.high : THEME.bg;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = isHigh ? THEME.high : THEME.muted;
-      ctx.font = `600 8px ${THEME.mono}`;
-      const tw = ctx.measureText(pin.toUpperCase()).width;
-      ctx.fillText(pin.toUpperCase(), pos.x - tw - 6, pos.y + 3);
-      ctx.restore();
-    });
-  }
-
-  function drawSchematicTitleBlock(ctx, canvasW, canvasH, eng) {
-    const boxW = 280;
-    const boxH = 68;
-    const pad = 16;
-    const x = canvasW - boxW - pad;
-    const y = canvasH - boxH - pad;
-
-    ctx.save();
-    ctx.fillStyle = THEME.panel;
-    ctx.strokeStyle = THEME.low;
-    ctx.lineWidth = 1;
-    ctx.fillRect(x, y, boxW, boxH);
-    ctx.strokeRect(x + 0.5, y + 0.5, boxW - 1, boxH - 1);
-
-    ctx.beginPath();
-    ctx.moveTo(x, y + 22);
-    ctx.lineTo(x + boxW, y + 22);
-    ctx.moveTo(x + 190, y + 22);
-    ctx.lineTo(x + 190, y + boxH);
-    ctx.stroke();
-
-    const level = hierarchyStack?.[hierarchyStack.length - 1];
-    const title = (level?.title || 'Vlastní obvod').toUpperCase();
-
-    ctx.fillStyle = THEME.high;
-    ctx.font = `700 9px ${THEME.mono}`;
-    ctx.fillText('SILICON LOGIC STUDIO · IEEE SCHÉMA', x + 10, y + 15);
-
-    ctx.fillStyle = THEME.text;
-    ctx.font = `700 9px ${THEME.mono}`;
-    ctx.fillText(title.length > 29 ? title.slice(0, 28) + '…' : title, x + 10, y + 38);
-    ctx.fillStyle = THEME.label;
-    ctx.fillText(`CLK ${Number.isFinite(eng.clockFrequency) ? `${eng.clockFrequency} Hz` : 'MAX'} · ${fmtTime(eng.simTime)}`, x + 10, y + 55);
-
-    ctx.fillStyle = THEME.muted;
-    ctx.fillText(`ÚROVEŇ ${level?.level || hierarchyStack?.length || 1}`, x + 200, y + 38);
-    ctx.fillText('LIST 1/1', x + 200, y + 55);
-
-    ctx.restore();
-  }
-
-  function roundRect(ctx, x, y, width, height, radius = 5) {
-    if (typeof radius === 'number') {
-      radius = { tl: radius, tr: radius, br: radius, bl: radius };
-    }
-    ctx.beginPath();
-    ctx.moveTo(x + radius.tl, y);
-    ctx.lineTo(x + width - radius.tr, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
-    ctx.lineTo(x + width, y + height - radius.br);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
-    ctx.lineTo(x + radius.bl, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
-    ctx.lineTo(x, y + radius.tl);
-    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
-    ctx.closePath();
-  }
 
   // ==========================================
   // MOUSE & INTERACTION HANDLERS (With Drag & Drop)
@@ -1539,7 +1544,7 @@ export function LogicCanvas({
   };
 
   const wheelRef = useRef(null);
-  wheelRef.current = handleWheel;
+  useEffect(() => { wheelRef.current = handleWheel; }); // vždy nejnovější handler pro nativní posluchač
   useEffect(() => {
     const canvas = canvasRef.current;
     const onWheel = (e) => wheelRef.current(e);
@@ -1548,7 +1553,8 @@ export function LogicCanvas({
   }, []);
 
   // Jen pro vývoj: skryté snímání (tools/shot.cjs) potřebuje najít součástku na plátně podle id
-  if (import.meta.env.DEV && typeof window !== 'undefined') {
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
     window.__slsCanvas = {
       screenOf: (id) => {
         const c = engine.components.get(id);
@@ -1569,7 +1575,7 @@ export function LogicCanvas({
       buttons: (id) => ({ ...engine.components.get(id)?.buttons }),
       count: () => engine.components.size,
     };
-  }
+  });
 
   // Double-Click to drill down into internal subcircuit schematic
   const handleDoubleClick = (e) => {

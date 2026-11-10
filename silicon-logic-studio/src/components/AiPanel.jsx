@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ShieldCheck, ArrowRight, Zap, Cpu, Check, Terminal } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, Cpu, Check } from 'lucide-react';
 import { AiCopilot } from '../engine/aiCopilot';
 import { audioEngine } from '../engine/audioEngine';
 

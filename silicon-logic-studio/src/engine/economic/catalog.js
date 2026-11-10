@@ -24,16 +24,17 @@ const P100_PC_ITEMS = [
   {
     id: 'p100', name: 'NVIDIA Tesla P100 16 GB PCIe', part: 'GP100 Pascal, 16 GB HBM2 732 GB/s, pasivní, bez video výstupů (PCIe, ne SXM2!)',
     qty: 2, dims: [267, 111.15, 37], dimsSrc: 'ověřeno: NVIDIA PB-08248 + PNY product brief, dual slot', model: { kind: 'tesla' },
-    note: 'Napájí se 8pinovým EPS (CPU) konektorem na čele karty, ne PCIe! V sestavě omezené na 150 W (nvidia-smi -pl 150).',
+    note: 'Do Dellu se samotná karta vejde: délka 267 z max. 312 mm, výška 111,15 z max. 111,3 mm. Napájí se 8pinovým EPS (CPU) konektorem na čele karty, ne PCIe! V sestavě omezené na 150 W (nvidia-smi -pl 150).',
   },
   {
     id: 'shroud', name: 'Adaptér chlazení (shroud) pro P100', part: 'Plastový kryt pro radiální ventilátor 97 × 33 mm, šrouby a klíč',
     qty: 2, dims: [91, 111, 38], dimsSrc: 'ověřeno: 91,2 mm délka (Newegg kit), průřez podle karty', model: { kind: 'shroudAdapter' },
-    note: 'Karta s adaptérem a ventilátorem je dlouhá asi 36–40 cm, ověř místo ve skříni.',
+    note: 'Karta s adaptérem a ventilátorem měří ~350–406 mm. Dell T5810 bere karty jen do 312 mm (plná délka PCIe), za tím je držák karet a šachty disků, takže se do zavřené skříně NEVEJDE. Jen s otevřeným bokem, nebo kartu přes riser mimo skříň.',
   },
   {
     id: 'blower', name: 'Radiální ventilátor 9733 (Delta BFB1012VH)', part: '97 × 94 × 33 mm, 12 V, 4 pin – ke každému adaptéru jeden',
     qty: 2, dims: [97, 94, 33], dimsSrc: 'ověřeno: 97 × 94 × 33 mm (Newegg, Sensdar)', model: { kind: 'blower' },
+    note: 'Bere 1,8 A při 12 V. Zapoj do regulátoru TD404, ne do desky.',
   },
   {
     id: 'k620', name: 'NVIDIA Quadro K620 2 GB', part: 'Low profile, single slot, DVI-I + DisplayPort, 45 W bez přídavného napájení',
@@ -64,13 +65,9 @@ const P100_PC_ITEMS = [
     note: 'KRITICKÉ: PCIe a EPS mají +12 V a zem prohozené. Kabel PCIe zapojený přímo do P100 zkratuje zdroj nebo kartu.',
   },
   {
-    id: 'fan_split', name: 'Rozbočovač PWM ventilátorů Noctua NA-SYC1', part: '4pinový Y-kabel 1 → 2, v balení 2 kusy',
-    qty: 1, dims: [140, 36, 6.2], dimsSrc: 'ověřeno: kabel 115 mm (Komplett) + konektory', model: { kind: 'fanSplitter' },
-  },
-  {
-    id: 'pwm_ctrl', name: 'Ruční PWM regulátor otáček', part: 'Destička s knoflíkem, nebo hotový Noctua NA-FC1',
-    qty: 1, dims: [50, 32, 24], dimsSrc: 'odhad: typická čínská destička', model: { kind: 'pwmController' },
-    note: 'Deska řídí ventilátory podle teploty CPU, ne podle P100. Regulátor nebo fancontrol podle nvidia-smi to řeší.',
+    id: 'pwm_ctrl', name: 'PWM regulátor s knoflíkem napájený ze SATA (ModDIY TD404)', part: '4 porty 4 pin PWM, napájení SATA 12 V, max. 60 W, knoflík 0–100 %',
+    qty: 1, dims: [63, 32, 20.3], dimsSrc: 'ověřeno: ModDIY 63 × 32 × 20,3 mm (s knoflíkem)', model: { kind: 'pwmController' },
+    note: 'Ventilátory NEZAPOJUJ do desky Dellu: konektory ventilátorů na desce T5810 jsou proprietární (jiné zapojení pinů) a dva BFB1012VH berou 2 × 1,8 A = 3,6 A, což jeden konektor na desce nesnese. Regulátor se napájí SATA kabelem z druhého zdroje a utáhne 2× 9733 + 2× P12 (~3,8 A z 5 A).',
   },
   {
     id: 'paste', name: 'Teplovodivá pasta Arctic MX-6 4 g', part: 'Na přepastování obou GP100 (původní pasta z roku 2016 je vyschlá)',

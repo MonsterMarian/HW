@@ -102,14 +102,14 @@ function bracket(g, x, z0, len, h, ports = []) {
 }
 
 /** Rotor s lopatkami v rovině XZ, střed (x, y, z). */
-function rotor(g, r, blades, y, x = 0, z = 0, mat = M.black(), hub = 0.38) {
+function rotor(g, r, blades, y, x = 0, z = 0, mat = M.black(), hub = 0.38, tilt = 0.45) {
   add(g, new THREE.CylinderGeometry(r * hub, r * hub, 2, 32), mat, x, y, z);
   const blade = new THREE.BoxGeometry(r * (1 - hub) * 0.95, 1, r * 0.34);
   blade.translate(r * hub + (r * (1 - hub) * 0.95) / 2, 0, 0);
   const mats = [];
   for (let i = 0; i < blades; i++) {
     const m = mat4(x, y - 0.4, z, (i / blades) * Math.PI * 2);
-    m.multiply(new THREE.Matrix4().makeRotationX(0.45));
+    m.multiply(new THREE.Matrix4().makeRotationX(tilt));
     mats.push(m);
   }
   g.add(instanced(blade, mat, mats));
@@ -238,10 +238,11 @@ function shroudAdapter([L, H, T]) {
 /** Radiální ventilátor 9733: dims [97, 94, 33], výdech na boku -X. */
 function blower([L, D, T]) {
   const g = new THREE.Group();
-  rslab(g, L, T, D, 4, M.black(), 0, 0, 0);
-  add(g, new THREE.CylinderGeometry(30, 30, 0.5, 48), M.hole(), 6, T + 0.1, 6);
-  rotor(g, 28, 30, T - 2, 6, 6, std(0x26272a, { roughness: 0.6 }), 0.45);
-  decal(g, label([{ text: 'DELTA', font: 'bold 70px Arial', color: '#bfc3c8' }, { text: 'BFB1012VH 12V', font: '600 34px Arial', color: '#8d9197' }], 256, 256), 22, 22, 6, T - 1.4, 6);
+  const Tb = T - 1.6; // oběžné kolo v sání drží celkovou výšku 33 mm
+  rslab(g, L, Tb, D, 4, M.black(), 0, 0, 0);
+  add(g, new THREE.CylinderGeometry(30, 30, 0.5, 48), M.hole(), 6, Tb + 0.1, 6);
+  rotor(g, 28, 30, Tb + 0.9, 6, 6, std(0x3a3c40, { roughness: 0.6 }), 0.45, 0.06);
+  decal(g, label([{ text: 'DELTA', font: 'bold 70px Arial', color: '#bfc3c8' }, { text: 'BFB1012VH 12V', font: '600 34px Arial', color: '#8d9197' }], 256, 256), 22, 22, 6, Tb + 1.95, 6);
   add(g, new THREE.BoxGeometry(0.3, T - 6, 50), M.hole(), -L / 2 - 0.05, T / 2, -D / 2 + 30);
   cable(g, [[L / 2 - 4, D / 2 - 10], [L / 2 + 25, D / 2 - 30], [L / 2 + 12, D / 2 - 70]], 1.6);
   slab(g, 13, 6.2, 10.3, M.white(), L / 2 + 12, 0, D / 2 - 78);
@@ -254,7 +255,7 @@ function k620([L, H, T]) {
   slab(g, L, 1.6, H, M.pcbBlack(), 0, 0, 0);
   rslab(g, L - 22, T - 4.5, H - 16, 2, M.plastic(), 5, 1.6, -4);
   add(g, new THREE.CylinderGeometry(25, 25, 0.6, 40), M.hole(), 8, T - 2.6, -4);
-  rotor(g, 23, 9, T - 3.4, 8, -4, std(0x2c2d30), 0.42);
+  rotor(g, 23, 9, T - 1.4, 8, -4, std(0x3a3c40), 0.42, 0.08);
   decal(g, label([{ text: 'NVIDIA', font: 'bold 60px Arial', color: '#8fb33a' }, { text: 'QUADRO K620', font: 'bold 70px Arial', color: '#c9cdd2' }], 1024, 256), 40, 10, -46, T - 2.85, -4);
   edgeFingers(g, -L / 2 + 42, 82, 1, H / 2 - 4, 7.5, 1.65, 11);
   bracket(g, -L / 2 - 0.5, -H / 2 - 5, 79.2, 18.4, [
@@ -334,13 +335,14 @@ function m2adapter([L, H]) {
 /** ATX zdroj 150 × 86 × 140 mm (Seasonic Core/Focus GX-650): ventilátor 120 mm nahoře, plně modulární. */
 function psu([W, D, H]) {
   const g = new THREE.Group();
-  rslab(g, W, H, D, 2, M.black(), 0, 0, 0);
-  add(g, new THREE.CylinderGeometry(58, 58, 0.6, 64), M.hole(), 0, H + 0.1, 0);
-  rotor(g, 56, 7, H - 3, 0, 0, std(0x232427));
+  const Hb = H - 3.5; // mřížka ventilátoru drží celkovou výšku 86 mm
+  rslab(g, W, Hb, D, 2, M.black(), 0, 0, 0);
+  add(g, new THREE.CylinderGeometry(58, 58, 0.6, 64), M.hole(), 0, Hb + 0.1, 0);
+  rotor(g, 56, 7, Hb + 0.9, 0, 0, std(0x34363a), 0.38, 0.08);
   const wire = std(0x2a2b2e, { metalness: 0.7, roughness: 0.4 });
-  for (const r of [16, 28, 40, 52, 58]) add(g, new THREE.TorusGeometry(r, 0.9, 6, 64).rotateX(Math.PI / 2), wire, 0, H + 0.6, 0);
-  for (const a of [0, Math.PI / 2]) { const b = add(g, new THREE.BoxGeometry(116, 1.6, 2), wire, 0, H + 0.6, 0); b.rotation.y = a; }
-  decal(g, label([{ text: 'SEASONIC', font: 'bold 54px Arial', color: '#d5d8dc' }, { text: 'CORE GX-650  80+ GOLD', font: '600 32px Arial', color: '#c8a85a' }], 512, 128), 34, 8.5, 0, H + 0.7, 0);
+  for (const r of [16, 28, 40, 52, 58]) add(g, new THREE.TorusGeometry(r, 0.9, 6, 64).rotateX(Math.PI / 2), wire, 0, Hb + 2.6, 0); // drátěná mřížka nad ventilátorem
+  for (const a of [0, Math.PI / 2]) { const b = add(g, new THREE.BoxGeometry(116, 1.6, 2), wire, 0, Hb + 2.6, 0); b.rotation.y = a; }
+  decal(g, label([{ text: 'SEASONIC', font: 'bold 54px Arial', color: '#d5d8dc' }, { text: 'CORE GX-650  80+ GOLD', font: '600 32px Arial', color: '#c8a85a' }], 512, 128), 34, 8.5, 0, Hb + 1.95, 0);
   // záda: voština, IEC C14, vypínač, tlačítko Hybrid
   vDecal(g, hexMesh(560, 320, 16), W - 52, H - 14, 18, H / 2, -D / 2 - 0.1, Math.PI);
   add(g, new THREE.BoxGeometry(28, 22, 4), M.plastic(), -W / 2 + 26, H / 2 + 8, -D / 2 - 2);
@@ -382,28 +384,22 @@ function epsCable([L, W]) {
   return g;
 }
 
-/** Noctua NA-SYC1: 4pinový PWM Y-kabel, 115 mm. */
-function fanSplitter([L, W]) {
-  const g = new THREE.Group();
-  const xa = -L / 2 + 6.5, xb = L / 2 - 6.5;
-  slab(g, 13, 6.2, 10.3, M.black(), xa, 0, 0);
-  for (const sz of [-1, 1]) {
-    slab(g, 13, 6.2, 10.3, M.black(), xb, 0, sz * W * 0.32);
-    cable(g, [[xa + 6, 0], [-10, sz * 3], [xb - 30, sz * W * 0.3], [xb - 6, sz * W * 0.32]], 1.4);
-  }
-  return g;
-}
-
-/** Ruční PWM regulátor: destička s potenciometrem a knoflíkem, 2× 4pinový konektor. */
+/** ModDIY TD404: deska 63 × 32 mm, potenciometr s knoflíkem (výška 20,3 mm), 4× konektor ventilátoru, SATA přívod. */
 function pwmController([L, W, H]) {
   const g = new THREE.Group();
-  slab(g, L, 1.6, W, M.pcbGreen(), 0, 0, 0);
-  slab(g, 10, 7, 10, std(0x2457a8), -8, 1.6, 0);
-  add(g, new THREE.CylinderGeometry(7.5, 8, H - 8.6 - 1.6, 28), M.black(), -8, 8.6 + (H - 10.2) / 2 + 1.6, 0);
-  for (const z of [-W / 2 + 5, W / 2 - 5]) {
-    slab(g, 10.2, 6, 3, M.black(), 14, 1.6, z);
-    for (let i = 0; i < 4; i++) slab(g, 0.64, 6, 0.64, M.gold(), 10.4 + i * 2.54, 7.6, z);
+  slab(g, L, 1.6, W, M.pcbBlack(), 0, 0, 0);
+  slab(g, 10, 6.5, 11, std(0x2457a8), -L / 2 + 10, 1.6, 0); // potenciometr
+  add(g, new THREE.CylinderGeometry(7, 7.4, H - 8.1, 28), M.black(), -L / 2 + 10, 8.1 + (H - 8.1) / 2, 0);
+  add(g, new THREE.BoxGeometry(1.2, 0.3, 5), M.white(), -L / 2 + 10, H + 0.1, -3.5); // ryska knoflíku
+  // 4 konektory ventilátoru (KF2510 4 pin, rozteč 2,54) ve dvou řadách podél dlouhých hran
+  for (const [x, z] of [[2, -W / 2 + 3.2], [18, -W / 2 + 3.2], [2, W / 2 - 3.2], [18, W / 2 - 3.2]]) {
+    slab(g, 10.2, 6, 4.9, M.white(), x, 1.6, z);
+    for (let k = 0; k < 4; k++) slab(g, 0.64, 1, 0.64, M.gold(), x - 3.8 + k * 2.54, 7.6, z);
   }
+  slab(g, 4, 1.6, 2.4, std(0x3fa65a, { emissive: 0x1a5a2a }), L / 2 - 4, 1.6, 0); // LED
+  // přívod SATA: kabel a konektor 15 pin
+  cable(g, [[L / 2, 0], [L / 2 + 25, 4], [L / 2 + 45, 18]], 2.2);
+  slab(g, 8, 6, 22, M.black(), L / 2 + 49, 0, 22);
   return g;
 }
 
@@ -469,7 +465,7 @@ function gamepad([W, D, H]) {
   return new THREE.Group().add(pad);
 }
 
-const BUILDERS = { tower, tesla, shroudAdapter, blower, k620, cpu, rdimm, m2ssd, m2adapter, psu, add2psu, epsCable, fanSplitter, pwmController, syringe, fan120, chip, connector, crt, speakers, gamepad };
+const BUILDERS = { tower, tesla, shroudAdapter, blower, k620, cpu, rdimm, m2ssd, m2adapter, psu, add2psu, epsCable, pwmController, syringe, fan120, chip, connector, crt, speakers, gamepad };
 export const MODEL_KINDS = Object.keys(BUILDERS);
 
 /** Model jednoho kusu položky kusovníku (mm). */

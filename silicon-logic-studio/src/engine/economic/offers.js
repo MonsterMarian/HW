@@ -116,25 +116,10 @@ export const OFFERS = {
       o('Serverschmiede.com', 'GPU Power Adapter 2× 8-Pin PCIe female → 1× 8-Pin EPS male, 030-0571-000', 'https://www.serverschmiede.com/en/generic-5-20cm-gpu-power-adapter-kabel-cable-2x-8-pin-pcie-female-to-1x-8-pin-eps-male-nvidia-tesla-k80-m60-p40-p100-v100-030-0571-000', 33, 'EUR', 804, 'repas', 'fetched'),
     ],
   },
-  fan_split: {
-    note: 'V ČR nejlevněji černá verze chromax.black za 169–179 Kč. Balení obsahuje 2 Y-kabely.',
-    offers: [
-      o('Alza.cz', 'Noctua NA-SYC1 chromax.black', 'https://www.alza.cz/noctua-na-syc1-chromaxblack-d5352084.htm', 169, 'CZK', 169, 'nové', 'snippet'),
-      o('TS Bohemia', 'Noctua NA-SYC1 chromax.black', 'https://www.tsbohemia.cz/noctua-na-syc1-chromax-black_d340923', 179, 'CZK', 179, 'nové', 'snippet'),
-      o('Caseking.de', 'Noctua NA-SYC1 Y-Kabelset für 4-Pin-PWM-Lüfter', 'https://www.caseking.de/noctua-na-syc1-y-cable-set-for-4-pin-pwm-fans/ZUAD-475.html', 8.9, 'EUR', 217, 'nové', 'snippet'),
-      o('Heureka.cz', 'Noctua NA-SYC1 (nejnižší nabídka)', 'https://prislusenstvi-k-chlazeni.heureka.cz/noctua-na-syc1/', 229, 'CZK', 229, 'nové', 'snippet'),
-      o('Alternate.de', 'Noctua NA-SYC1 4 Pin Y Kabel (2er Pack)', 'https://www.alternate.de/Noctua/NA-SYC1-4-Pin-Y-Kabel/html/product/1142136', 9.9, 'EUR', 241, 'nové', 'fetched'),
-    ],
-  },
   pwm_ctrl: {
-    note: 'Levné destičky s knoflíkem jsou v ČR jen přes Fruugo (poštovné 300+ Kč). Kvalitní hotová náhrada je Noctua NA-FC1 za 470–600 Kč.',
+    note: 'Jediná nabídka, kterou šlo ověřit na stránce. Podobné SATA regulátory 60 W jsou na Neweggu za 17–19 USD, ten ale stažení blokuje.',
     offers: [
-      o('Fruugo.cz', 'DC 12V PWM regulátor otáček ventilátoru s knoflíkem, 4vodičový', 'https://www.fruugo.cz/dc-12v-nastavitelny-0-100-pwm-regulator-otacek-ventilatoru-s-prepinacem-knofliku-4-vodicovy-regulator-rychlosti-ventilatoru-hluk/p-189197470-404181905', 35.95, 'CZK', 36, 'nové', 'snippet'),
-      o('Fruugo.cz', 'DC12V manuální 4vodičový PWM regulátor otáček s knoflíkem', 'https://www.fruugo.cz/dc12v-manualni-4vodicovy-pwm-regulator-otacek-motoru-ventilatoru-regulator-podvozek-4vodicovy-regulator-otacek-ventilatoru-spinac-redukce-hluku-s-knoflikem/p-249108204-538009824', 329, 'CZK', 329, 'nové', 'snippet'),
-      o('Heureka.cz', 'Noctua NA-FC1 (nejnižší nabídka)', 'https://prislusenstvi-k-chlazeni.heureka.cz/noctua-na-fc1/', 470, 'CZK', 470, 'nové', 'snippet'),
-      o('TS Bohemia', 'Noctua NA-FC1 Fan controller', 'https://www.tsbohemia.cz/noctua-na-fc1-fan-controller_d278151', 483, 'CZK', 483, 'nové', 'snippet'),
-      o('QuietPC.co.nl', 'Noctua NA-FC1 PWM Fan Controller', 'https://quietpc.co.nl/na-fc1', 21.9, 'EUR', 533, 'nové', 'fetched'),
-      o('Alza.cz', 'Noctua NA-FC1 - Regulátor otáček', 'https://www.alza.cz/noctua-na-fc1-d5214069.htm', 599, 'CZK', 599, 'nové', 'snippet'),
+      o('ModDIY', '12V 4 Pin PC Chassis PWM Fan Hub Speed Controller Powered by SATA (TD404)', 'https://www.moddiy.com/products/6699/12V-4-Pin-PC-Chassis-PWM-Fan-Hub-Speed-Controller-Powered-by-SATA.html', 9.99, 'USD', 217, 'nové', 'fetched'),
     ],
   },
   paste: {

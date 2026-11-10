@@ -529,13 +529,13 @@ export function drawSchematicDevice(ctx, comp, g, engine, { selected = false } =
   title.forEach((l, i) => ctx.fillText(fitText(ctx, l, w - 12), x + 6, y + 12 + i * 12));
   ctx.fillStyle = THEME.muted;
   ctx.font = `700 7.5px ${THEME.mono}`;
-  const sub = !meta ? (comp.type === 'DIE_BLOCK' ? (comp.drill ? 'BLOK · DVOJKLIK ↓' : 'FUNKČNÍ BLOK') : comp.type) : `${meta.part} · ${meta.pkg || ''}`;
+  const sub = !meta ? (comp.type === 'DIE_BLOCK' ? (comp.drill ? 'BLOK · DVOJKLIK ↓' : 'FUNKČNÍ BLOK') : comp.type === 'PC_BLOCK' ? (comp.note || 'BLOK Z VEŘEJNÉHO BLOKOVÉHO SCHÉMATU') : comp.type) : `${meta.part} · ${meta.pkg || ''}`;
   ctx.fillText(fitText(ctx, sub, w - 12), x + 6, y + 11 + title.length * 12);
 
   // piny
   ctx.font = `700 ${SCH.font}px ${THEME.mono}`;
   for (const [pin, p] of g.pins) {
-    const st = signalStyle(engine.pinValue(comp.id, pin));
+    const st = signalStyle(engine.pinValue(comp.id, pin), 1, engine.pinLabel?.(comp.id, pin));
     const on = st.state === 'high' || st.state === 'analog' || st.state === 'clock';
     ctx.fillStyle = on ? st.color : st.state === 'x' ? THEME.conflict : THEME.bg;
     ctx.strokeStyle = on ? st.color : THEME.stroke;

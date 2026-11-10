@@ -2,9 +2,11 @@
 // Synthesizes verified logic netlists from natural language prompts.
 
 import { NV1_BOARD } from './presets/nv1Board.js';
+import { PC_POWER } from './presets/pcPower.js';
 
 export const PRESET_CIRCUITS = {
   nvidia_nv1: NV1_BOARD,
+  ai_pc_power: PC_POWER,
 
   mini_pc: {
     name: 'Mini 8-Bit Computer (CPU + ROM + ALU + CRT)',

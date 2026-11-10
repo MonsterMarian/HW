@@ -45,6 +45,7 @@ export default function App() {
   useEffect(() => {
     engine.loadCircuit(PROJECTS[0].circuit);
     defaultSpeedFor(engine);
+    if (import.meta.env.DEV) window.__engine = engine; // jen vývoj: skryté snímání (tools/shot.cjs) ovládá simulaci
   }, [engine]);
 
   // Přepnutí projektu: rozpracovaný stav (obvod, úroveň zanoření, pohled) se uloží a při návratu obnoví

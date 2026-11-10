@@ -54,6 +54,13 @@ const mix = (a, b, t) => {
 export function signalStyle(value, width = 1, label = null, lowRgb = THEME.lowRgb) {
   if (value === WireState.CONFLICT) return { color: THEME.conflict, dash: null, text: 'X', state: 'x' };
   if (value === WireState.HIGH_Z || value === undefined) return { color: THEME.highZ, dash: [5, 4], text: 'Z', state: 'z' };
+  // napájecí sítě PC (pojmenované zařízeními): volty, střída PWM, otáčky ventilátoru
+  if (isNum(value) && label && /^(\+\d|GND$)/.test(label)) {
+    const t = Math.min(1, Math.abs(value) / 12);
+    return { color: value === 0 ? `rgb(${lowRgb})` : `rgb(${mix(lowRgb, THEME.highRgb, 0.35 + 0.65 * t)})`, dash: null, text: `${String(value).replace('.', ',')} V`, state: value ? 'analog' : 'low' };
+  }
+  if (isNum(value) && label === 'PWM %') return { color: THEME.high, dash: null, text: `${value} %`, state: 'high' };
+  if (isNum(value) && label === 'OT/MIN') return { color: value ? THEME.high : `rgb(${lowRgb})`, dash: null, text: `${value} ot/min`, state: value ? 'high' : 'low' };
   if (isAnalog(value, label)) {
     const t = Math.min(1, Math.abs(value) / analogRange(label));
     return { color: `rgb(${mix(lowRgb, THEME.highRgb, t)})`, dash: null, text: fmtVolt(value), state: 'analog' };

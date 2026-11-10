@@ -48,6 +48,8 @@ export const PRIMITIVE_PINS = {
   FULL_ADDER: { inputs: { a: 0, b: 0, cin: 0 }, outputs: { s: 0, cout: 0 } },
   // architecture block / physical layer / atom: drawn and drillable, no logic of their own (passive pins)
   DIE_BLOCK: { inputs: {}, outputs: {} },
+  // blok z veřejného blokového schématu (deska P100, platforma Dellu, zdroj): popisný, dál se nevstupuje
+  PC_BLOCK: { inputs: {}, outputs: {} },
   LAYER: { inputs: {}, outputs: {} },
   ATOM: { inputs: {}, outputs: {} },
   COMPARATOR_8BIT: { inputs: { a: 0, b: 0 }, outputs: { eq: 1, lt: 0 } },
@@ -75,7 +77,7 @@ const PRIMITIVE_WIDTHS = {
 
 const SWITCH_TYPES = new Set(['NMOS', 'PMOS']);
 // Pins of these parts never drive a net; they only carry it (labels, connectors, transistor terminals)
-const PASSIVE_TYPES = new Set(['TUNNEL_IN', 'TUNNEL_OUT', 'DIE_BLOCK', 'LAYER', 'ATOM']);
+const PASSIVE_TYPES = new Set(['TUNNEL_IN', 'TUNNEL_OUT', 'DIE_BLOCK', 'PC_BLOCK', 'LAYER', 'ATOM']);
 const isPassive = (comp) => PASSIVE_TYPES.has(comp.type) || !!DEVICES[comp.type]?.passive;
 
 export function pinWidth(comp, pin) {
@@ -310,6 +312,12 @@ export class LogicEngine {
   pinValue(compId, pin) {
     const idx = this.netIndexOf(compId, pin);
     return idx < 0 ? undefined : this._topo.nets[idx].value;
+  }
+
+  /** Name of the net a pin is on (e.g. "+12V"), if a device names it. */
+  pinLabel(compId, pin) {
+    const idx = this.netIndexOf(compId, pin);
+    return idx < 0 ? null : this._topo.nets[idx].label;
   }
 
   /** Value carried by a drawn wire (= value of its net). */

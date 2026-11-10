@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-10 15:27
+Aktualizováno: 2026-11-10 15:40
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -65,6 +65,16 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   přesný ventilátor ani zavřená skříň nejsou ověřené. Konektory ventilátorů T5810 jsou proprietární → ventilátory
   napájí SATA PWM regulátor ModDIY TD404 (60 W), ne deska ani Y-rozbočovač (2× BFB1012VH = 3,6 A).
 
+## Schémata AI PC (2026-11-10)
+- L1 `engine/presets/pcPower.js` (projekt 2 má teď `circuit` = PC_POWER, pohled SCHEMATIC), modely
+  `engine/devices/pcBuild.js` (sítě ve voltech, netNames → plátno ukazuje V / % / ot/min), L2 `engine/pcSubcircuits.js`
+  (registrované do H v hierarchicalSubcircuits.js). Typ `PC_BLOCK` = popisný blok z veřejného blokového schématu (terminál).
+  Testy `tests/pc_power.test.js`. Rešerše pinoutů (scratchpad agenta): redukce 030-0571-000 podle PB-08248 obr. 4.
+- Zjištění: T5810 sloty 1 x8 Gen3, 2 a 4 x16 Gen3 (CPU), 3 x1 / 5 x4 Gen2 (PCH), 6 PCI. P100 do 2 a 4; dvouslotové
+  chladiče nejspíš zakryjí 3 a 5 → pro K620 i M.2 redukci zbývá jen slot 1 (pořadí slotů neověřeno). V ANATOMY jsou
+  K620 a redukce zatím na odhadnutých pozicích slotů 6/7 – nesedí s touto topologií.
+- Zkrat při PCIe kabelu do EPS: X stáhne i druhou kartu (společná zem desky přes sloty) – fyzikálně správně.
+
 ## Další kroky / známé vady
 - PC projekt nemá schéma/PCB/3D simulaci, jen ECONOMIC. Nabídky stárnou (inzeráty z Bazoše zmizí) – při další
   práci přerešeršovat. eBay/Alza/Heureka blokují stahování (403): jejich ceny jsou jen z výpisu vyhledávače.
@@ -101,3 +111,4 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   view s kitem Anatomy; 126/126 testů.
 - 2026-11-10 15:27 — „3D pohled pro anatomii, pak schémata dílů PC“ → ANATOMY 3D (modely v sestavě, rozložení,
   čísla), logo P100 čitelné po instalaci; schémata rozpracována (rešerše pinoutů běží).
+- 2026-11-10 15:40 — pokračování: schéma napájení PC L1 + 6 podobvodů L2 podle veřejných pinoutů, 138/138 testů.

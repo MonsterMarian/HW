@@ -1,3 +1,4 @@
+import { PC_SUBCIRCUITS } from './pcSubcircuits.js';
 // SILICON // LOGIC STUDIO - HIERARCHICAL DRILL-DOWN
 //
 // Every level is a real circuit that the engine (logicEngine.js) simulates, built the way the hardware is built:
@@ -1459,10 +1460,15 @@ H.nand_center = H.NAND; // used by components/Nv1DiagnosticModal.jsx
 H.adder_pipe = H.FULL_ADDER; // used by components/Nv1DiagnosticModal.jsx
 
 // Parts with nothing (simulable) inside: I/O, sources, wiring, connectors, off-board equipment, layers, atoms
+// AI PC: díly napájení (pcSubcircuits.js)
+Object.assign(H, PC_SUBCIRCUITS);
+
 export const TERMINAL_TYPES = new Set([
   'INPUT', 'OUTPUT', 'PROBE', 'CONSTANT', 'CLOCK', 'VDD', 'GND', 'LAYER', 'ATOM', 'TUNNEL_IN', 'TUNNEL_OUT',
   'BUS_SPLITTER', 'BUS_MERGER', 'VIRTUAL_SCREEN', 'SEVEN_SEGMENT',
   'CRYSTAL', 'PCI_EDGE', 'VGA_DB15', 'GAME_PORT', 'AUDIO_JACK', 'PCI_HOST', 'VGA_MONITOR', 'AUDIO_SPEAKERS', 'SATURN_PAD',
+  // AI PC: popisné bloky z veřejných blokových schémat, konektory a kabely (jen měď), motor ventilátoru
+  'PC_BLOCK', 'BLOWER_9733', 'CONN_PCIE8', 'CONN_EPS8', 'CONN_SATA', 'CONN_ATX24', 'CONN_FAN4', 'RELAY', 'DIODE',
 ]);
 
 /** Level of the deepest (current) hierarchy entry. */

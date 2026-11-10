@@ -1,5 +1,6 @@
 // Projekty, které aplikace založí po každém spuštění. Otevře se první z nich.
 import { NV1_BOARD } from './presets/nv1Board.js';
+import { PC_POWER } from './presets/pcPower.js';
 import { NV1_BOM, P100_PC_BOM } from './economic/catalog.js';
 
 export const PROJECTS = [
@@ -18,9 +19,9 @@ export const PROJECTS = [
     tab: 'AI PC 2× P100',
     title: 'AI PC · Dell T5810 + 2× Tesla P100',
     subtitle: 'Sestava z videa Junk GPU Lab: 32 GB HBM2 pro Qwen 27B v llama.cpp',
-    circuit: null, // jen kusovník: pohledy ECONOMIC a ANATOMY
+    circuit: PC_POWER, // schéma napájení (simulované); PCB ani křemík zatím ne
     bom: P100_PC_BOM,
-    views: ['economic', 'anatomy'],
+    views: ['schematic', 'economic', 'anatomy'],
     defaultView: 'economic',
     source: { label: 'Video: Qwen 27B at 67 tok/s on Two $78 Tesla P100s', url: 'https://www.youtube.com/watch?v=JvLUoJYUjDM' },
   },

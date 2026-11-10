@@ -19,7 +19,8 @@ import {
   Boxes,
 } from 'lucide-react';
 import { audioEngine } from '../engine/audioEngine';
-import { DEVICES } from '../engine/devices/index.js';
+import { NV1_DEVICES } from '../engine/devices/nv1Card.js';
+import { PC_DEVICES } from '../engine/devices/pcBuild.js';
 import { fmtTime } from '../views/canvas/theme';
 
 // Poměr simulovaného a reálného času: "×2.0" rychleji, "1/2 400" pomaleji
@@ -133,7 +134,7 @@ export function Toolbar({
   };
 
   // Součástky karty Diamond Edge 3D (modely v engine/devices): název z meta
-  const NV1_ITEMS = Object.entries(DEVICES).map(([type, d]) => ({
+  const itemsOf = (devices) => Object.entries(devices).map(([type, d]) => ({
     type,
     label: `${d.meta.ref} ${d.meta.part.split(' (')[0]}`,
     desc: `${d.meta.pkg} · ${d.meta.desc}`,
@@ -171,7 +172,8 @@ export function Toolbar({
         { type: 'VIRTUAL_SCREEN', label: 'CRT Display', desc: '64x64 Dual-Port VRAM' },
       ],
     },
-    { name: 'DIAMOND EDGE 3D (NV1, 1995)', short: 'NV1', items: NV1_ITEMS },
+    { name: 'DIAMOND EDGE 3D (NV1, 1995)', short: 'NV1', items: itemsOf(NV1_DEVICES) },
+    { name: 'AI PC (NAPÁJENÍ)', short: 'PC', items: itemsOf(PC_DEVICES) },
   ];
 
   const VIEWS = [

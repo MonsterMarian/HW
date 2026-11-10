@@ -17,6 +17,11 @@ const SCHEMATIC_DIMS = {
   DRAM_256K16: [150, 130], EPROM_27C256: [150, 90], AD1845: [170, 200], CRYSTAL: [110, 50],
   VGA_DB15: [180, 130], GAME_PORT: [160, 70], AUDIO_JACK: [150, 70], SATURN_PAD: [150, 70],
   VGA_MONITOR: [280, 250], AUDIO_SPEAKERS: [180, 110],
+  // AI PC (schéma napájení)
+  DELL_T5810: [240, 120], ATX_PSU: [240, 200], ADD2PSU: [200, 100], EPS_ADAPTER: [240, 110], TESLA_P100: [240, 110],
+  PWM_HUB: [220, 140], BLOWER_9733: [210, 90],
+  CONN_PCIE8: [200, 160], CONN_EPS8: [200, 160], CONN_SATA: [210, 120], CONN_ATX24: [220, 110], CONN_FAN4: [200, 104],
+  RELAY: [210, 104], DIODE: [150, 70],
 };
 
 // Real package outlines (incl. leads) on the PCB, in world px
@@ -38,6 +43,7 @@ const HARDWARE_DIMS = {
 };
 
 export function componentDims(comp, mode = 'hardware') {
+  if (mode === 'schematic' && comp.w && comp.h && !SCHEMATIC_DIMS[comp.type]) return { w: comp.w, h: comp.h }; // blok s pevnou velikostí
   const table = mode === 'schematic' ? SCHEMATIC_DIMS : HARDWARE_DIMS;
   const d = table[comp.type] || (mode === 'schematic' ? [90, 60] : [154, 90]);
   return { w: d[0], h: d[1] };

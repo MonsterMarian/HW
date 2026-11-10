@@ -58,6 +58,17 @@ celku přes očíslované popisky propojené s kusovníkem vpravo, posuvník ROZ
 skříň Dell v řezu a červeně limit 312 mm (plná délka PCIe), za který P100 s krytem a ventilátorem 9733 přesahuje;
 u karty NV1 jsou čipy na skutečných pozicích z PCB pohledu.
 
+## Schéma napájení AI PC (SCHEMATIC u projektu 2)
+Simulovaný obvod jako u karty NV1: sítě nesou napětí (12 V, zem). Vypínač Dellu → vestavěný zdroj → SATA 12 V →
+Add2PSU (relé) → PS_ON# druhého zdroje → 4 PCIe kabely → 2× redukce NVIDIA 030-0571-000 → EPS12V obou P100;
+ventilátory 9733 napájí SATA regulátor TD404. PCIe kabel zapojený napřímo do EPS zdířky karty dá zkrat (`X`) přes
+zem karty a slotu – stejně jako ve skutečnosti. Dvojklikem dovnitř (úroveň 2):
+- redukce 030-0571-000 pin po pinu podle výkresu NVIDIA PB-08248,
+- Add2PSU (relé spíná PS_ON# na COM, patent US8878390),
+- regulátor TD404, obecná topologie ATX zdroje, bloky desky Tesla P100 a platforma Dell T5810 (CPU, C612, sloty).
+Co není veřejně doložené, je ve schématu označené „neověřeno“. Pinouty: Intel ATX 3.0 DG, PCI Express CEM, Intel
+4-Wire PWM Fan spec, SATA.
+
 ## Proklikávání (dvojklik)
 L1 deska → L2 bloky uvnitř čipu → L3 RTL (CRTC, kvadratické dopředné diference, fázový akumulátor, PCI dekodér…)
 → L4 registry a sčítačky → L5 hradla → L6 CMOS z tranzistorů → L7 průřez tranzistorem 0,5 µm

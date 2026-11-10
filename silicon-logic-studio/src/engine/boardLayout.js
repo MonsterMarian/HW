@@ -1,18 +1,39 @@
 // Shared geometry of the circuit layout, used by the 2D canvas (schematic / PCB) and the 3D view,
 // so the 3D board matches the 2D hardware drawing exactly.
+//
+// Board scale: PX_PER_MM = 3.7 world px per millimetre. Package sizes below are the real body (+ leads)
+// dimensions of the parts on the Diamond Edge 3D, so the PCB view is drawn to scale.
+
+export const PX_PER_MM = 3.7;
+const mm = (v) => Math.round(v * PX_PER_MM);
 
 const SCHEMATIC_DIMS = {
   VIRTUAL_SCREEN: [180, 190], INPUT: [90, 56], CLOCK: [96, 56], PROBE: [84, 50], NOT: [70, 44],
-  AND: [84, 56], NAND: [84, 56], OR: [88, 56], NOR: [88, 56], XOR: [94, 56], D_FF: [86, 74], MUX: [78, 70],
-  SEVEN_SEGMENT: [88, 108], NV1_CORE: [190, 170], PCI_BUS: [170, 80], VGA_BRACKET: [160, 100],
-  VRAM_BANK: [150, 80], RAMDAC: [150, 80], AUDIO_DSP: [150, 80], SATURN_PAD: [140, 76],
-  RAM: [140, 96], ROM: [140, 96], REGISTER_8BIT: [140, 96],
+  AND: [84, 56], NAND: [84, 56], OR: [88, 56], NOR: [88, 56], XOR: [94, 56], XNOR: [94, 56], D_FF: [86, 74], MUX: [78, 70],
+  SEVEN_SEGMENT: [88, 108], RAM: [140, 96], ROM: [140, 96], REGISTER_8BIT: [140, 96],
+  ADDER_8BIT: [120, 90], COMPARATOR_8BIT: [120, 80], VDD: [60, 40], GND: [60, 40], NMOS: [70, 70], PMOS: [70, 70],
+  // board parts: tall enough for one pin row every 18 px
+  NV1_CORE: [220, 520], PCI_HOST: [200, 230], PCI_EDGE: [200, 210], RAMDAC_STG1764: [190, 140],
+  DRAM_256K16: [150, 130], EPROM_27C256: [150, 90], AD1845: [170, 200], CRYSTAL: [110, 50],
+  VGA_DB15: [180, 130], GAME_PORT: [160, 70], AUDIO_JACK: [150, 70], SATURN_PAD: [150, 70],
+  VGA_MONITOR: [280, 250], AUDIO_SPEAKERS: [180, 110],
 };
 
+// Real package outlines (incl. leads) on the PCB, in world px
 const HARDWARE_DIMS = {
-  VIRTUAL_SCREEN: [190, 200], SEVEN_SEGMENT: [92, 112], NV1_CORE: [180, 180], PCI_BUS: [260, 60],
-  VGA_BRACKET: [84, 360], VRAM_BANK: [140, 66], RAMDAC: [110, 110], AUDIO_DSP: [110, 110],
-  SATURN_PAD: [130, 86], INPUT: [110, 94], CLOCK: [130, 84], PROBE: [110, 78],
+  NV1_CORE: [mm(30.6), mm(30.6)], // PQFP-208: 28 x 28 mm body, 30.6 mm over the gull-wing leads
+  RAMDAC_STG1764: [mm(17.2), mm(23.2)], // PQFP-128: 14 x 20 mm body
+  DRAM_256K16: [mm(11.2), mm(26.0)], // SOJ-40 400 mil: 10.16 x 26.03 mm
+  EPROM_27C256: [mm(37.0), mm(15.2)], // DIP-28 600 mil, lying horizontally
+  AD1845: [mm(25.2), mm(25.2)], // PLCC-68: 24.2 mm body + J-leads
+  CRYSTAL: [mm(11.0), mm(4.7)], // HC-49/U
+  PCI_EDGE: [mm(85.0), mm(7.9)], // 32-bit 5 V card edge, 120 contacts on 1.27 mm pitch (both sides)
+  VGA_DB15: [mm(17.0), mm(33.0)], // DE-15 shell on the bracket
+  GAME_PORT: [mm(17.0), mm(16.0)], // RJ-45 jack
+  AUDIO_JACK: [mm(12.0), mm(9.0)], // 3.5 mm jack
+  // off-board equipment (not to scale)
+  PCI_HOST: [300, 110], VGA_MONITOR: [300, 270], AUDIO_SPEAKERS: [220, 120], SATURN_PAD: [170, 110],
+  VIRTUAL_SCREEN: [190, 200], SEVEN_SEGMENT: [92, 112], INPUT: [110, 94], CLOCK: [130, 84], PROBE: [110, 78],
   RAM: [174, 126], ROM: [174, 126], REGISTER_8BIT: [174, 126],
 };
 
@@ -22,7 +43,8 @@ export function componentDims(comp, mode = 'hardware') {
   return { w: d[0], h: d[1] };
 }
 
-// Pin position in hardware (PCB) mode; schematic pins are computed in LogicCanvas.
+// Pin position in hardware (PCB) mode: pins are spread evenly along the left (inputs) / right (outputs)
+// edge of the package, so every pin fits inside the real outline. Schematic pins are computed in LogicCanvas.
 export function hardwarePinPos(comp, pinName, isOutput) {
   const { w, h } = componentDims(comp, 'hardware');
   if (comp.type === 'SEVEN_SEGMENT') {
@@ -32,13 +54,16 @@ export function hardwarePinPos(comp, pinName, isOutput) {
   }
   const pins = Object.keys((isOutput ? comp.outputs : comp.inputs) || {});
   const idx = Math.max(0, pins.indexOf(pinName));
-  return { x: isOutput ? comp.x + w : comp.x, y: comp.y + 32 + idx * 17 };
+  const n = Math.max(1, pins.length);
+  return { x: isOutput ? comp.x + w : comp.x, y: comp.y + (h * (idx + 0.5)) / n };
 }
 
-// Diamond Edge 3D PCI card outline (2D world px). Tab = PCI edge connector under the PCI_BUS part.
+// Diamond Edge 3D PCI card outline (2D world px). PCI cards are 106.68 mm tall including the edge fingers.
+// The 32-bit 5 V edge (85 mm) sits under the J1 part; its key notch is ~11 contacts from the free end.
 export const NV1_CARD = {
-  x: 120, y: 20, w: 650, h: 528, chamfer: 35,
-  tab: { x: 250, w: 260, h: 34 },
+  x: 120, y: 20, w: mm(175), h: mm(106.68) - mm(7.9), chamfer: mm(9),
+  // pin 1 is at the bracket end; the 5 V key notch replaces contacts 50/51 (1.27 mm pitch)
+  tab: { x: 275, w: mm(85), h: mm(7.9), key: { at: mm(1.5 + 49 * 1.27), w: mm(2.5) } },
 };
 
 // Outline polygon of the card, clockwise, in 2D world px.
@@ -51,15 +76,20 @@ export function nv1CardOutline() {
   ];
 }
 
+const BRACKET_TYPES = new Set(['VGA_DB15', 'GAME_PORT', 'AUDIO_JACK']);
+
 export function isOnNv1Card(comp) {
-  if (comp.type === 'VGA_BRACKET' || comp.type === 'PCI_BUS') return true;
+  if (BRACKET_TYPES.has(comp.type) || comp.type === 'PCI_EDGE') return true;
   const { w, h } = componentDims(comp, 'hardware');
   const { x, y, w: cw, h: ch } = NV1_CARD;
   return comp.x >= x - 1 && comp.y >= y - 1 && comp.x + w <= x + cw + 1 && comp.y + h <= y + ch + 1;
 }
 
-// Clock frequency printed on a crystal can, taken from its label ("Y2 24.576 MHz ...")
+export const isBracketPart = (comp) => BRACKET_TYPES.has(comp.type);
+
+// Clock frequency printed on a crystal can
 export function crystalFrequency(comp) {
+  if (comp.freqHz) return (comp.freqHz / 1e6).toFixed(comp.freqHz % 1e3 ? 5 : 3).replace(/0+$/, '');
   const m = /([\d.]+)\s*MHz/i.exec(comp.label || '');
   return m ? m[1] : '14.31818';
 }

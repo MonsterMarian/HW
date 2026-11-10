@@ -16,6 +16,30 @@ import {
 import { COMPONENT_DETAILS } from '../engine/componentDetails';
 import { WireState } from '../engine/logicEngine';
 import { ComponentSchematicCanvas } from './ComponentSchematicCanvas';
+import { DEVICES } from '../engine/devices/index.js';
+import { pinWidth } from '../engine/logicEngine';
+
+// Popis skutečné součástky karty (engine/devices) z jejího `meta`; tabulka = piny se směrem a šířkou
+function deviceDetails(comp, dev) {
+  const m = dev.meta;
+  const names = [...new Set([...Object.keys(dev.pins.inputs || {}), ...Object.keys(dev.pins.outputs || {})])];
+  const dir = (p) => (p in (dev.pins.inputs || {}) && p in (dev.pins.outputs || {}) ? 'obousměrný' : p in (dev.pins.outputs || {}) ? 'výstup' : 'vstup');
+  return {
+    name: m.part,
+    icCode: m.ref,
+    package: m.pkg,
+    technology: m.offBoard ? 'zařízení mimo kartu' : 'součástka karty',
+    transistorCount: '—',
+    gateCount: '—',
+    propagationDelay: 'podle hodin modelu',
+    powerConsumption: '—',
+    description: m.desc,
+    internalLogic: 'behaviorální model (engine/devices/nv1Card.js)',
+    subcomponents: [],
+    truthTable: { headers: ['Pin', 'Směr', 'Šířka (bit)'], rows: names.map((p) => ({ inputs: [p, dir(p)], output: pinWidth(comp, p) })) },
+    pinout: names.map((p, i) => ({ pin: i + 1, name: p, type: `${dir(p)} · ${pinWidth(comp, p)} b` })),
+  };
+}
 
 export function ComponentInspectorModal({ component, engine, onClose }) {
   const [activeTab, setActiveTab] = useState('schematic'); // 'schematic' | 'blueprint' | 'table' | 'pinout'
@@ -31,7 +55,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
 
   if (!component) return null;
 
-  const details = COMPONENT_DETAILS[component.type] || {
+  const details = COMPONENT_DETAILS[component.type] || (DEVICES[component.type] ? deviceDetails(component, DEVICES[component.type]) : {
     name: component.label || component.type,
     icCode: component.type,
     package: 'INTEGRATED BLOCK',
@@ -45,7 +69,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
     subcomponents: [{ name: 'Core Logic Cell', type: component.type, desc: 'Základní logický blok' }],
     truthTable: { headers: ['Inputs', 'Outputs'], rows: [] },
     pinout: [],
-  };
+  });
 
   const temp = engine?.thermalMap?.get(component.id) || 28.5;
   const inPins = Object.entries(component.inputs || {});
@@ -55,27 +79,25 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none font-mono text-xs animate-fadeIn">
-      <div className="w-full max-w-4xl bg-[#080C14] border border-cyan-500/40 rounded-xl shadow-[0_0_60px_rgba(0,240,255,0.2)] flex flex-col overflow-hidden max-h-[92vh]">
+      <div className="w-full max-w-4xl bg-(--bg-dark) border border-gray-700 shadow-[14px_14px_0_rgba(255,169,9,0.12)] flex flex-col overflow-hidden max-h-[92vh]">
         {/* Top Header */}
-        <div className="px-5 py-3 bg-[#05070D] border-b border-[#161D2B] flex items-center justify-between">
+        <div className="px-5 py-3 border-b border-(--line) flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.2)]">
-              <Cpu size={18} />
-            </div>
+            <Cpu size={22} className="text-(--accent-amber) shrink-0" />
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-bold text-gray-100 text-sm">{details.icCode}</span>
+                <span className="panel-title text-lg">{details.icCode}</span>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/80 text-cyan-300 font-semibold">
                   {details.package}
                 </span>
                 <span className="text-[10px] text-gray-400">({details.technology})</span>
               </div>
-              <span className="text-[11px] text-gray-400 font-sans font-medium">{details.name}</span>
+              <span className="serif-accent text-[14px]">{details.name}</span>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-1.5 text-[10px] px-2.5 py-1 rounded bg-[#0E131F] border border-[#1A2333]">
+            <div className="flex items-center space-x-1.5 text-[10px] px-2.5 py-1 rounded bg-(--bg-card-light) border border-(--line)">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-gray-300">{temp.toFixed(1)}°C DIE TEMP</span>
             </div>
@@ -89,7 +111,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center justify-between px-5 pt-2.5 bg-[#05070D] border-b border-[#161D2B]">
+        <div className="flex items-center justify-between px-5 pt-2.5 bg-(--bg-card) border-b border-(--line)">
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setActiveTab('schematic')}
@@ -142,7 +164,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
 
           {/* Sub-mode switch for schematic tab (Gate vs Transistor) */}
           {activeTab === 'schematic' && hasTransistorView && (
-            <div className="flex items-center bg-[#090D17] border border-[#1A2333] p-0.5 rounded-lg mb-1">
+            <div className="flex items-center bg-(--bg-card-light) border border-(--line) p-0.5 rounded-lg mb-1">
               <button
                 onClick={() => setSchematicViewType('gate')}
                 className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
@@ -182,7 +204,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
 
               {/* Pin Voltage Bar below schematic */}
               <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="p-2.5 rounded-lg bg-[#05070D] border border-[#161D2B] flex items-center justify-between">
+                <div className="p-2.5 rounded-lg bg-(--bg-card) border border-(--line) flex items-center justify-between">
                   <span className="text-gray-500 text-[10px] uppercase font-bold">VSTUPNÍ SIGNÁLY:</span>
                   <div className="flex items-center space-x-1.5 flex-wrap">
                     {inPins.map(([p, v]) => (
@@ -200,7 +222,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-[#05070D] border border-[#161D2B] flex items-center justify-between">
+                <div className="p-2.5 rounded-lg bg-(--bg-card) border border-(--line) flex items-center justify-between">
                   <span className="text-gray-500 text-[10px] uppercase font-bold">VÝSTUPNÍ SIGNÁLY:</span>
                   <div className="flex items-center space-x-1.5 flex-wrap">
                     {outPins.map(([p, v]) => (
@@ -224,23 +246,23 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
           {activeTab === 'blueprint' && (
             <div className="space-y-4">
               {/* Description */}
-              <div className="p-3.5 rounded-lg bg-[#0C101A] border border-[#161E2E] text-gray-300 text-[11px] leading-relaxed font-sans">
+              <div className="p-3.5 rounded-lg bg-(--bg-card-light) border border-(--line) text-gray-300 text-[11px] leading-relaxed font-sans">
                 {details.description}
               </div>
 
               {/* Internal Formula & Specs Banner */}
               <div className="grid grid-cols-3 gap-2">
-                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                <div className="p-3 rounded-lg bg-(--bg-card) border border-(--line)">
                   <span className="text-[10px] text-gray-500 uppercase block mb-1">Logická funkce:</span>
                   <span className="font-bold text-cyan-400 text-xs">{details.internalLogic}</span>
                 </div>
-                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                <div className="p-3 rounded-lg bg-(--bg-card) border border-(--line)">
                   <span className="text-[10px] text-gray-500 uppercase block mb-1">Počet tranzistorů:</span>
                   <span className="font-bold text-emerald-400 text-xs">
                     {details.transistorCount} MOSFETs ({details.gateCount} hradel)
                   </span>
                 </div>
-                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                <div className="p-3 rounded-lg bg-(--bg-card) border border-(--line)">
                   <span className="text-[10px] text-gray-500 uppercase block mb-1">Propagační zpoždění:</span>
                   <span className="font-bold text-amber-400 text-xs">{details.propagationDelay}</span>
                 </div>
@@ -253,13 +275,13 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   {/* Inputs */}
-                  <div className="p-3 rounded-lg bg-[#0A0E18] border border-[#151D2C] space-y-1.5">
+                  <div className="p-3 rounded-lg bg-(--bg-card-light) border border-(--line) space-y-1.5">
                     <span className="text-[9px] text-gray-500 uppercase font-bold block mb-1">VSTUPNÍ PINY (INPUTS):</span>
                     {inPins.length === 0 ? (
                       <span className="text-gray-600 text-[10px]">Žádné přímé vstupy</span>
                     ) : (
                       inPins.map(([pin, val]) => (
-                        <div key={pin} className="flex items-center justify-between py-0.5 border-b border-[#141B28]">
+                        <div key={pin} className="flex items-center justify-between py-0.5 border-b border-(--line)">
                           <span className="text-gray-300 font-semibold">{pin.toUpperCase()}</span>
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
@@ -278,13 +300,13 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
                   </div>
 
                   {/* Outputs */}
-                  <div className="p-3 rounded-lg bg-[#0A0E18] border border-[#151D2C] space-y-1.5">
+                  <div className="p-3 rounded-lg bg-(--bg-card-light) border border-(--line) space-y-1.5">
                     <span className="text-[9px] text-gray-500 uppercase font-bold block mb-1">VÝSTUPNÍ PINY (OUTPUTS):</span>
                     {outPins.length === 0 ? (
                       <span className="text-gray-600 text-[10px]">Žádné výstupy</span>
                     ) : (
                       outPins.map(([pin, val]) => (
-                        <div key={pin} className="flex items-center justify-between py-0.5 border-b border-[#141B28]">
+                        <div key={pin} className="flex items-center justify-between py-0.5 border-b border-(--line)">
                           <span className="text-gray-300 font-semibold">{pin.toUpperCase()}</span>
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
@@ -313,7 +335,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
                   {details.subcomponents.map((sub, i) => (
                     <div
                       key={i}
-                      className="p-2.5 rounded-lg bg-[#06080F] border border-[#161D2B] flex items-center justify-between"
+                      className="p-2.5 rounded-lg bg-(--bg-card) border border-(--line) flex items-center justify-between"
                     >
                       <div className="flex items-center space-x-2.5">
                         <span className="w-5 h-5 rounded bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-[10px] font-bold">
@@ -337,10 +359,10 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
           {/* TAB 2: TRUTH TABLE */}
           {activeTab === 'table' && (
             <div className="space-y-4">
-              <div className="overflow-hidden rounded-lg border border-[#161D2B]">
+              <div className="overflow-hidden rounded-lg border border-(--line)">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-[#05070D] border-b border-[#161D2B] text-gray-400 text-[10px]">
+                    <tr className="bg-(--bg-card) border-b border-(--line) text-gray-400 text-[10px]">
                       {details.truthTable.headers.map((h, i) => (
                         <th key={i} className="p-2.5 font-bold uppercase tracking-wider">
                           {h}
@@ -348,7 +370,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#141B28]">
+                  <tbody className="divide-y divide-(--line)">
                     {details.truthTable.rows.map((row, idx) => {
                       // Check if this row matches current inputs
                       const isMatch =
@@ -362,7 +384,7 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
                           className={`transition-colors font-mono ${
                             isMatch
                               ? 'bg-cyan-500/20 text-cyan-300 font-bold border-l-4 border-cyan-400'
-                              : 'bg-[#080C14] text-gray-300 hover:bg-[#0E131F]'
+                              : 'bg-(--bg-card-light) text-gray-300 hover:bg-(--bg-card-light)'
                           }`}
                         >
                           {row.inputs.map((inp, i) => (
@@ -382,11 +404,11 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
 
               {/* Power & Timing Specs */}
               <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                <div className="p-3 rounded-lg bg-(--bg-card) border border-(--line)">
                   <span className="text-gray-500 block text-[10px] mb-1">Dynamická spotřeba (P_dyn):</span>
                   <span className="text-gray-200 font-bold">{details.powerConsumption}</span>
                 </div>
-                <div className="p-3 rounded-lg bg-[#05070D] border border-[#161D2B]">
+                <div className="p-3 rounded-lg bg-(--bg-card) border border-(--line)">
                   <span className="text-gray-500 block text-[10px] mb-1">Logická rodina:</span>
                   <span className="text-gray-200 font-bold">{details.technology}</span>
                 </div>
@@ -405,10 +427,10 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
                 {details.pinout.map((p) => (
                   <div
                     key={p.pin}
-                    className="p-2 rounded bg-[#06080F] border border-[#161D2B] flex items-center justify-between text-[10px]"
+                    className="p-2 rounded bg-(--bg-card) border border-(--line) flex items-center justify-between text-[10px]"
                   >
                     <div className="flex items-center space-x-2">
-                      <span className="w-5 h-5 rounded bg-[#10141D] text-cyan-400 font-bold flex items-center justify-center border border-[#1A2333]">
+                      <span className="w-5 h-5 rounded bg-(--bg-card-light) text-cyan-400 font-bold flex items-center justify-center border border-(--line)">
                         {p.pin}
                       </span>
                       <span className="font-bold text-gray-200">{p.name}</span>
@@ -422,14 +444,14 @@ export function ComponentInspectorModal({ component, engine, onClose }) {
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3.5 bg-[#05070D] border-t border-[#161D2B] flex items-center justify-between">
+        <div className="p-3.5 bg-(--bg-card) border-t border-(--line) flex items-center justify-between">
           <div className="flex items-center space-x-2 text-[10px] text-gray-500">
             <Info size={12} className="text-cyan-400" />
             <span>Dvojklikem na libovolnou jinou součástku otevřete její vnitřní inspekci.</span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-[#0E131F] hover:bg-white/10 text-gray-200 rounded font-semibold text-[11px] border border-[#1A2333] transition-colors"
+            className="px-4 py-1.5 bg-(--bg-card-light) hover:bg-white/10 text-gray-200 rounded font-semibold text-[11px] border border-(--line) transition-colors"
           >
             ZAVŘÍT
           </button>

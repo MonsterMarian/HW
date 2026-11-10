@@ -1,47 +1,10 @@
 // SILICON // LOGIC STUDIO - AI COPILOT & FORMAL VERIFIER
 // Synthesizes verified logic netlists from natural language prompts.
 
+import { NV1_BOARD } from './presets/nv1Board.js';
+
 export const PRESET_CIRCUITS = {
-  nvidia_nv1: {
-    name: "Nvidia's First Product: NV1 (1995) - 3D Multimedia PCI Card",
-    prompt: "Postav Nvidia's First Product: NV1 (1995) - Diamond Edge 3D PCI kartu s čipem SGS-Thomson STG2000, EDO VRAM pamětí, 135MHz RAMDAC, 32hlasým zvukovým čipem, konektory Sega Saturn a VGA výstupem",
-    components: [
-      // Positions follow the Diamond Edge 3D card outline (NV1_CARD in boardLayout.js); 2D PCB and 3D share them.
-      { id: 'vga_bracket', type: 'VGA_BRACKET', label: 'I/O BRACKET', x: 36, y: 110, inputs: { vga_in: 0, audio_in: 0 }, outputs: { display_ready: 1 } },
-      { id: 'y1_crystal', type: 'CLOCK', label: 'Y1 14.318 MHz (PCI/GPU)', x: 150, y: 110, inputs: {}, outputs: { out: 0 } },
-      { id: 'y2_crystal', type: 'CLOCK', label: 'Y2 24.576 MHz (AUDIO/MIDI)', x: 150, y: 215, inputs: {}, outputs: { out: 0 } },
-      { id: 'saturn_pad', type: 'SATURN_PAD', label: 'SEGA SATURN GAMEPAD', x: 150, y: 330, inputs: {}, outputs: { dpad: 1, btn_a: 0, btn_b: 1 } },
-      { id: 'audio_dsp', type: 'AUDIO_DSP', label: '32-VOICE AUDIO DSP (STG2000)', x: 345, y: 100, inputs: { clk: 0, synth_en: 1 }, outputs: { audio_l: 128, audio_r: 128 } },
-      { id: 'nv1_core', type: 'NV1_CORE', label: 'SGS-THOMSON STG-2000X / NVIDIA NV1', x: 330, y: 250, inputs: { pci_clk: 0, pci_data: 0, saturn_in: 1 }, outputs: { vram_addr: 0, vram_data: 0, pixel_clk: 0, rgb_data: 0, audio_sample: 0, status: 1 } },
-      { id: 'pci_bus', type: 'PCI_BUS', label: 'PCI 2.1 32-BIT 33MHz GOLD EDGE', x: 250, y: 522, inputs: { clk: 0 }, outputs: { pci_data: 0x12D2, pci_frame: 1 } },
-      { id: 'vram_bank0', type: 'VRAM_BANK', label: 'TOSHIBA EDO DRAM 2MB (BANK 0)', x: 580, y: 100, inputs: { addr: 0, din: 0, we: 1 }, outputs: { dout: 0x55 } },
-      { id: 'vram_bank1', type: 'VRAM_BANK', label: 'TOSHIBA EDO DRAM 2MB (BANK 1)', x: 580, y: 196, inputs: { addr: 0, din: 0, we: 1 }, outputs: { dout: 0xAA } },
-      { id: 'ramdac', type: 'RAMDAC', label: '135MHz TrueColor RAMDAC (ATT20C409)', x: 580, y: 292, inputs: { pixel_clk: 0, rgb_in: 0 }, outputs: { vga_rgb: 0xFF, hsync: 1, vsync: 1 } },
-      { id: 'bios_rom', type: 'ROM', label: 'NV1 BIOS v1.08 (C)1995 NVIDIA', x: 572, y: 404, inputs: { addr: 0 }, outputs: { dout: 0x12 } },
-      { id: 'screen', type: 'VIRTUAL_SCREEN', label: '640x480 TrueColor CRT (3D DEMO)', x: 860, y: 110, inputs: { x: 0, y: 0, color: 0x1F, we: 1, clk: 0 }, outputs: {} },
-      { id: 'audio_out', type: 'PROBE', label: 'LINE OUT (16-BIT 44.1kHz)', x: 860, y: 380, inputs: { in: 0 }, outputs: { val: 0 } },
-    ],
-    wires: [
-      { from: { id: 'y1_crystal', pin: 'out' }, to: { id: 'nv1_core', pin: 'pci_clk' } },
-      { from: { id: 'y1_crystal', pin: 'out' }, to: { id: 'pci_bus', pin: 'clk' } },
-      { from: { id: 'y2_crystal', pin: 'out' }, to: { id: 'audio_dsp', pin: 'clk' } },
-      { from: { id: 'pci_bus', pin: 'pci_data' }, to: { id: 'nv1_core', pin: 'pci_data' } },
-      { from: { id: 'saturn_pad', pin: 'btn_a' }, to: { id: 'nv1_core', pin: 'saturn_in' } },
-      { from: { id: 'nv1_core', pin: 'vram_addr' }, to: { id: 'vram_bank0', pin: 'addr' } },
-      { from: { id: 'nv1_core', pin: 'vram_addr' }, to: { id: 'vram_bank1', pin: 'addr' } },
-      { from: { id: 'nv1_core', pin: 'pixel_clk' }, to: { id: 'ramdac', pin: 'pixel_clk' } },
-      { from: { id: 'nv1_core', pin: 'rgb_data' }, to: { id: 'ramdac', pin: 'rgb_in' } },
-      { from: { id: 'nv1_core', pin: 'pixel_clk' }, to: { id: 'screen', pin: 'clk' } },
-      { from: { id: 'ramdac', pin: 'vga_rgb' }, to: { id: 'screen', pin: 'color' } },
-      { from: { id: 'ramdac', pin: 'vga_rgb' }, to: { id: 'vga_bracket', pin: 'vga_in' } },
-      { from: { id: 'audio_dsp', pin: 'audio_l' }, to: { id: 'audio_out', pin: 'in' } },
-      { from: { id: 'audio_dsp', pin: 'audio_l' }, to: { id: 'vga_bracket', pin: 'audio_in' } },
-    ],
-    testbench: [
-      { inputs: { pci_clk: 1 }, expected: { pixel_clk: 1, status: 1 } },
-      { inputs: { pci_clk: 0 }, expected: { pixel_clk: 0, status: 1 } },
-    ]
-  },
+  nvidia_nv1: NV1_BOARD,
 
   mini_pc: {
     name: 'Mini 8-Bit Computer (CPU + ROM + ALU + CRT)',
@@ -61,8 +24,14 @@ export const PRESET_CIRCUITS = {
       { id: 'screen', type: 'VIRTUAL_SCREEN', label: '64x64 DUAL-PORT CRT', x: 700, y: 340, inputs: { x: 0, y: 0, color: 0x1F, we: 1, clk: 0 }, outputs: {} },
       { id: 'sw_color', type: 'INPUT', label: 'VRAM COLOR (RGB)', x: 450, y: 440, inputs: {}, outputs: { out: 1 } },
       { id: 'probe_bus', type: 'PROBE', label: 'INSTRUCTION BUS', x: 450, y: 70, inputs: { in: 0 }, outputs: { val: 0 } },
+      // PC + 1 (without it the program counter never moves)
+      { id: 'pc_inc', type: 'ADDER_8BIT', label: 'PC + 1', x: 50, y: 290, inputs: {}, outputs: {} },
+      { id: 'pc_one', type: 'CONSTANT', label: '+1', x: 50, y: 420, inputs: {}, outputs: { out: 1 } },
     ],
     wires: [
+      { from: { id: 'pc', pin: 'q' }, to: { id: 'pc_inc', pin: 'a' } },
+      { from: { id: 'pc_one', pin: 'out' }, to: { id: 'pc_inc', pin: 'b' } },
+      { from: { id: 'pc_inc', pin: 'sum' }, to: { id: 'pc', pin: 'd' } },
       { from: { id: 'clk', pin: 'out' }, to: { id: 'pc', pin: 'clk' } },
       { from: { id: 'clk', pin: 'out' }, to: { id: 'reg_a', pin: 'clk' } },
       { from: { id: 'clk', pin: 'out' }, to: { id: 'reg_b', pin: 'clk' } },
@@ -303,15 +272,36 @@ export const PRESET_CIRCUITS = {
     name: 'GPU Display & Pixel Generator',
     prompt: 'Postav obvod s virtuálním monitorem 64x64, oscilátorem a generátorem souřadnic',
     components: [
+      // X counts 0..63 and wraps; Y counts one step each time X wraps -> the screen fills line by line
       { id: 'clk', type: 'CLOCK', label: 'Pixel Clock (10 Hz)', x: 60, y: 140, inputs: {}, outputs: { out: 0 } },
-      { id: 'reg_x', type: 'REGISTER_8BIT', label: 'Counter X', x: 220, y: 100, inputs: { d: 0, clk: 0, we: 1 }, outputs: { q: 0 } },
-      { id: 'reg_y', type: 'REGISTER_8BIT', label: 'Counter Y', x: 220, y: 220, inputs: { d: 0, clk: 0, we: 1 }, outputs: { q: 0 } },
-      { id: 'color_const', type: 'CONSTANT', label: 'Cyan Color (0x1F)', x: 220, y: 320, inputs: {}, outputs: { out: 0x1F } },
-      { id: 'screen', type: 'VIRTUAL_SCREEN', label: 'Dual-Port VRAM 64x64', x: 440, y: 120, inputs: { x: 0, y: 0, color: 0x1F, we: 1, clk: 0 }, outputs: {} },
+      { id: 'one', type: 'CONSTANT', label: '+1', x: 60, y: 260, inputs: {}, outputs: { out: 1 } },
+      { id: 'zero', type: 'CONSTANT', label: '0', x: 60, y: 360, inputs: {}, outputs: { out: 0 } },
+      { id: 'last_x', type: 'CONSTANT', label: 'X MAX = 63', x: 60, y: 460, inputs: {}, outputs: { out: 63 } },
+      { id: 'reg_x', type: 'REGISTER_8BIT', label: 'Counter X', x: 220, y: 60, inputs: { d: 0, clk: 0, we: 1 }, outputs: { q: 0 } },
+      { id: 'inc_x', type: 'ADDER_8BIT', label: 'X + 1', x: 400, y: 60, inputs: {}, outputs: {} },
+      { id: 'cmp_x', type: 'COMPARATOR_8BIT', label: 'X == 63', x: 400, y: 180, inputs: {}, outputs: {} },
+      { id: 'wrap_x', type: 'MUX', label: 'X WRAP', x: 560, y: 60, inputs: {}, outputs: {} },
+      { id: 'reg_y', type: 'REGISTER_8BIT', label: 'Counter Y', x: 220, y: 300, inputs: { d: 0, clk: 0, we: 0 }, outputs: { q: 0 } },
+      { id: 'inc_y', type: 'ADDER_8BIT', label: 'Y + 1', x: 400, y: 300, inputs: {}, outputs: {} },
+      { id: 'color_const', type: 'CONSTANT', label: 'Cyan Color (0x1F)', x: 560, y: 420, inputs: {}, outputs: { out: 0x1F } },
+      { id: 'screen', type: 'VIRTUAL_SCREEN', label: 'Dual-Port VRAM 64x64', x: 740, y: 120, inputs: { x: 0, y: 0, color: 0x1F, we: 1, clk: 0 }, outputs: {} },
     ],
     wires: [
       { from: { id: 'clk', pin: 'out' }, to: { id: 'reg_x', pin: 'clk' } },
+      { from: { id: 'clk', pin: 'out' }, to: { id: 'reg_y', pin: 'clk' } },
       { from: { id: 'clk', pin: 'out' }, to: { id: 'screen', pin: 'clk' } },
+      { from: { id: 'reg_x', pin: 'q' }, to: { id: 'inc_x', pin: 'a' } },
+      { from: { id: 'one', pin: 'out' }, to: { id: 'inc_x', pin: 'b' } },
+      { from: { id: 'reg_x', pin: 'q' }, to: { id: 'cmp_x', pin: 'a' } },
+      { from: { id: 'last_x', pin: 'out' }, to: { id: 'cmp_x', pin: 'b' } },
+      { from: { id: 'inc_x', pin: 'sum' }, to: { id: 'wrap_x', pin: 'a' } },
+      { from: { id: 'zero', pin: 'out' }, to: { id: 'wrap_x', pin: 'b' } },
+      { from: { id: 'cmp_x', pin: 'eq' }, to: { id: 'wrap_x', pin: 'sel' } },
+      { from: { id: 'wrap_x', pin: 'out' }, to: { id: 'reg_x', pin: 'd' } },
+      { from: { id: 'cmp_x', pin: 'eq' }, to: { id: 'reg_y', pin: 'we' } },
+      { from: { id: 'reg_y', pin: 'q' }, to: { id: 'inc_y', pin: 'a' } },
+      { from: { id: 'one', pin: 'out' }, to: { id: 'inc_y', pin: 'b' } },
+      { from: { id: 'inc_y', pin: 'sum' }, to: { id: 'reg_y', pin: 'd' } },
       { from: { id: 'reg_x', pin: 'q' }, to: { id: 'screen', pin: 'x' } },
       { from: { id: 'reg_y', pin: 'q' }, to: { id: 'screen', pin: 'y' } },
       { from: { id: 'color_const', pin: 'out' }, to: { id: 'screen', pin: 'color' } },

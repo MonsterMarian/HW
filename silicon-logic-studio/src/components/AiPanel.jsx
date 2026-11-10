@@ -61,17 +61,15 @@ export function AiPanel({ engine, onClose, onCircuitReplaced = () => {} }) {
   };
 
   return (
-    <div className="w-96 bg-[#070A12]/95 border-l border-[#161D2B] shadow-2xl backdrop-blur-2xl flex flex-col h-full select-none text-xs z-40 font-mono">
+    <div className="w-96 bg-(--bg-dark) border-l border-(--line) flex flex-col h-full select-none text-xs z-40 font-mono">
       {/* Header */}
-      <div className="flex items-center justify-between px-3.5 py-3 border-b border-[#141B29] bg-[#04060A]/90">
-        <div className="flex items-center space-x-2 text-cyan-400 font-semibold text-[11px] tracking-wider">
-          <Sparkles size={14} className="text-cyan-400 animate-pulse" />
-          <span>AI LOGIC NETLIST COPILOT</span>
+      <div className="h-11 flex items-center justify-between px-4 border-b border-(--line)">
+        <div className="flex items-baseline gap-2">
+          <Sparkles size={13} className="text-(--accent-amber) self-center" />
+          <span className="panel-title">AI Copilot</span>
+          <span className="serif-accent text-[13px]">syntéza obvodu</span>
         </div>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-white text-xs px-2 py-0.5 rounded bg-white/5 border border-white/5 transition-colors"
-        >
+        <button onClick={onClose} title="Zavřít" className="text-gray-500 hover:text-(--accent-amber) p-1 text-sm">
           ✕
         </button>
       </div>
@@ -86,7 +84,7 @@ export function AiPanel({ engine, onClose, onCircuitReplaced = () => {} }) {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             rows={3}
-            className="w-full bg-[#04060A] border border-[#1A2336] rounded-lg p-2.5 text-cyan-200 text-xs font-mono outline-none focus:border-cyan-500 transition-colors placeholder-gray-600"
+            className="w-full bg-(--bg-card) border border-(--line) rounded-lg p-2.5 text-cyan-200 text-xs font-mono outline-none focus:border-cyan-500 transition-colors placeholder-gray-600"
             placeholder="např. Postav 8bitový Mini PC s procesorem, pamětí a monitorem..."
           />
         </div>
@@ -130,7 +128,7 @@ export function AiPanel({ engine, onClose, onCircuitReplaced = () => {} }) {
 
             <button
               onClick={() => handleSynthesizeAndDeploy('Vytvoř 1bitovou úplnou sčítačku se vstupem Carry-In')}
-              className="w-full text-left px-2.5 py-1.5 rounded bg-[#0A0E18] hover:bg-[#121826] border border-[#161D2B] text-gray-300 text-[11px] transition-colors flex items-center justify-between"
+              className="w-full text-left px-2.5 py-1.5 rounded bg-(--bg-card-light) hover:bg-(--bg-card-light) border border-(--line) text-gray-300 text-[11px] transition-colors flex items-center justify-between"
             >
               <span>1-Bit Full Adder (Sčítačka)</span>
               <span className="text-[9px] text-gray-500 font-mono">LOGIC</span>
@@ -138,7 +136,7 @@ export function AiPanel({ engine, onClose, onCircuitReplaced = () => {} }) {
 
             <button
               onClick={() => handleSynthesizeAndDeploy('Sestav 1bitovou paměťovou buňku SR Latch z hradel NOR')}
-              className="w-full text-left px-2.5 py-1.5 rounded bg-[#0A0E18] hover:bg-[#121826] border border-[#161D2B] text-gray-300 text-[11px] transition-colors flex items-center justify-between"
+              className="w-full text-left px-2.5 py-1.5 rounded bg-(--bg-card-light) hover:bg-(--bg-card-light) border border-(--line) text-gray-300 text-[11px] transition-colors flex items-center justify-between"
             >
               <span>Bistable SR Latch (Memory)</span>
               <span className="text-[9px] text-gray-500 font-mono">MEMORY</span>
@@ -146,7 +144,7 @@ export function AiPanel({ engine, onClose, onCircuitReplaced = () => {} }) {
 
             <button
               onClick={() => handleSynthesizeAndDeploy('Postav obvod s virtuálním GPU monitorem 64x64')}
-              className="w-full text-left px-2.5 py-1.5 rounded bg-[#0A0E18] hover:bg-[#121826] border border-[#161D2B] text-gray-300 text-[11px] transition-colors flex items-center justify-between"
+              className="w-full text-left px-2.5 py-1.5 rounded bg-(--bg-card-light) hover:bg-(--bg-card-light) border border-(--line) text-gray-300 text-[11px] transition-colors flex items-center justify-between"
             >
               <span>GPU Rasterizer & Screen</span>
               <span className="text-[9px] text-gray-500 font-mono">DISPLAY</span>
@@ -170,8 +168,8 @@ export function AiPanel({ engine, onClose, onCircuitReplaced = () => {} }) {
 
         {/* Synthesized Result Card */}
         {synthesizedCircuit && (
-          <div className="bg-[#05070D] border border-cyan-500/30 rounded-lg p-3 space-y-2.5 animate-fadeIn shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#141C2B] pb-2">
+          <div className="bg-(--bg-card) border border-cyan-500/30 rounded-lg p-3 space-y-2.5 animate-fadeIn shadow-xl">
+            <div className="flex items-center justify-between border-b border-(--line) pb-2">
               <span className="font-bold text-gray-100 text-[11px]">{synthesizedCircuit.name}</span>
               <span className="text-[9px] bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 px-1.5 py-0.5 rounded font-mono">
                 {synthesizedCircuit.components.length} ICs

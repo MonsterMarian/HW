@@ -17,6 +17,16 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { audioEngine } from '../engine/audioEngine';
+import { DEVICES } from '../engine/devices/index.js';
+import { fmtTime } from '../views/canvas/theme';
+
+// Poměr simulovaného a reálného času: "×2.0" rychleji, "1/2 400" pomaleji
+function fmtRatio(r, running) {
+  if (!running) return 'STOJÍ';
+  if (!r) return '—';
+  if (r >= 1) return `×${r.toFixed(1)} REÁL`;
+  return `1/${Math.round(1 / r).toLocaleString('cs-CZ')} REÁL`;
+}
 
 export function Toolbar({
   engine,
@@ -36,14 +46,29 @@ export function Toolbar({
   setIsMuted,
 }) {
   const [isRunning, setIsRunning] = useState(engine.isRunning);
+  const [freq, setFreq] = useState(engine.clockFrequency);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [clock, setClock] = useState({ sim: engine.simTime, ratio: 0 });
 
   // Synchronize running state with logic engine events
   useEffect(() => {
     const unsub = engine.subscribe(() => {
       setIsRunning(engine.isRunning);
+      setFreq(engine.clockFrequency);
     });
     return () => unsub();
+  }, [engine]);
+
+  // Simulovaný čas a jeho poměr k reálnému (měřeno po 0,5 s)
+  useEffect(() => {
+    let last = { sim: engine.simTime, t: performance.now() };
+    const id = setInterval(() => {
+      const now = performance.now();
+      const ratio = engine.isRunning && now > last.t ? (engine.simTime - last.sim) / ((now - last.t) * 1e6) : 0;
+      last = { sim: engine.simTime, t: now };
+      setClock({ sim: engine.simTime, ratio: Math.max(0, ratio) });
+    }, 500);
+    return () => clearInterval(id);
   }, [engine]);
 
   // Spacebar shortcut to Start/Stop simulation clock
@@ -86,6 +111,7 @@ export function Toolbar({
     setIsMuted(!isMuted);
   };
 
+  // Piny i výchozí stav doplní engine (ensurePins / init zařízení)
   const addComponent = (type, label) => {
     audioEngine.playRelayClick(1.0);
     const id = `${type.toLowerCase()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -98,106 +124,21 @@ export function Toolbar({
       inputs: {},
       outputs: {},
     };
-
-    if (type === 'INPUT') {
-      comp.outputs.out = 0;
-    } else if (type === 'CLOCK') {
-      comp.outputs.out = 0;
-    } else if (type === 'NOT') {
-      comp.inputs.in = 0;
-      comp.outputs.out = 1;
-    } else if (['AND', 'OR', 'XOR', 'NAND', 'NOR'].includes(type)) {
-      comp.inputs.a = 0;
-      comp.inputs.b = 0;
-      comp.outputs.out = 0;
-    } else if (type === 'D_FF') {
-      comp.inputs.d = 0;
-      comp.inputs.clk = 0;
-      comp.outputs.q = 0;
-      comp.outputs.nq = 1;
-    } else if (type === 'REGISTER_8BIT') {
-      comp.inputs.d = 0;
-      comp.inputs.clk = 0;
-      comp.inputs.we = 1;
-      comp.outputs.q = 0;
-    } else if (type === 'RAM') {
-      comp.inputs.addr = 0;
-      comp.inputs.din = 0;
-      comp.inputs.we = 0;
-      comp.inputs.clk = 0;
-      comp.outputs.dout = 0;
-    } else if (type === 'ROM') {
-      comp.inputs.addr = 0;
-      comp.outputs.dout = 0;
-    } else if (type === 'VIRTUAL_SCREEN') {
-      comp.inputs.x = 0;
-      comp.inputs.y = 0;
-      comp.inputs.color = 0x1F;
-      comp.inputs.we = 1;
-      comp.inputs.clk = 0;
-      comp.outputs = {};
-      comp.vram = new Uint8Array(64 * 64);
-    } else if (type === 'MUX') {
-      comp.inputs.a = 0;
-      comp.inputs.b = 0;
-      comp.inputs.sel = 0;
-      comp.outputs.out = 0;
-    } else if (type === 'PROBE') {
-      comp.inputs.in = 0;
-      comp.outputs.val = 0;
-    } else if (type === 'SEVEN_SEGMENT') {
-      comp.inputs.b0 = 0;
-      comp.inputs.b1 = 0;
-      comp.inputs.b2 = 0;
-      comp.inputs.b3 = 0;
-      comp.outputs.val = 0;
-    } else if (type === 'NV1_CORE') {
-      comp.inputs.pci_clk = 0;
-      comp.inputs.pci_data = 0;
-      comp.inputs.saturn_in = 1;
-      comp.outputs.vram_addr = 0;
-      comp.outputs.vram_data = 0;
-      comp.outputs.pixel_clk = 0;
-      comp.outputs.rgb_data = 0;
-      comp.outputs.audio_sample = 0;
-      comp.outputs.status = 1;
-    } else if (type === 'VRAM_BANK') {
-      comp.inputs.addr = 0;
-      comp.inputs.din = 0;
-      comp.inputs.we = 1;
-      comp.outputs.dout = 0x55;
-    } else if (type === 'RAMDAC') {
-      comp.inputs.pixel_clk = 0;
-      comp.inputs.rgb_in = 0;
-      comp.outputs.vga_rgb = 0xFF;
-      comp.outputs.hsync = 1;
-      comp.outputs.vsync = 1;
-    } else if (type === 'AUDIO_DSP') {
-      comp.inputs.clk = 0;
-      comp.inputs.synth_en = 1;
-      comp.outputs.audio_l = 128;
-      comp.outputs.audio_r = 128;
-    } else if (type === 'PCI_BUS') {
-      comp.inputs.clk = 0;
-      comp.outputs.pci_data = 0x12D2;
-      comp.outputs.pci_frame = 1;
-    } else if (type === 'VGA_BRACKET') {
-      comp.inputs.vga_in = 0;
-      comp.inputs.audio_in = 0;
-      comp.outputs.display_ready = 1;
-    } else if (type === 'SATURN_PAD') {
-      comp.outputs.dpad = 1;
-      comp.outputs.btn_a = 0;
-      comp.outputs.btn_b = 1;
-    }
-
+    if (type === 'CRYSTAL') comp.freqHz = 14.31818e6;
     engine.addComponent(comp);
     setActiveCategory(null);
   };
 
+  // Součástky karty Diamond Edge 3D (modely v engine/devices): název z meta
+  const NV1_ITEMS = Object.entries(DEVICES).map(([type, d]) => ({
+    type,
+    label: `${d.meta.ref} ${d.meta.part.split(' (')[0]}`,
+    desc: `${d.meta.pkg} · ${d.meta.desc}`,
+  }));
+
   const COMPONENT_GROUPS = [
     {
-      name: 'LOGIC GATES',
+      name: 'LOGIC GATES', short: 'GATES',
       items: [
         { type: 'AND', label: 'AND Gate', desc: 'Dual Input AND' },
         { type: 'OR', label: 'OR Gate', desc: 'Dual Input OR' },
@@ -208,16 +149,16 @@ export function Toolbar({
       ],
     },
     {
-      name: 'SEQUENTIAL & MEMORY',
+      name: 'SEQUENTIAL & MEMORY', short: 'MEMORY',
       items: [
         { type: 'D_FF', label: 'D Flip-Flop', desc: 'Clocked D Latch' },
         { type: 'REGISTER_8BIT', label: '8-Bit Register', desc: 'Octal D Register' },
-        { type: 'RAM', label: 'SRAM 32KB', desc: 'Static Random Access' },
-        { type: 'ROM', label: 'EEPROM 64KB', desc: 'Read Only Memory' },
+        { type: 'RAM', label: 'SRAM 256×8', desc: 'Static Random Access' },
+        { type: 'ROM', label: 'ROM 256×8', desc: 'Read Only Memory' },
       ],
     },
     {
-      name: 'I/O & BUS ROUTING',
+      name: 'I/O & BUS ROUTING', short: 'I/O',
       items: [
         { type: 'INPUT', label: 'Logic Switch', desc: 'Digital State Source' },
         { type: 'CLOCK', label: 'Oscillator', desc: 'Square Wave Pulse' },
@@ -227,231 +168,159 @@ export function Toolbar({
         { type: 'VIRTUAL_SCREEN', label: 'CRT Display', desc: '64x64 Dual-Port VRAM' },
       ],
     },
-    {
-      name: 'NVIDIA NV1 (1995) VINTAGE CHIPS',
-      items: [
-        { type: 'NV1_CORE', label: 'SGS STG2000 / NV1', desc: 'QFP-208 3D & 2D Multimedia GPU' },
-        { type: 'VRAM_BANK', label: 'Toshiba EDO DRAM', desc: 'SOJ-42 60ns High Speed VRAM' },
-        { type: 'RAMDAC', label: '135MHz TrueColor DAC', desc: 'Triple 8-Bit Analog Video DAC' },
-        { type: 'AUDIO_DSP', label: '32-Voice Audio DSP', desc: 'Hardware Wavetable MIDI Synthesizer' },
-        { type: 'PCI_BUS', label: 'PCI 2.1 32-Bit Edge', desc: '33.3 MHz Gold Finger Host Bus' },
-        { type: 'VGA_BRACKET', label: 'PCI I/O Bracket', desc: 'VGA DB-15 + Audio + Sega Saturn Port' },
-        { type: 'SATURN_PAD', label: 'Sega Saturn Pad', desc: 'Official 9-Pin Digital Gamepad' },
-      ],
-    },
+    { name: 'DIAMOND EDGE 3D (NV1, 1995)', short: 'NV1', items: NV1_ITEMS },
   ];
 
+  const VIEWS = [
+    { id: 'schematic', label: 'SCHEMATIC', Icon: Grid, title: 'Schéma – IEEE/ANSI značky hradel' },
+    { id: 'hardware', label: 'PCB', Icon: Cpu, title: 'Hardware PCB – deska s pouzdry DIP/QFP' },
+    { id: 'physics', label: 'DIE 3D', Icon: Layers, title: 'Silicon Die 3D – vrstvy křemíku a teplotní mapa' },
+  ];
+
+  // Jednotný vzhled tlačítek lišty: ostré hrany, tenká linka, jantar jen pro aktivní stav
+  const btn = (active) =>
+    `h-7 flex items-center gap-1.5 px-2 border text-[11px] font-bold tracking-[0.08em] whitespace-nowrap transition-colors ${
+      active
+        ? 'bg-(--accent-amber) border-(--accent-amber) text-(--bg-dark)'
+        : 'bg-transparent border-(--line) text-gray-400 hover:text-(--text-light) hover:border-gray-600'
+    }`;
+  const sep = <div className="h-5 w-px bg-(--line) shrink-0" />;
+
   return (
-    <div className="h-12 bg-[#080B12] border-b border-[#161D2B] px-3.5 flex items-center justify-between select-none font-mono text-xs z-30 shrink-0">
-      {/* 1. Tri-State View Switcher */}
-      <div className="flex items-center space-x-3">
-        {/* Leftmost Gallery Drawer Toggle Button */}
-        <button
-          onClick={() => setShowGallery(!showGallery)}
-          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-all border ${
-            showGallery
-              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
-              : 'bg-[#0A0E17] text-gray-300 border-[#1A2333] hover:bg-[#121824] hover:text-white'
-          }`}
-          title="Circuit Gallery, Presets & Cloud / JSON Storage"
-        >
-          <FolderOpen size={12} className={showGallery ? 'text-cyan-400' : 'text-gray-400'} />
-          <span>GALLERY</span>
-        </button>
+    <div className="h-11 bg-(--bg-dark) border-b border-(--line) px-3 flex items-center gap-2.5 select-none font-mono uppercase z-30 shrink-0">
+      <button
+        onClick={() => setShowGallery(!showGallery)}
+        className={btn(showGallery)}
+        title="Galerie obvodů, předvolby a úložiště JSON"
+      >
+        <FolderOpen size={13} />
+        <span>GALLERY</span>
+      </button>
 
-        <div className="h-4 w-px bg-[#161D2B]" />
+      {sep}
 
-        <div className="flex items-center bg-[#04060A] border border-[#161D2B] p-0.5 rounded-md">
+      {/* Režim zobrazení */}
+      <div className="flex items-center" role="group" aria-label="Režim zobrazení">
+        {VIEWS.map(({ id, label, Icon, title }, i) => (
           <button
-            onClick={() => setViewMode('schematic')}
-            className={`flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-all ${
-              viewMode === 'schematic'
-                ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(0,240,255,0.15)]'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-            title="Clean IEEE/ANSI Technical Logic Gate Schematic"
+            key={id}
+            data-view={id}
+            aria-pressed={viewMode === id}
+            onClick={() => setViewMode(id)}
+            className={`${btn(viewMode === id)} ${i > 0 ? '-ml-px' : ''}`}
+            title={title}
           >
-            <Grid size={12} />
-            <span>SCHEMATIC</span>
+            <Icon size={13} />
+            <span>{label}</span>
           </button>
-
-          <button
-            onClick={() => setViewMode('hardware')}
-            className={`flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-all ${
-              viewMode === 'hardware'
-                ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(0,240,255,0.15)]'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-            title="Realistic PCB with DIP ICs, Metallic Pins & Moving Electrons"
-          >
-            <Cpu size={12} />
-            <span>HARDWARE PCB</span>
-          </button>
-
-          <button
-            onClick={() => setViewMode('physics')}
-            className={`flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-all ${
-              viewMode === 'physics'
-                ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(0,240,255,0.15)]'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-            title="3D Silicon Die Physical Polysilicon Layers & Thermal Map"
-          >
-            <Layers size={12} />
-            <span>SILICON DIE 3D</span>
-          </button>
-        </div>
-
-        {/* Divider */}
-        <div className="h-4 w-px bg-[#161D2B]" />
-
-        {/* 2. Modular Component Adder Dropdowns */}
-        <div className="flex items-center space-x-1 relative">
-          {COMPONENT_GROUPS.map((group) => {
-            const isOpen = activeCategory === group.name;
-            return (
-              <div key={group.name} className="relative">
-                <button
-                  onClick={() => setActiveCategory(isOpen ? null : group.name)}
-                  className={`flex items-center space-x-1.5 px-2.5 py-1 rounded text-[11px] transition-colors border ${
-                    isOpen
-                      ? 'bg-[#121824] text-cyan-400 border-cyan-500/40'
-                      : 'bg-[#0A0E17] text-gray-300 border-[#1A2333] hover:bg-[#121824] hover:text-white'
-                  }`}
-                >
-                  <Plus size={11} className="text-cyan-400" />
-                  <span>{group.name}</span>
-                  <ChevronDown size={10} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {/* Dropdown Menu */}
-                {isOpen && (
-                  <div className="absolute top-8 left-0 w-52 bg-[#090D16] border border-[#1E283D] rounded-lg shadow-2xl py-1 z-50 backdrop-blur-xl">
-                    <div className="px-2.5 py-1 text-[9px] font-bold text-gray-500 tracking-wider border-b border-[#141C2B]">
-                      {group.name}
-                    </div>
-                    {group.items.map((item) => (
-                      <button
-                        key={item.type}
-                        onClick={() => addComponent(item.type, item.label)}
-                        className="w-full text-left px-3 py-1.5 hover:bg-cyan-500/10 hover:text-cyan-400 text-gray-300 transition-colors flex items-center justify-between group"
-                      >
-                        <span className="font-semibold text-[11px]">{item.label}</span>
-                        <span className="text-[9px] text-gray-500 group-hover:text-cyan-500/70 font-mono">
-                          {item.type}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        ))}
       </div>
 
-      {/* 3. Clock & Simulation Pulse Controls */}
-      <div className="flex items-center space-x-2 bg-[#04060A] border border-[#161D2B] px-2.5 py-1 rounded-md">
+      {sep}
+
+      {/* Přidání součástek */}
+      <div className="flex items-center gap-1">
+        {COMPONENT_GROUPS.map((group) => {
+          const isOpen = activeCategory === group.name;
+          return (
+            <div key={group.name} className="relative">
+              <button
+                onClick={() => setActiveCategory(isOpen ? null : group.name)}
+                className={btn(isOpen)}
+                title={`Přidat: ${group.name}`}
+              >
+                <Plus size={12} />
+                <span>{group.short}</span>
+                <ChevronDown size={11} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isOpen && (
+                <div className="absolute top-8 left-0 w-80 bg-(--bg-dark) border border-gray-700 py-1 z-50 normal-case tracking-normal">
+                  <div className="meta px-3 py-1.5 border-b border-(--line)">{group.name}</div>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.type}
+                      onClick={() => addComponent(item.type, item.label)}
+                      title={item.desc}
+                      className="w-full text-left px-3 py-1.5 hover:bg-(--bg-card-light) text-gray-300 hover:text-(--accent-amber) transition-colors flex items-center justify-between gap-3 group"
+                    >
+                      <span className="font-sans font-semibold text-[13px] truncate">{item.label}</span>
+                      <span className="text-[10px] text-gray-600 group-hover:text-(--accent-amber) shrink-0">{item.type}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Hodiny simulace */}
+      <div className="ml-auto flex items-center gap-1">
         <button
           onClick={handleToggleRun}
-          className={`flex items-center space-x-1.5 px-3 py-1 rounded font-bold text-[11px] transition-all cursor-pointer ${
-            isRunning
-              ? 'bg-rose-500/25 text-rose-300 border border-rose-500/60 shadow-[0_0_12px_rgba(244,63,94,0.35)] animate-pulse'
-              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-500/30'
-          }`}
-          title="Spustit / Zastavit hodiny (Mezerník)"
+          className={`${btn(isRunning)} min-w-[4.6rem] justify-center`}
+          title="Spustit / zastavit hodiny (mezerník)"
         >
-          {isRunning ? <Pause size={12} className="text-rose-400" /> : <Play size={12} className="text-emerald-400" />}
-          <span>{isRunning ? 'HALT (STOP)' : 'RUN (START)'}</span>
+          {isRunning ? <Pause size={13} /> : <Play size={13} />}
+          <span className="max-[1400px]:hidden">{isRunning ? 'HALT' : 'RUN'}</span>
         </button>
-
         <button
           onClick={handleStep}
           disabled={isRunning}
-          className="flex items-center space-x-1 px-2.5 py-1 bg-[#0C101A] hover:bg-[#141B2B] text-gray-300 rounded border border-[#1A2333] disabled:opacity-30 text-[11px] cursor-pointer"
-          title="Krokovat o 1 takt"
+          className={`${btn(false)} disabled:opacity-30`}
+          title="Krokovat o jednu hranu hodin"
         >
-          <SkipForward size={11} />
-          <span>STEP</span>
+          <SkipForward size={12} />
+          <span className="max-[1400px]:hidden">STEP</span>
         </button>
-
-        <div className="h-3 w-px bg-[#161D2B]" />
-
-        <div className="flex items-center space-x-1.5 text-gray-400 text-[10px]">
-          <span>RATE:</span>
-          <select
-            value={engine.clockFrequency}
-            onChange={(e) => engine.setFrequency(Number(e.target.value))}
-            className="bg-[#0C101A] border border-[#1A2333] text-cyan-400 px-1.5 py-0.5 rounded outline-none text-[11px]"
-          >
-            <option value={1}>1 Hz</option>
-            <option value={5}>5 Hz</option>
-            <option value={10}>10 Hz</option>
-            <option value={50}>50 Hz</option>
-            <option value={200}>200 Hz</option>
-            <option value={1000}>1 kHz</option>
-          </select>
+        <select
+          value={String(freq)}
+          onChange={(e) => engine.setFrequency(Number(e.target.value))}
+          className="h-7 bg-(--bg-dark) border border-(--line) text-(--accent-amber) px-1.5 outline-none text-[11px] font-bold focus:border-(--accent-amber)"
+          title="Rychlost simulace: hrany hodin za sekundu, MAX = co nejrychleji (karta NV1 má reálné takty 33/50/25 MHz)"
+        >
+          <option value="1">1 Hz</option>
+          <option value="5">5 Hz</option>
+          <option value="10">10 Hz</option>
+          <option value="50">50 Hz</option>
+          <option value="200">200 Hz</option>
+          <option value="1000">1 kHz</option>
+          <option value="Infinity">MAX</option>
+        </select>
+        <div
+          className="h-7 flex flex-col justify-center px-2 border border-(--line) text-[10px] leading-[1.15] tracking-[0.06em] whitespace-nowrap min-w-[6.6rem]"
+          title="Simulovaný čas a poměr k reálnému času (1/N = simulace je N× pomalejší než skutečný hardware)"
+        >
+          <span className="text-(--text-light)">{fmtTime(clock.sim)}</span>
+          <span className="text-gray-500">{fmtRatio(clock.ratio, isRunning)}</span>
         </div>
       </div>
 
-      {/* 4. Right Tools: AI Copilot, Custom ISA Monaco, Oscilloscope, Audio */}
-      <div className="flex items-center space-x-1.5">
-        <button
-          onClick={() => setShowAi(!showAi)}
-          className={`flex items-center space-x-1 px-2.5 py-1 rounded border text-[11px] transition-all ${
-            showAi
-              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.2)]'
-              : 'bg-[#0A0E17] text-gray-400 border-[#1A2333] hover:text-white hover:bg-[#121824]'
-          }`}
-          title="AI Logic Copilot & Verifier"
-        >
-          <Sparkles size={12} className={showAi ? 'text-cyan-400' : 'text-gray-400'} />
-          <span>AI COPILOT</span>
-        </button>
+      {sep}
 
-        <button
-          onClick={() => setShowAsm(!showAsm)}
-          className={`flex items-center space-x-1 px-2.5 py-1 rounded border text-[11px] transition-all ${
-            showAsm
-              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.2)]'
-              : 'bg-[#0A0E17] text-gray-400 border-[#1A2333] hover:text-white hover:bg-[#121824]'
-          }`}
-          title="Custom ISA Compiler & Assembler"
-        >
-          <Terminal size={12} />
-          <span>ASSEMBLER</span>
+      {/* Nástroje */}
+      <div className="flex items-center gap-1">
+        <button onClick={() => setShowAi(!showAi)} className={btn(showAi)} title="AI Copilot – návrh a ověření obvodu">
+          <Sparkles size={13} />
+          <span className="max-[1400px]:hidden">AI</span>
         </button>
-
-        <button
-          onClick={() => setShowWaveform(!showWaveform)}
-          className={`flex items-center space-x-1 px-2.5 py-1 rounded border text-[11px] transition-all ${
-            showWaveform
-              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.2)]'
-              : 'bg-[#0A0E17] text-gray-400 border-[#1A2333] hover:text-white hover:bg-[#121824]'
-          }`}
-          title="Digital Oscilloscope & Logic Waveform Analyzer"
-        >
-          <Activity size={12} />
-          <span>WAVEFORM</span>
+        <button onClick={() => setShowAsm(!showAsm)} className={btn(showAsm)} title="Assembler vlastní instrukční sady">
+          <Terminal size={13} />
+          <span className="max-[1400px]:hidden">ASM</span>
         </button>
-
-        <button
-          onClick={() => setShowDiagnostic(true)}
-          className={`flex items-center space-x-1 px-2.5 py-1 rounded border text-[11px] transition-all ${
-            showDiagnostic
-              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.2)]'
-              : 'bg-[#0A0E17] text-emerald-400/90 border-emerald-500/30 hover:text-white hover:bg-[#121824]'
-          }`}
-          title="Hardware Diagnostic & Speed Testbench (Mock Inputs & Speed Benchmark)"
-        >
-          <ShieldCheck size={12} className="text-emerald-400" />
-          <span>DIAGNOSTIKA</span>
+        <button onClick={() => setShowWaveform(!showWaveform)} className={btn(showWaveform)} title="Logický analyzátor – průběhy signálů">
+          <Activity size={13} />
+          <span className="max-[1400px]:hidden">WAVE</span>
         </button>
-
+        <button onClick={() => setShowDiagnostic(true)} className={btn(showDiagnostic)} title="Diagnostika a rychlostní test hardwaru">
+          <ShieldCheck size={13} />
+          <span className="max-[1400px]:hidden">DIAG</span>
+        </button>
         <button
           onClick={handleToggleMute}
-          className="p-1.5 bg-[#0A0E17] text-gray-400 hover:text-white border border-[#1A2333] rounded transition-colors"
-          title={isMuted ? 'Zapnout haptický zvuk' : 'Ztlumit zvuk'}
+          className={`${btn(false)} px-2`}
+          title={isMuted ? 'Zapnout zvuk' : 'Ztlumit zvuk'}
         >
           {isMuted ? <VolumeX size={13} /> : <Volume2 size={13} />}
         </button>

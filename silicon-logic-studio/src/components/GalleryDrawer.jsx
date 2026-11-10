@@ -152,18 +152,18 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-0 left-0 h-full w-84 bg-[#070A12]/95 border-r border-[#161D2B] shadow-2xl backdrop-blur-2xl z-40 flex flex-col font-mono text-xs select-none">
+    <div className="absolute top-0 left-0 h-full w-84 bg-(--bg-dark) border-r border-(--line) z-40 flex flex-col font-mono text-xs select-none">
       {/* Drawer Header */}
-      <div className="h-11 px-3.5 border-b border-[#141B29] flex items-center justify-between shrink-0 bg-[#04060A]/80">
-        <div className="flex items-center space-x-2">
-          <FolderOpen size={14} className="text-cyan-400" />
-          <span className="font-bold text-[11px] tracking-wider text-gray-200">
-            CIRCUIT GALLERY & STORAGE
-          </span>
+      <div className="h-11 px-4 border-b border-(--line) flex items-center justify-between shrink-0">
+        <div className="flex items-baseline gap-2">
+          <FolderOpen size={13} className="text-(--accent-amber) self-center" />
+          <span className="panel-title">Galerie</span>
+          <span className="serif-accent text-[13px]">obvody a úložiště</span>
         </div>
         <button
           onClick={onClose}
-          className="w-6 h-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          title="Zavřít"
+          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-(--accent-amber) transition-colors"
         >
           <X size={14} />
         </button>
@@ -178,10 +178,10 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
       )}
 
       {/* Action Toolbar */}
-      <div className="p-3 border-b border-[#141B29] grid grid-cols-2 gap-1.5 shrink-0 bg-[#05070D]">
+      <div className="p-3 border-b border-(--line) grid grid-cols-2 gap-1.5 shrink-0 bg-(--bg-card)">
         <button
           onClick={() => setIsSaving(!isSaving)}
-          className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded bg-[#0E131F] hover:bg-cyan-500/20 hover:text-cyan-400 border border-[#1A2336] text-gray-200 transition-colors text-[10px] font-semibold"
+          className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded bg-(--bg-card-light) hover:bg-cyan-500/20 hover:text-cyan-400 border border-(--line) text-gray-200 transition-colors text-[10px] font-semibold"
         >
           <Save size={12} className="text-cyan-400" />
           <span>SAVE CIRCUIT</span>
@@ -189,13 +189,13 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
 
         <button
           onClick={handleExportJSON}
-          className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded bg-[#0E131F] hover:bg-cyan-500/20 hover:text-cyan-400 border border-[#1A2336] text-gray-200 transition-colors text-[10px] font-semibold"
+          className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded bg-(--bg-card-light) hover:bg-cyan-500/20 hover:text-cyan-400 border border-(--line) text-gray-200 transition-colors text-[10px] font-semibold"
         >
           <Download size={12} className="text-cyan-400" />
           <span>EXPORT JSON</span>
         </button>
 
-        <label className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded bg-[#0E131F] hover:bg-cyan-500/20 hover:text-cyan-400 border border-[#1A2336] text-gray-200 transition-colors text-[10px] font-semibold cursor-pointer">
+        <label className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded bg-(--bg-card-light) hover:bg-cyan-500/20 hover:text-cyan-400 border border-(--line) text-gray-200 transition-colors text-[10px] font-semibold cursor-pointer">
           <Upload size={12} className="text-cyan-400" />
           <span>IMPORT JSON</span>
           <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
@@ -203,7 +203,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
 
         <button
           onClick={handleExportPNG}
-          className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded bg-[#0E131F] hover:bg-cyan-500/20 hover:text-cyan-400 border border-[#1A2336] text-gray-200 transition-colors text-[10px] font-semibold"
+          className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded bg-(--bg-card-light) hover:bg-cyan-500/20 hover:text-cyan-400 border border-(--line) text-gray-200 transition-colors text-[10px] font-semibold"
         >
           <Image size={12} className="text-cyan-400" />
           <span>EXPORT PNG</span>
@@ -212,7 +212,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
 
       {/* Inline Save Dialog */}
       {isSaving && (
-        <div className="p-3 bg-[#0B0F1B] border-b border-[#1E283D] shrink-0 space-y-2">
+        <div className="p-3 bg-(--bg-card-light) border-b border-(--line) shrink-0 space-y-2">
           <label className="text-[10px] text-gray-400 uppercase font-semibold">NÁZEV OBVODU:</label>
           <div className="flex items-center space-x-2">
             <input
@@ -220,7 +220,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
               value={circuitName}
               onChange={(e) => setCircuitName(e.target.value)}
               placeholder="např. 8-Bit ALU nebo Dual Counter"
-              className="flex-1 bg-[#05070D] border border-[#1E283D] px-2.5 py-1.5 rounded text-white text-[11px] outline-none focus:border-cyan-500"
+              className="flex-1 bg-(--bg-card) border border-(--line) px-2.5 py-1.5 rounded text-white text-[11px] outline-none focus:border-cyan-500"
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleSaveCircuit()}
             />
@@ -247,7 +247,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
             {Object.entries(PRESET_CIRCUITS).map(([key, circuit]) => (
               <div
                 key={key}
-                className="p-2.5 rounded-lg bg-[#0A0E18] hover:bg-[#111726] border border-[#151D2C] hover:border-cyan-500/40 transition-all group"
+                className="p-2.5 rounded-lg bg-(--bg-card-light) hover:bg-(--bg-card-light) border border-(--line) hover:border-cyan-500/40 transition-all group"
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-bold text-[11px] text-gray-200 group-hover:text-cyan-300">
@@ -262,7 +262,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
                   {circuit.prompt}
                 </p>
 
-                <div className="flex items-center justify-between pt-1 border-t border-[#141B28]">
+                <div className="flex items-center justify-between pt-1 border-t border-(--line)">
                   <span className="text-[9px] text-gray-500 font-mono">
                     {circuit.wires.length} WIRES
                   </span>
@@ -287,7 +287,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
           </div>
 
           {savedCircuits.length === 0 ? (
-            <div className="p-4 rounded border border-dashed border-[#1A2336] text-center text-gray-500 text-[10px]">
+            <div className="p-4 rounded border border-dashed border-(--line) text-center text-gray-500 text-[10px]">
               Zatím nemáte žádné uložené obvody. Klikněte nahoře na "SAVE CIRCUIT" pro uložení aktuálního návrhu.
             </div>
           ) : (
@@ -295,7 +295,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
               {savedCircuits.map((c) => (
                 <div
                   key={c.name}
-                  className="p-2.5 rounded-lg bg-[#0A0E18] hover:bg-[#111726] border border-[#151D2C] hover:border-cyan-500/40 transition-all group"
+                  className="p-2.5 rounded-lg bg-(--bg-card-light) hover:bg-(--bg-card-light) border border-(--line) hover:border-cyan-500/40 transition-all group"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-[11px] text-gray-200 group-hover:text-cyan-300">
@@ -314,7 +314,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
                     Uloženo: {new Date(c.createdAt || Date.now()).toLocaleDateString()}
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 border-t border-[#141B28]">
+                  <div className="flex items-center justify-between pt-1 border-t border-(--line)">
                     <span className="text-[9px] text-gray-500 font-mono">
                       {c.components?.length || 0} ICs / {c.wires?.length || 0} WIRES
                     </span>
@@ -334,7 +334,7 @@ export function GalleryDrawer({ engine, isOpen, onClose, onCircuitReplaced = () 
       </div>
 
       {/* Drawer Footer */}
-      <div className="p-3 border-t border-[#141B29] shrink-0 bg-[#04060A]/90">
+      <div className="p-3 border-t border-(--line) shrink-0 bg-(--bg-card)/90">
         <button
           onClick={handleClearCanvas}
           className="w-full flex items-center justify-center space-x-1.5 py-1.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-colors text-[10px] font-semibold"

@@ -13,8 +13,13 @@ import { AiPanel } from './components/AiPanel';
 import { GalleryDrawer } from './components/GalleryDrawer';
 import { Nv1DiagnosticModal } from './components/Nv1DiagnosticModal';
 
-const ROOT_TITLE = 'NVIDIA NV1 (1995)';
-const ROOT_SUBTITLE = "Nvidia's First Product: Diamond Edge 3D PCI Multimedia Card";
+const ROOT_TITLE = 'Diamond Edge 3D 2120 · NV1 (1995)';
+const ROOT_SUBTITLE = 'NVIDIA NV1 / STG2000X, 2 MB DRAM, PCI';
+
+// Karta NV1 běží na reálných taktech 33/50/25 MHz: při pomalé rychlosti by se nic viditelného nestalo
+const defaultSpeedFor = (engine) => {
+  if ([...engine.components.values()].some((c) => c.type === 'NV1_CORE')) engine.setFrequency(Infinity);
+};
 const makeRootEntry = (title, subtitle) => ({ id: 'root', key: 'root', title, subtitle, level: 1, state: null, viewMode: 'hardware' });
 
 export default function App() {
@@ -36,6 +41,7 @@ export default function App() {
   // Initialize with Nvidia NV1 (1995) PCI architecture demo circuit
   useEffect(() => {
     engine.loadCircuit(PRESET_CIRCUITS.nvidia_nv1);
+    defaultSpeedFor(engine);
   }, [engine]);
 
   useEffect(() => {
@@ -83,7 +89,10 @@ export default function App() {
 
     const target = hierarchyStack[targetIdx];
     if (target.state) engine.importState(target.state);
-    else engine.loadCircuit(PRESET_CIRCUITS.nvidia_nv1);
+    else {
+      engine.loadCircuit(PRESET_CIRCUITS.nvidia_nv1);
+      defaultSpeedFor(engine);
+    }
 
     if (target.viewMode) setViewMode(target.viewMode);
     audioEngine.playRelayClick(1.3);
@@ -95,12 +104,13 @@ export default function App() {
   const handleCircuitReplaced = useCallback((name) => {
     setHierarchyStack([makeRootEntry(name || 'Vlastní obvod', '')]);
     setSelectedComponentId(null);
-  }, []);
+    defaultSpeedFor(engine);
+  }, [engine]);
 
   return (
-    <div className="w-screen h-screen bg-[#060911] text-gray-200 flex flex-col overflow-hidden font-sans border border-[#161D2B]">
+    <div className="w-screen h-screen bg-(--bg-dark) text-(--text-light) flex flex-col overflow-hidden font-sans border border-(--line)">
       {/* Sleek Custom Desktop Titlebar */}
-      <Titlebar />
+      <Titlebar circuitTitle={hierarchyStack[hierarchyStack.length - 1].title} />
 
       {/* Top Engineering Controls Toolbar */}
       <Toolbar
@@ -152,7 +162,7 @@ export default function App() {
             />
           )}
           {drillHint && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-lg bg-[#1A1206]/95 border border-amber-500/50 text-amber-300 text-xs font-mono shadow-xl pointer-events-none">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-(--bg-dark) border border-(--accent-amber) text-(--text-light) text-xs font-mono pointer-events-none">
               {drillHint}
             </div>
           )}

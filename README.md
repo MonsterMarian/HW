@@ -1,81 +1,58 @@
-# SILICON LOGIC STUDIO // CYBER-PHYSICAL HARDWARE EDA
+# SILICON LOGIC STUDIO
 
-> **Next-Generation Desktop Logic Circuit, CPU & GPU Simulator**  
-> Vytvořeno pro vývoj a simulaci digitálních architektur od úrovně hradel až po kompletní procesor a grafický adaptér s virtuálním CRT monitorem.
+Desktopový simulátor hardwaru (React + Vite + three.js, Electron). Hlavní obvod je skutečná grafická karta
+**Diamond Edge 3D 2120** s čipem **NVIDIA NV1 / SGS-Thomson STG2000X** (1995). Kartu jde proklikat od desky
+až k atomům křemíku, ve 2D (schéma, plošný spoj) i ve 3D.
 
----
+## Jak to simuluje
+- **Dráty jsou měď.** Spojené piny tvoří jednu vodivou síť. Piny můžou být obousměrné. Na síti platí tri-state,
+  dva budiče s různou hodnotou dají zkrat (`X`), nebuzená síť plave (`Z`) nebo ji drží pull-up.
+- **Tranzistory jsou spínače.** NMOS/PMOS spojují sítě, VDD/GND je budí, izolovaný uzel drží náboj
+  (buňka DRAM opravdu drží bit).
+- **Víc hodin v simulovaném čase.** PCI 33 MHz z počítače, VCLK 25,17 MHz a MCLK 50,1 MHz z PLL v RAMDACu
+  (krystal 14,31818 MHz), 48 kHz z kodeku (krystal 24,576 MHz).
 
-## ⚡ Klíčové vlastnosti & Režimy zobrazení
+## Karta (úroveň 1)
+| Ref | Součástka | Pouzdro |
+|---|---|---|
+| U1 | NVIDIA NV1 / SGS-Thomson STG2000X | PQFP-208 |
+| U2 | SGS-Thomson STG1764X RAMDAC + PLL | PQFP-128 |
+| U3–U6 | 4× 256K×16 FPM DRAM 50 ns (2 MB, 64bitová sběrnice) | SOJ-40 |
+| U7 | Analog Devices AD1845 kodek | PLCC-68 |
+| U8 | video BIOS EPROM 32 KB | DIP-28 |
+| Y1, Y2 | krystaly 14,31818 / 24,576 MHz | HC-49/U |
+| J1 | PCI 32 bit 5 V (klíč na kontaktech 50/51) | hrana karty |
+| J2–J6 | VGA DE-15, game port RJ-45, line in, line out, mic | bracket |
 
-Aplikace disponuje **třemi specializovanými režimy zobrazení**:
+Mimo kartu: hostitelské PC, VGA monitor, reproduktory a Sega Saturn pad.
 
-1. **`SCHEMATIC` (Čisté IEEE/ANSI schéma)**
-   - Vektorové značky logických hradel podle mezinárodních norem **IEEE Std 91-1984**:
-     - **AND / NAND** (`&`) – rovná zadní stěna, půlkruhové tělo.
-     - **OR / NOR** (`≥1`) – konkávně prohnutá zadní stěna, špičatý oblouk.
-     - **XOR** (`=1`) – dvojitě prohnutá zadní stěna s izolovaným obloukem.
-     - **NOT** (`1`) – trojúhelník s bublinkou negace na špičce.
-     - **D-FF** – synchronní klopný obvod s dynamickým vstupem taktu `>`.
-   - Inženýrské pravoúhlé **Manhattan EDA vodiče** s pájecími uzly (*junction dots*).
-   - Blueprintové technické pozadí s dot-gridem a EDA rohovým štítkem.
+Co se děje po spuštění (RUN, rychlost MAX):
+1. Počítač posílá skutečné PCI transakce: čte config space (`104A:0008`, třída VGA), nastaví BAR, přečte BIOS ROM
+   (`55 AA`), naprogramuje CRTC na 640×480 @ 60 Hz a zapíše obraz do framebufferu.
+2. NV1 zapisuje do DRAM cykly RAS#/CAS# ve fast page mode a každých 15,6 µs dělá refresh.
+3. NV1 čte obraz zpátky do scan-out FIFO a posílá pixely RGB555 do RAMDACu. RAMDAC z nich dělá analogové
+   napětí 0–0,7 V a monitor skládá obraz jen z napětí a časování synchronizace.
+4. 32hlasá syntéza v NV1 posílá vzorky do AD1845 a na line-out je analogový signál.
+5. Saturn pad se čte přes výběr TH/TR.
 
-2. **`HARDWARE PCB` (Autentická deska plošných spojů)**
-   - Realistická deska FR-4 s tmavě zelenou vojenskou pájecí maskou a leptanými měděnými trasami.
-   - **ENIG zlacení** na všech pájecích ploškách a prokovkových kroužcích.
-   - **DIP pouzdra čipů**: Lisovaný černý epoxid, 3D zkosení, půlkruhový notch pin 1, indexová jamka, kovové nožičky s kapkami pájecího cínu a laserový sítotisk (Texas Instruments / Motorola / Hitachi).
-   - **Plynule animované proudění elektronů** podél vodičů v reálném čase (60 FPS).
-   - **Termální telemetrie**: Měření spínací frekvence a dynamické teploty každého integrovaného obvodu v °C.
+Simulace je přesná na takty, a proto pomalá: celý snímek 640×480 trvá v reálném čase zhruba minutu.
 
-3. **`SILICON DIE 3D` (Fyzikální křemíkový model)**
-   - 3D vizualizace mikročipu v Three.js (P/N difuze, polysilikonová hradla, kovové propojovací vrstvy M1–M4).
-   - Termokamera (infračervená difuze tepla čipu).
+## Proklikávání (dvojklik)
+L1 deska → L2 bloky uvnitř čipu → L3 RTL (CRTC, kvadratické dopředné diference, fázový akumulátor, PCI dekodér…)
+→ L4 registry a sčítačky → L5 hradla → L6 CMOS z tranzistorů → L7 průřez tranzistorem 0,5 µm
+(LOCOS, oxid ~10 nm, 3× Al) → L8 mřížka Si a SiO₂.
 
----
+Úrovně L3–L6 se opravdu simulují. L2 (bloky), L7 (vrstvy) a L8 (atomy) jsou popisné.
 
-## 🗄️ Galerie architektur & Ukládání projektů
+## Co je model, ne kopie skutečného čipu
+Mapa registrů NV1 je vlastní a 3D engine NV1 se nesimuluje (obraz kreslí CPU). Odhadem jsou dál:
+rozdělení paměti na 4 čipy, typ EPROM, PLL v RAMDACu, pouzdro NV1, floorplan čipu a parametry procesu.
 
-Boční panel **`GALLERY & STORAGE`** obsahuje:
-- **Předpřipravené ověřené obvody**:
-  - 1-Bit Half Adder (Polosčítačka)
-  - 1-Bit Full Adder (Úplná sčítačka se vstupem Cin a Cout)
-  - 1-Bit Bistable SR Latch (Paměťová buňka ze dvou hradel NOR)
-  - Synchronous D Flip-Flop
-  - GPU 64×64 Pixel Generator & Display
-- **Uživatelská úložiště (My Saved Circuits)**:
-  - Ukládání libovolného počtu vlastních zapojení pod zvoleným názvem.
-  - **Export JSON**: Uložení kompletního netlistu do souboru `.json`.
-  - **Import JSON**: Načtení obvodu z disku.
-  - **Export PNG**: Vygenerování snímku schématu ve vysokém rozlišení.
-  - **Clear Canvas**: Jedním klikem vyčistí plátno pro nový návrh.
-
----
-
-## 🛠️ Interaktivita & Ovládání
-
-- **Drag & Drop**: Kliknutím na součástku a tažením myši ji můžete volně posouvat po plátně (vodiče se automaticky přizpůsobují).
-- **Klávesa `Delete` / `Backspace`**: Smazání vybrané součástky a jejích vodičů.
-- **Klávesa `Escape`**: Zrušení tažení vodiče nebo odznačení.
-- **Kolečko myši**: Plynulý Zoom (25 % až 250 %).
-- **Prostřední tlačítko / Alt + tažení**: Posun plátna (Pan).
-- **Přepínač vstupů (Switch)**: Kliknutím přímo na páčku přepnete stav mezi `0` (LOW) a `1` (HIGH).
-- **Simulační hodiny (Clock)**: Tlačítka `HALT / CLOCK`, `STEP` (jeden takt) a volba frekvence od 1 Hz do 1 kHz.
-
----
-
-## 🚀 Jak spustit desktopovou aplikaci
-
+## Spuštění
 ```bash
-# 1. Přejít do složky aplikace
 cd silicon-logic-studio
-
-# 2. Nainstalovat závislosti (pokud ještě nejsou)
 npm install
-
-# 3. Zbuildit frontend
+npm test          # testy jádra, karty, hierarchie a routeru
 npm run build
-
-# 4. Spustit nativní desktopové okno
-npm run desktop
+npm run desktop   # Electron okno
 ```
-
-Případně stačí na Windows 2× kliknout na dávkový spouštěč **`Spustit_Silicon_Studio.bat`** (nebo na zástupce **`SiliconStudio.bat`** na ploše).

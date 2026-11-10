@@ -14,13 +14,13 @@ export function WaveformViewer({ engine, onClose }) {
       const height = canvas.height;
 
       // Clear dark
-      ctx.fillStyle = '#07080A';
+      ctx.fillStyle = '#010102';
       ctx.fillRect(0, 0, width, height);
 
       const entries = Array.from(engine.waveformHistory.entries()).slice(0, 6);
       if (entries.length === 0) {
-        ctx.fillStyle = '#4A5568';
-        ctx.font = '12px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#717579';
+        ctx.font = '600 12px "Courier New", monospace';
         ctx.fillText('Žádné aktivní signály k monitorování (připojte komponenty)', 20, height / 2);
         return;
       }
@@ -29,7 +29,7 @@ export function WaveformViewer({ engine, onClose }) {
       const graphWidth = width - 180;
 
       // Draw timeline grid
-      ctx.strokeStyle = '#12161F';
+      ctx.strokeStyle = '#121519';
       ctx.lineWidth = 1;
       for (let x = 160; x < width; x += 40) {
         ctx.beginPath();
@@ -45,12 +45,12 @@ export function WaveformViewer({ engine, onClose }) {
         const yMid = yTop + rowHeight * 0.5;
 
         // Channel Label
-        ctx.fillStyle = '#A0AEC0';
-        ctx.font = '600 11px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#ADAAA7';
+        ctx.font = '700 11px "Courier New", monospace';
         ctx.fillText(key, 12, yMid + 4);
 
         // Waveform plot
-        ctx.strokeStyle = '#00F0FF';
+        ctx.strokeStyle = '#FFA909';
         ctx.lineWidth = 2;
         ctx.beginPath();
 
@@ -75,7 +75,7 @@ export function WaveformViewer({ engine, onClose }) {
         ctx.stroke();
 
         // Channel divider
-        ctx.strokeStyle = '#141820';
+        ctx.strokeStyle = '#1A1D21';
         ctx.beginPath();
         ctx.moveTo(0, yTop + rowHeight);
         ctx.lineTo(width, yTop + rowHeight);
@@ -89,18 +89,20 @@ export function WaveformViewer({ engine, onClose }) {
   }, [engine]);
 
   return (
-    <div className="h-44 bg-[#0A0D12] border-t border-[#1F242D] flex flex-col select-none">
-      <div className="flex items-center justify-between px-4 py-1.5 bg-[#0E1116] border-b border-[#1F242D] text-xs">
-        <div className="flex items-center space-x-2 text-cyan-400 font-mono font-semibold">
-          <Activity size={14} />
-          <span>LOGIC ANALYZER // WAVEFORM MONITOR</span>
+    <div className="h-44 bg-(--bg-dark) border-t border-(--line) flex flex-col select-none">
+      <div className="flex items-center justify-between px-4 py-1.5 border-b border-(--line)">
+        <div className="flex items-baseline gap-2">
+          <Activity size={13} className="text-(--accent-amber) self-center" />
+          <span className="panel-title">Logic analyzer</span>
+          <span className="serif-accent text-[13px]">průběhy signálů</span>
         </div>
-        <div className="flex items-center space-x-4 text-gray-500 font-mono text-[11px]">
-          <span>CLK: {engine.clockFrequency} Hz</span>
-          <span>TICKS: {engine.tickCount}</span>
+        <div className="meta flex items-center gap-4">
+          <span>CLK {engine.clockFrequency} Hz</span>
+          <span>TICKS {engine.tickCount}</span>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white p-1 rounded"
+            title="Zavřít"
+            className="text-gray-500 hover:text-(--accent-amber) p-1"
           >
             <X size={14} />
           </button>

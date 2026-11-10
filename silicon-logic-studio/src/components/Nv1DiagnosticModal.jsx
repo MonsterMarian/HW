@@ -1,382 +1,354 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle2, AlertTriangle, Zap, Play, X, Gauge, Cpu, Activity, ShieldCheck } from 'lucide-react';
-import { LogicEngine, WireState } from '../engine/logicEngine';
-import { PRESET_CIRCUITS } from '../engine/aiCopilot';
-import { HIERARCHICAL_SUBCIRCUITS } from '../engine/hierarchicalSubcircuits';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { CheckCircle2, AlertTriangle, Play, X, ShieldCheck, Loader2 } from 'lucide-react';
+import { LogicEngine } from '../engine/logicEngine';
+import { NV1_BOARD } from '../engine/presets/nv1Board';
+import { testPixel, PCI_IDS } from '../engine/devices/nv1Card';
 import { audioEngine } from '../engine/audioEngine';
+import { HIERARCHICAL_SUBCIRCUITS } from '../engine/hierarchicalSubcircuits';
+import { fmtTime } from '../views/canvas/theme';
+
+// Diagnostika spustí skutečnou kartu v samostatném enginu (stejně jako tests/nv1_card.test.js):
+// hostitel posílá PCI transakce, výsledky se čtou jen z konektorů a pamětí, ne z ručně nastavených hodnot.
+// Malý video režim (32×16), aby celý snímek trval ~46 µs simulovaného času.
+const TINY = { htotal: 48, hdisp: 32, hss: 36, hse: 40, vtotal: 24, vdisp: 16, vss: 18, vse: 20 };
+const VCLK = (14.31818e6 * 116) / 66;
+const TINY_MONITOR_MODE = { name: 'TEST 32×16', hHz: VCLK / 48, vHz: VCLK / 48 / 24, w: 32, h: 16, pclk: VCLK, hBack: 48 - 36, vBack: 24 - 18 };
+
+const hex = (v, n = 4) => (v >>> 0).toString(16).toUpperCase().padStart(n, '0');
+
+function makeBoard() {
+  const e = new LogicEngine();
+  e.loadCircuit(JSON.parse(JSON.stringify(NV1_BOARD)));
+  e.components.get('host').driverMode = TINY;
+  e.components.get('monitor').modes = [TINY_MONITOR_MODE];
+  e.components.get('saturn_pad').buttons.a = true; // stisk A od začátku, ovladač ho má přečíst
+  return e;
+}
+
+const part = (e, id) => e.components.get(id);
+
+// Každá fáze běží, dokud neplatí `until` (nebo do `maxNs` simulovaného času), pak `check` vyhodnotí výsledek
+const STAGES = [
+  {
+    category: 'PCI',
+    name: 'Enumerace PCI: konfigurační prostor a video BIOS',
+    maxNs: 200_000,
+    until: (e) => part(e, 'host').status.romSignature !== undefined,
+    check(e) {
+      const st = part(e, 'host').status;
+      const id = st.configId >>> 0;
+      const want = ((PCI_IDS.device << 16) | PCI_IDS.vendor) >>> 0;
+      const cls = part(e, 'host').log.some((l) => l.includes('class 0x030000'));
+      const rom = part(e, 'bios_rom').rom;
+      const sum = rom.reduce((a, b) => (a + b) & 0xFF, 0);
+      return {
+        passed: id === want && cls && st.romSignature === 0xAA55 && sum === 0 && st.aborts === 0,
+        detail: `ID ${hex(id & 0xFFFF)}:${hex(id >>> 16)} (čekáno ${hex(PCI_IDS.vendor)}:${hex(PCI_IDS.device)}) · třída ${cls ? '030000' : '?'} · podpis ROM ${hex(st.romSignature ?? 0)} · součet ROM ${sum} · master abort ${st.aborts}`,
+      };
+    },
+  },
+  {
+    category: 'DRAM',
+    name: 'Frame buffer: zápis přes PCI do 4× DRAM a zpětné čtení',
+    maxNs: 2_000_000,
+    until: (e) => part(e, 'host').status.readBack !== undefined,
+    check(e) {
+      const drams = [0, 1, 2, 3].map((k) => part(e, `dram${k}`));
+      let bad = 0;
+      for (let y = 0; y < TINY.vdisp; y++) {
+        for (let x = 0; x < TINY.hdisp; x++) {
+          const byte = y * TINY.hdisp * 2 + x * 2;
+          if (drams[(byte >> 1) & 3].mem[byte >> 3] !== testPixel(x, y, TINY.hdisp, TINY.vdisp)) bad++;
+        }
+      }
+      const y = Math.floor(TINY.vdisp / 2);
+      const want = (testPixel(2, y, TINY.hdisp, TINY.vdisp) | (testPixel(3, y, TINY.hdisp, TINY.vdisp) << 16)) >>> 0;
+      const got = part(e, 'host').status.readBack >>> 0;
+      return {
+        passed: bad === 0 && got === want,
+        detail: `${TINY.hdisp * TINY.vdisp - bad}/${TINY.hdisp * TINY.vdisp} pixelů na správném místě ve 4 čipech · zpětné čtení 0x${hex(got, 8)} (čekáno 0x${hex(want, 8)})`,
+      };
+    },
+  },
+  {
+    category: 'DRAM',
+    name: 'Refresh DRAM (CAS před RAS, nejvýš 15,6 µs na řádek)',
+    maxNs: 100_000,
+    fixed: true,
+    begin: (e, ctx) => { ctx.r0 = part(e, 'dram0')._d.refreshes; ctx.t0 = e.simTime; },
+    until: () => false,
+    check(e, ctx) {
+      const drams = [0, 1, 2, 3].map((k) => part(e, `dram${k}`));
+      const perUs = (drams[0]._d.refreshes - ctx.r0) / ((e.simTime - ctx.t0) / 1000);
+      const same = drams.every((d) => d._d.refreshes === drams[0]._d.refreshes);
+      return {
+        passed: perUs >= 1 / 15.6 - 0.01 && same,
+        detail: `${(perUs * 15.6).toFixed(2)} refreshe za 15,6 µs · ${same ? 'všechny 4 čipy současně' : 'čipy nejsou obnovovány současně'} · celkem ${drams[0]._d.refreshes}`,
+      };
+    },
+  },
+  {
+    category: 'VIDEO',
+    name: 'Monitor skládá obraz jen z analogového RGB a synchronizace',
+    maxNs: 1_000_000,
+    begin: (e, ctx) => { ctx.f0 = part(e, 'monitor').frames; },
+    until: (e, ctx) => part(e, 'monitor').frames >= ctx.f0 + 3,
+    check(e) {
+      const mon = part(e, 'monitor');
+      let bad = 0;
+      for (let y = 0; y < TINY.vdisp; y++) {
+        for (let x = 0; x < TINY.hdisp; x++) {
+          const px = testPixel(x, y, TINY.hdisp, TINY.vdisp);
+          const o = (y * 640 + x) * 4;
+          const exp = [(px >> 10) & 31, (px >> 5) & 31, px & 31].map((c5) => Math.round((Math.round((c5 / 31) * 700) / 1000 / 0.7) * 255));
+          for (let k = 0; k < 3; k++) if (Math.abs(mon.image[o + k] - exp[k]) > 1) bad++;
+        }
+      }
+      const under = part(e, 'nv1_core')._s?.vid?.underflows ?? 0;
+      return {
+        passed: /TEST/.test(mon.status) && bad === 0 && under === 0,
+        detail: `${mon.status} · ${mon.frames} snímků · ${bad} chybných složek RGB · podtečení FIFO ${under}`,
+      };
+    },
+  },
+  {
+    category: 'AUDIO',
+    name: 'Zvuk: syntéza v NV1 → kodek AD1845 → linkový výstup 48 kHz',
+    maxNs: 5_000_000,
+    until: (e) => part(e, 'codec')._c?.samples > 120,
+    check(e) {
+      const spk = part(e, 'speakers');
+      const lvls = new Set((spk.scope || []).map((s) => s[0])).size;
+      return {
+        passed: spk.maxAbs > 0.15 && lvls > 20,
+        detail: `${part(e, 'codec')._c?.samples ?? 0} vzorků · špička ${(spk.maxAbs || 0).toFixed(2)} V · ${lvls} různých úrovní napětí`,
+      };
+    },
+  },
+  {
+    category: 'PAD',
+    name: 'Sega Saturn: stisk A přečtený ovladačem přes TH/TR a registr PCI',
+    maxNs: 3_000_000,
+    until: (e) => part(e, 'host').status.phase === 'running' && part(e, 'host').status.pad !== 0xFFFF,
+    check(e) {
+      const pad = part(e, 'host').status.pad;
+      return {
+        passed: (pad & (1 << 6)) === 0 && (pad | (1 << 6)) === 0xFFFF,
+        detail: `registr padu 0x${hex(pad)} · bit 6 (A) = ${(pad >> 6) & 1} · ostatní tlačítka ${(pad | (1 << 6)) === 0xFFFF ? 'uvolněná' : 'chybně stisknutá'}`,
+      };
+    },
+  },
+  {
+    category: 'CMOS',
+    name: 'Úroveň tranzistorů: CMOS NAND (2× PMOS, 2× NMOS) – pravdivostní tabulka',
+    maxNs: 0,
+    standalone: true,
+    run() {
+      const sub = HIERARCHICAL_SUBCIRCUITS.NAND;
+      if (!sub) return { passed: false, detail: 'Podobvod CMOS NAND v hierarchii chybí.' };
+      const rows = [[0, 0], [0, 1], [1, 0], [1, 1]].map(([a, b]) => {
+        const e = new LogicEngine();
+        e.loadCircuit(sub);
+        e.components.get('in_cmos_a').outputs.out = a;
+        e.components.get('in_cmos_b').outputs.out = b;
+        e.propagate();
+        return { a, b, y: e.pinValue('out_node', 'in') };
+      });
+      return {
+        passed: rows.every((r) => r.y === (r.a & r.b ? 0 : 1)),
+        detail: rows.map((r) => `${r.a}${r.b}→${r.y}`).join(' · ') + ' (čekáno 1 1 1 0, výstup čten ze sítě out_node)',
+      };
+    },
+  },
+];
 
 export function Nv1DiagnosticModal({ isOpen, onClose }) {
-  const [isRunning, setIsRunning] = useState(false);
-  const [testResults, setTestResults] = useState(null);
-  const [benchmarkMetrics, setBenchmarkMetrics] = useState(null);
+  const [results, setResults] = useState([]);
+  const [current, setCurrent] = useState(null); // { index, frac }
+  const [metrics, setMetrics] = useState(null);
+  const runRef = useRef(null);
 
   const runAllTests = useCallback(() => {
-    setIsRunning(true);
+    if (runRef.current) runRef.current.cancelled = true;
+    const run = { cancelled: false };
+    runRef.current = run;
     audioEngine.playRelayClick(1.4);
+    setResults([]);
+    setMetrics(null);
 
-    setTimeout(() => {
-      const results = [];
+    let e;
+    try {
+      e = makeBoard();
+    } catch (err) {
+      setResults([{ ...STAGES[0], passed: false, detail: `Kartu se nepodařilo sestavit: ${err.message}` }]);
+      return;
+    }
+    const ctx = {};
+    const out = [];
+    const t0 = performance.now();
+    let steps = 0;
+    let index = 0;
+    let end = 0;
+    let started = false;
 
-      // 1. Board Topology & 13 Chips
+    const tick = () => {
+      if (run.cancelled) return;
+      const st = STAGES[index];
       try {
-        const engine = new LogicEngine();
-        const nv1 = PRESET_CIRCUITS.nvidia_nv1;
-        nv1.components.forEach((c) => engine.addComponent(JSON.parse(JSON.stringify(c))));
-        nv1.wires.forEach((w) => engine.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin));
-        engine.propagate();
-
-        const has13 = engine.components.size === 13;
-        const hasWires = engine.wires.length >= 13;
-        results.push({
-          name: 'NVIDIA NV1 PCI Inicializace & Topologie (13 Čipů)',
-          category: 'Hardware Board',
-          passed: has13 && hasWires,
-          detail: `13 IC čipů (STG2000X, EDO DRAM, RAMDAC, DSP, PCI, Sega) propojeno ${engine.wires.length} vodiči.`,
-        });
-
-        // 2. Mock PCI Host DMA
-        const pciBus = engine.components.get('pci_bus');
-        const nv1Core = engine.components.get('nv1_core');
-        let pciOk = true;
-        for (let cycle = 1; cycle <= 4; cycle++) {
-          const mockData = (cycle * 0x1234) & 0xFFFF;
-          pciBus.manualData = mockData;
-          engine.propagate();
-          if (nv1Core.inputs.pci_data !== mockData || nv1Core.receivedPciData !== mockData) {
-            pciOk = false;
+        if (st.standalone) {
+          // samostatný test (vlastní malý obvod), proběhne naráz
+          out.push({ ...st, ...st.run() });
+          setResults([...out]);
+          index++;
+        } else {
+          if (!started) {
+            st.begin?.(e, ctx);
+            end = e.simTime + st.maxNs;
+            started = true;
+          }
+          // ~30 ms výpočtu, pak předat řízení UI
+          let done = false;
+          const slice = performance.now() + 30;
+          while (!done && e.simTime < end && performance.now() < slice) {
+            for (let k = 0; k < 200; k++) {
+              e.step();
+              steps++;
+              if (st.until(e, ctx)) { done = true; break; }
+              if (e.simTime >= end) break;
+            }
+          }
+          if (done || e.simTime >= end) {
+            const r = done || st.fixed ? st.check(e, ctx) : { passed: false, detail: `Nedoběhlo do ${fmtTime(st.maxNs)} simulovaného času.` };
+            out.push({ ...st, ...r, simTime: e.simTime });
+            setResults([...out]);
+            index++;
+            started = false;
+          } else {
+            setCurrent({ index, frac: 1 - (end - e.simTime) / st.maxNs });
           }
         }
-        results.push({
-          name: 'MOCK INPUT: PCI 2.1 33MHz Host Bus & DMA Burst',
-          category: 'Bus Protocol',
-          passed: pciOk,
-          detail: 'Hostitelská DMA sběrnice přenáší 32bitové burst pakety do jádra NV1 bez kolizí (0 konfliktů).',
-        });
-
-        // 3. Mock Crystals (14.318MHz & 24.576MHz)
-        const y1 = engine.components.get('y1_crystal');
-        const y2 = engine.components.get('y2_crystal');
-        const audioDsp = engine.components.get('audio_dsp');
-        y1.manualState = 1;
-        y2.manualState = 1;
-        engine.propagate();
-        const y1Pass = nv1Core.inputs.pci_clk === 1 && audioDsp.inputs.clk === 1;
-        results.push({
-          name: 'MOCK INPUT: Duální Master Krystaly (Y1 14.318M & Y2 24.576M)',
-          category: 'Oscillators',
-          passed: y1Pass,
-          detail: 'Hodinové signály pro GPU (14.318 MHz) a Audio DSP (24.576 MHz) synchronně distribuovány.',
-        });
-
-        // 4. Mock Sega Saturn Gamepad
-        const pad = engine.components.get('saturn_pad');
-        pad.manualBtnA = 1;
-        engine.propagate();
-        const pad1 = nv1Core.inputs.saturn_in === 1 && nv1Core.saturnActive === true;
-        pad.manualBtnA = 0;
-        engine.propagate();
-        const pad0 = nv1Core.inputs.saturn_in === 0 && nv1Core.saturnActive === false;
-        results.push({
-          name: 'MOCK INPUT: Sega Saturn Gamepad Matrix (Button A & D-Pad)',
-          category: 'Controllers',
-          passed: pad1 && pad0,
-          detail: 'Stisknutí tlačítka A a D-pad směru Sega ovladače úspěšně dekódováno v jádře procesoru.',
-        });
-
-        // 5. Mock VRAM Memory Banks
-        const vram0 = engine.components.get('vram_bank0');
-        const vram1 = engine.components.get('vram_bank1');
-        nv1Core.manualVramAddr = 0x1200;
-        engine.propagate();
-        const vramOk = vram0.inputs.addr === 0x1200 && vram1.inputs.addr === 0x1200 && vram0.outputs.dout !== undefined;
-        results.push({
-          name: 'MOCK INPUT: Dual-Bank Toshiba 4MB EDO DRAM Paměť',
-          category: 'Memory Arbiter',
-          passed: vramOk,
-          detail: '64bitový prokládaný přístup do banků 0 a 1 čte i zapisuje frame buffer data bez latence.',
-        });
-
-        // 6. Mock RAMDAC & Video Stream
-        const ramdac = engine.components.get('ramdac');
-        const screen = engine.components.get('screen');
-        const bracket = engine.components.get('vga_bracket');
-        nv1Core.manualRgbData = 0x7FE0; // Cyan
-        engine.propagate();
-        const ramdacOk = ramdac.outputs.vga_rgb === 0x7FE0 && screen.inputs.color === 0x7FE0 && bracket.inputs.vga_in === 0x7FE0;
-        results.push({
-          name: 'MOCK INPUT: 135MHz TrueColor RAMDAC & Analog VGA DB-15',
-          category: 'Video DAC',
-          passed: ramdacOk,
-          detail: 'Digitální RGB 24-bit barevný stream převeden na analogové VGA napětí s aktivními HSYNC/VSYNC.',
-        });
-
-        // 7. Mock Audio DSP Synthesizer
-        audioDsp.manualTick = 12;
-        engine.propagate();
-        const audioProbe = engine.components.get('audio_out');
-        const audioOk = audioProbe.inputs.in === audioDsp.outputs.audio_l && audioDsp.outputs.audio_l >= 0;
-        results.push({
-          name: 'MOCK INPUT: STG-2000 32-Hlasý Wavetable Audio Syntetizér',
-          category: 'Audio DSP',
-          passed: audioOk,
-          detail: '32hlasá wavetable syntéza generuje 16bitový stereo PCM zvuk do linkového 3.5mm jack výstupu.',
-        });
-
-        // 8. Subcircuit Full Adder Truth Table (All 8 combinations)
-        const faSub = HIERARCHICAL_SUBCIRCUITS.adder_pipe;
-        const faEngine = new LogicEngine();
-        faSub.components.forEach((c) => faEngine.addComponent(JSON.parse(JSON.stringify(c))));
-        faSub.wires.forEach((w) => faEngine.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin));
-        const faA = faEngine.components.get('fa_a');
-        const faB = faEngine.components.get('fa_b');
-        const faCin = faEngine.components.get('fa_cin');
-        const pSum = faEngine.components.get('probe_sum');
-        const pCout = faEngine.components.get('probe_cout');
-        let faOk = true;
-        const vectors = [
-          [0,0,0, 0,0], [1,0,0, 1,0], [0,1,0, 1,0], [1,1,0, 0,1],
-          [0,0,1, 1,0], [1,0,1, 0,1], [0,1,1, 0,1], [1,1,1, 1,1]
-        ];
-        for (const [a, b, cin, es, ec] of vectors) {
-          faA.outputs.out = a; faB.outputs.out = b; faCin.outputs.out = cin;
-          faEngine.propagate();
-          if (pSum.inputs.in !== es || pCout.inputs.in !== ec) faOk = false;
-        }
-        results.push({
-          name: 'Hierarchické Schéma: 1-Bit Full Adder / ALU (Pravdivostní tabulka 8/8)',
-          category: 'Subcircuits L4',
-          passed: faOk,
-          detail: '100% verifikace sčítání a přenosu Carry-In/Out ve všech 8 binárních kombinacích.',
-        });
-
-        // 9. CMOS Transistor Level Pull-Up / Pull-Down
-        const cmosSub = HIERARCHICAL_SUBCIRCUITS.nand_center;
-        const cmosEngine = new LogicEngine();
-        cmosSub.components.forEach((c) => cmosEngine.addComponent(JSON.parse(JSON.stringify(c))));
-        cmosSub.wires.forEach((w) => cmosEngine.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin));
-        const cmosA = cmosEngine.components.get('in_cmos_a');
-        const cmosB = cmosEngine.components.get('in_cmos_b');
-        cmosA.outputs.out = 0; cmosB.outputs.out = 0;
-        cmosEngine.propagate();
-        const pmosPass = cmosEngine.components.get('pmos_1').outputs.out === 1;
-        results.push({
-          name: 'Hierarchické Schéma: Křemíková CMOS Úroveň (PMOS / NMOS Tranzistory)',
-          category: 'Subcircuits L6',
-          passed: pmosPass,
-          detail: 'Pull-up PMOS tranzistory sepnuty na VDD (+5V), series NMOS pulldown blokován.',
-        });
-
-        // 10. Performance Benchmark
-        const benchEngine = new LogicEngine();
-        nv1.components.forEach((c) => benchEngine.addComponent(JSON.parse(JSON.stringify(c))));
-        nv1.wires.forEach((w) => benchEngine.addWire(w.from.id, w.from.pin, w.to.id, w.to.pin));
-
-        const benchCycles = 3000;
-        const t0 = performance.now();
-        for (let i = 0; i < benchCycles; i++) {
-          benchEngine.stepClock();
-        }
-        const tElapsed = performance.now() - t0;
-        const opsPerSec = Math.round((benchCycles / tElapsed) * 1000);
-        const latencyMicro = ((tElapsed / benchCycles) * 1000).toFixed(2);
-
-        // 60 FPS frame verification
-        const tFrame0 = performance.now();
-        for (let f = 0; f < 60; f++) {
-          benchEngine.stepClock();
-          benchEngine.stepClock();
-        }
-        const frameElapsed = performance.now() - tFrame0;
-        const effectiveFps = Math.round((60 / frameElapsed) * 1000);
-
-        setBenchmarkMetrics({
-          opsPerSec,
-          latencyMicro,
-          benchCycles,
-          tElapsed: tElapsed.toFixed(1),
-          frameElapsed: frameElapsed.toFixed(2),
-          effectiveFps,
-          fpsRatio: (effectiveFps / 60).toFixed(1),
-        });
-
-        results.push({
-          name: 'Rychlost Simulace & Propagace Signálů',
-          category: 'Benchmark',
-          passed: opsPerSec >= 10000,
-          detail: `${opsPerSec.toLocaleString()} operací/s (propagační latence: ${latencyMicro} µs/takt).`,
-        });
-
-        results.push({
-          name: 'Real-Time 60 FPS CRT Frame Budget Verifikace',
-          category: 'Benchmark',
-          passed: effectiveFps >= 60,
-          detail: `60 snímků vykresleno za ${frameElapsed.toFixed(2)} ms (efektivní rychlost: ${effectiveFps.toLocaleString()} FPS, ${((effectiveFps / 60)).toFixed(0)}× rychlejší než reálný čas).`,
-        });
-
-        setTestResults(results);
       } catch (err) {
-        console.error('Test execution failed:', err);
-      } finally {
-        setIsRunning(false);
+        out.push({ ...st, passed: false, detail: `Chyba při běhu: ${err.message}` });
+        setResults([...out]);
+        index++;
+        started = false;
       }
-    }, 150);
+      if (index >= STAGES.length) {
+        const real = performance.now() - t0;
+        setCurrent(null);
+        setMetrics({ sim: e.simTime, real, steps, perSec: (steps / real) * 1000, ratio: e.simTime / (real * 1e6) });
+        audioEngine.playRelayClick(out.every((r) => r.passed) ? 1.6 : 0.6);
+        return;
+      }
+      setCurrent((c) => (c && c.index === index ? c : { index, frac: 0 }));
+      setTimeout(tick, 0);
+    };
+    setCurrent({ index: 0, frac: 0 });
+    setTimeout(tick, 30);
   }, []);
 
   useEffect(() => {
-    if (isOpen && !testResults) {
-      runAllTests();
-    }
-  }, [isOpen, testResults, runAllTests]);
+    if (isOpen) runAllTests();
+    return () => { if (runRef.current) runRef.current.cancelled = true; };
+  }, [isOpen, runAllTests]);
 
   if (!isOpen) return null;
 
-  const passedCount = testResults ? testResults.filter((r) => r.passed).length : 0;
-  const totalCount = testResults ? testResults.length : 0;
+  const isRunning = current !== null;
+  const passed = results.filter((r) => r.passed).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-4xl bg-[#080B12] border border-cyan-500/40 rounded-2xl shadow-[0_20px_70px_rgba(0,240,255,0.2)] overflow-hidden flex flex-col max-h-[90vh] font-mono text-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+      <div className="w-full max-w-4xl bg-(--bg-dark) border border-gray-700 shadow-[14px_14px_0_rgba(255,169,9,0.12)] overflow-hidden flex flex-col max-h-[90vh] font-mono text-xs">
         {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-[#0C1220] via-[#09101C] to-[#0C1220] border-b border-[#1A253A] flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-cyan-950/80 border border-cyan-500/50 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-950/50">
-              <ShieldCheck size={20} />
-            </div>
+        <div className="px-6 py-4 border-b border-(--line) flex items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <ShieldCheck size={22} className="text-(--accent-amber) shrink-0" />
             <div>
-              <h2 className="text-base font-bold text-white tracking-wide flex items-center space-x-2">
-                <span>NVIDIA NV1 (1995) // AUTOMATED DIAGNOSTIC & SPEED TESTBENCH</span>
+              <h2 className="text-xl leading-tight text-(--text-light)">
+                Diagnostika <span className="serif-accent">Diamond Edge 3D</span>
               </h2>
-              <p className="text-[11px] text-cyan-400/80">
-                Ověření mock vstupů, propagační logiky, sběrnic a reálné propustnosti obvodu
-              </p>
+              <p className="meta mt-1">Skutečný běh karty · PCI · DRAM · video · zvuk · pad · CMOS</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={runAllTests}
               disabled={isRunning}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-lg transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 bg-(--accent-amber) hover:bg-cyan-300 text-(--bg-dark) font-bold tracking-[0.1em] whitespace-nowrap transition-colors disabled:opacity-50"
             >
-              <Play size={12} className={isRunning ? 'animate-spin' : ''} />
-              <span>{isRunning ? 'TESTUJI...' : 'SPUSTIT TESTY ZNOVU'}</span>
+              <Play size={12} />
+              <span>{isRunning ? 'TESTUJI…' : 'SPUSTIT ZNOVU'}</span>
             </button>
-            <button
-              onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-            >
+            <button onClick={onClose} title="Zavřít" className="p-1.5 text-gray-500 hover:text-(--accent-amber) transition-colors">
               <X size={16} />
             </button>
           </div>
         </div>
 
-        {/* Top Metric Cards */}
-        {benchmarkMetrics && (
-          <div className="grid grid-cols-4 gap-3 p-5 bg-[#05070D] border-b border-[#141C2E]">
-            <div className="bg-[#0A0F1D] border border-cyan-500/30 rounded-xl p-3 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-gray-400 text-[10px]">
-                <span>PROPAGAČNÍ RYCHLOST</span>
-                <Gauge size={14} className="text-cyan-400" />
-              </div>
-              <div className="text-xl font-bold text-cyan-300 mt-1">
-                {benchmarkMetrics.opsPerSec.toLocaleString()}
-                <span className="text-xs text-cyan-500/80 font-normal ml-1">ops/s</span>
-              </div>
-              <div className="text-[10px] text-emerald-400 mt-0.5">
-                {(benchmarkMetrics.opsPerSec / 1000).toFixed(1)} kHz simulační takt
-              </div>
+        {/* Souhrn */}
+        <div className="grid grid-cols-4 border-b border-(--line) divide-x divide-(--line)">
+          {[
+            ['Simulovaný čas', metrics ? fmtTime(metrics.sim) : '…', 'karty od resetu'],
+            ['Výpočet', metrics ? `${(metrics.real / 1000).toFixed(1)} s` : '…', metrics ? `poměr 1/${Math.round(1 / metrics.ratio).toLocaleString('cs-CZ')} reálného času` : 'běží po částech, UI nezamrzá'],
+            ['Hrany hodin', metrics ? Math.round(metrics.perSec).toLocaleString('cs-CZ') : '…', metrics ? `za sekundu · celkem ${metrics.steps.toLocaleString('cs-CZ')}` : 'za sekundu'],
+            ['Výsledek', `${passed} / ${STAGES.length}`, isRunning ? `testuji ${(current?.index ?? 0) + 1}. z ${STAGES.length}` : passed === STAGES.length ? 'vše prošlo' : 'něco selhalo'],
+          ].map(([k, v, s], i) => (
+            <div key={k} className="px-5 py-4">
+              <div className="meta">{k}</div>
+              <div className={`text-2xl font-sans font-extrabold mt-1 ${i === 3 && !isRunning ? (passed === STAGES.length ? 'text-(--accent-amber)' : 'text-(--conflict)') : 'text-(--text-light)'}`}>{v}</div>
+              <div className="text-[10px] text-gray-500 mt-0.5">{s}</div>
             </div>
+          ))}
+        </div>
 
-            <div className="bg-[#0A0F1D] border border-cyan-500/30 rounded-xl p-3 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-gray-400 text-[10px]">
-                <span>CYKLOVÁ LATENCE</span>
-                <Activity size={14} className="text-cyan-400" />
-              </div>
-              <div className="text-xl font-bold text-white mt-1">
-                {benchmarkMetrics.latencyMicro}
-                <span className="text-xs text-gray-400 font-normal ml-1">µs</span>
-              </div>
-              <div className="text-[10px] text-cyan-400/80 mt-0.5">
-                Čas na 1 kompletní propagaci
-              </div>
-            </div>
-
-            <div className="bg-[#0A0F1D] border border-cyan-500/30 rounded-xl p-3 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-gray-400 text-[10px]">
-                <span>CRT RASTER FRAME RATE</span>
-                <Cpu size={14} className="text-cyan-400" />
-              </div>
-              <div className="text-xl font-bold text-emerald-400 mt-1">
-                {benchmarkMetrics.effectiveFps.toLocaleString()}
-                <span className="text-xs text-emerald-500/80 font-normal ml-1">FPS</span>
-              </div>
-              <div className="text-[10px] text-emerald-300 mt-0.5">
-                {benchmarkMetrics.fpsRatio}× rychlejší než 60 Hz limit
-              </div>
-            </div>
-
-            <div className="bg-[#0A0F1D] border border-cyan-500/30 rounded-xl p-3 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-gray-400 text-[10px]">
-                <span>VÝSLEDEK VERIFIKACE</span>
-                <Zap size={14} className="text-emerald-400" />
-              </div>
-              <div className="text-xl font-bold text-emerald-400 mt-1">
-                {passedCount} / {totalCount}
-                <span className="text-xs text-gray-400 font-normal ml-1">SPLNĚNO</span>
-              </div>
-              <div className="text-[10px] text-emerald-400 mt-0.5 font-bold">
-                100% testovacích vektorů PASSED
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Test Cases List */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-2.5">
-          {isRunning ? (
-            <div className="h-64 flex flex-col items-center justify-center space-y-3 text-cyan-400">
-              <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs font-semibold tracking-wider">PROBÍHÁ HARDWAROVÁ VERIFIKACE MOCK VSTUPŮ...</p>
-            </div>
-          ) : (
-            testResults &&
-            testResults.map((t, idx) => (
-              <div
-                key={idx}
-                className="bg-[#0A0E18] border border-[#162033] hover:border-cyan-500/40 rounded-xl p-3 transition-colors flex items-start justify-between group"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-700/40 text-cyan-400">
-                      {t.category}
-                    </span>
-                    <span className="font-bold text-gray-200 text-xs">{t.name}</span>
+        {/* Jednotlivé testy */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-2">
+          {STAGES.map((st, i) => {
+            const r = results[i];
+            const active = current?.index === i && !r;
+            return (
+              <div key={st.name} className={`border p-3 flex items-start justify-between gap-4 ${active ? 'border-gray-600' : 'border-(--line)'}`}>
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="meta text-(--accent-amber) border border-(--line) px-1.5">{st.category}</span>
+                    <span className="font-sans font-bold text-[13px] text-(--text-light)">{st.name}</span>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed pl-1">{t.detail}</p>
-                </div>
-                <div className="flex items-center space-x-1.5 shrink-0 pl-4 pt-1">
-                  {t.passed ? (
-                    <span className="flex items-center space-x-1 text-emerald-400 bg-emerald-950/50 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold text-[10px]">
-                      <CheckCircle2 size={12} />
-                      <span>PASS</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center space-x-1 text-rose-400 bg-rose-950/50 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold text-[10px]">
-                      <AlertTriangle size={12} />
-                      <span>FAIL</span>
-                    </span>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    {r ? r.detail : active ? (st.standalone ? 'běží…' : `běží… simulovaný čas ${fmtTime((current.frac || 0) * st.maxNs)} z max. ${fmtTime(st.maxNs)}`) : 'čeká'}
+                  </p>
+                  {active && (
+                    <div className="h-0.5 bg-(--line) mt-1">
+                      <div className="h-full bg-(--accent-amber)" style={{ width: `${Math.min(100, (current.frac || 0) * 100)}%` }} />
+                    </div>
                   )}
                 </div>
+                <div className="shrink-0 pt-0.5">
+                  {r ? (
+                    r.passed ? (
+                      <span className="flex items-center gap-1 text-(--accent-amber) border border-(--accent-amber) px-2 py-0.5 font-bold text-[10px]">
+                        <CheckCircle2 size={12} /> PASS
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-(--conflict) border border-(--conflict) px-2 py-0.5 font-bold text-[10px]">
+                        <AlertTriangle size={12} /> FAIL
+                      </span>
+                    )
+                  ) : active ? (
+                    <Loader2 size={14} className="animate-spin text-gray-500" />
+                  ) : null}
+                </div>
               </div>
-            ))
-          )}
+            );
+          })}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-[#06080F] border-t border-[#141C2E] flex items-center justify-between text-gray-500 text-[11px]">
-          <span>Test suite: Node.js 24 + LogicEngine v2.1 Formal Benchmarks</span>
+        <div className="px-6 py-3 border-t border-(--line) flex items-center justify-between text-gray-500 text-[11px]">
+          <span className="meta">Vlastní instance LogicEngine + preset NV1 · video režim 32×16 pro rychlý běh</span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-[#121A2B] hover:bg-[#1A2640] text-gray-300 hover:text-white rounded-lg transition-colors font-semibold"
+            className="px-4 py-1.5 border border-(--line) text-gray-300 hover:text-(--bg-dark) hover:bg-(--accent-amber) hover:border-(--accent-amber) tracking-[0.1em] transition-colors font-bold"
           >
             ZAVŘÍT
           </button>

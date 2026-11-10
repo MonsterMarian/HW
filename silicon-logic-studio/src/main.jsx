@@ -22,46 +22,45 @@ class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div style={{
-          padding: '30px',
-          backgroundColor: '#07080A',
-          color: '#00F0FF',
-          fontFamily: 'monospace',
+          padding: '40px',
+          backgroundColor: 'var(--bg-dark)',
+          color: 'var(--text-light)',
+          fontFamily: 'var(--font-sans)',
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           boxSizing: 'border-box'
         }}>
-          <h1 style={{ color: '#FF3366', fontSize: '20px', marginBottom: '10px' }}>
-            [!] SILICON ENGINE HARDWARE FAULT (KERNEL PANIC)
+          <p className="meta" style={{ color: 'var(--conflict)', marginBottom: '12px' }}>Chyba aplikace</p>
+          <h1 style={{ fontSize: '40px', lineHeight: 1, marginBottom: '16px' }}>
+            Něco se <span className="serif-accent">pokazilo</span>
           </h1>
-          <p style={{ color: '#ccc', marginBottom: '20px' }}>{this.state.error?.toString()}</p>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>{this.state.error?.toString()}</p>
           <pre style={{
-            background: '#0B0F19',
+            background: 'var(--bg-card)',
             padding: '15px',
-            borderRadius: '6px',
-            border: '1px solid #1F293D',
+            border: '1px solid var(--line)',
             overflow: 'auto',
-            color: '#8892B0',
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--font-mono)',
             fontSize: '11px'
           }}>
             {this.state.info?.componentStack || this.state.error?.stack}
           </pre>
           <button
             onClick={() => window.location.reload()}
+            className="meta"
             style={{
               marginTop: '20px',
-              padding: '10px 20px',
-              backgroundColor: '#00F0FF',
-              color: '#000',
-              fontWeight: 'bold',
+              padding: '12px 20px',
+              backgroundColor: 'var(--accent-amber)',
+              color: 'var(--bg-dark)',
               border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              width: '160px'
+              width: '180px'
             }}
           >
-            RELOAD SYSTEM
+            Načíst znovu
           </button>
         </div>
       );

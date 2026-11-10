@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Cpu, Check, AlertCircle } from 'lucide-react';
+import { Play, Cpu, Check, AlertCircle, X } from 'lucide-react';
 import { IsaAssembler } from '../engine/isaAssembler';
 import { audioEngine } from '../engine/audioEngine';
 
@@ -49,18 +49,16 @@ export function AsmEditor({ engine, onClose }) {
   };
 
   return (
-    <div className="w-96 bg-[#0E1116] border-l border-[#1F242D] flex flex-col h-full select-none text-xs">
+    <div className="w-96 bg-(--bg-dark) border-l border-(--line) flex flex-col h-full select-none text-xs">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#1F242D] bg-[#141820]">
-        <div className="flex items-center space-x-2 text-cyan-400 font-mono font-semibold">
-          <Cpu size={15} />
-          <span>CUSTOM ISA & ASSEMBLER</span>
+      <div className="h-11 flex items-center justify-between px-4 border-b border-(--line)">
+        <div className="flex items-baseline gap-2">
+          <Cpu size={13} className="text-(--accent-amber) self-center" />
+          <span className="panel-title">Assembler</span>
+          <span className="serif-accent text-[13px]">vlastní ISA</span>
         </div>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded bg-[#1F242D]"
-        >
-          Zavřít
+        <button onClick={onClose} title="Zavřít" className="text-gray-500 hover:text-(--accent-amber) p-1">
+          <X size={14} />
         </button>
       </div>
 
@@ -74,7 +72,7 @@ export function AsmEditor({ engine, onClose }) {
           value={code}
           onChange={(e) => setCode(e.target.value)}
           spellCheck={false}
-          className="flex-1 w-full bg-[#07080A] border border-[#1F242D] rounded-lg p-3 text-cyan-200 text-xs font-mono leading-relaxed outline-none resize-none focus:border-cyan-500 transition-colors"
+          className="flex-1 w-full bg-(--bg-card) border border-(--line) rounded-lg p-3 text-cyan-200 text-xs font-mono leading-relaxed outline-none resize-none focus:border-cyan-500 transition-colors"
         />
       </div>
 
@@ -93,10 +91,10 @@ export function AsmEditor({ engine, onClose }) {
       )}
 
       {/* Footer Actions */}
-      <div className="p-3 border-t border-[#1F242D] bg-[#0E1116] flex justify-end">
+      <div className="p-3 border-t border-(--line) bg-(--bg-card-light) flex justify-end">
         <button
           onClick={handleCompile}
-          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-[#07080A] font-semibold rounded-lg shadow-lg font-mono transition-all transform active:scale-95"
+          className="flex items-center gap-2 px-4 py-2 bg-(--accent-amber) hover:bg-cyan-300 text-(--bg-dark) font-bold tracking-[0.1em] font-mono transition-colors"
         >
           <Play size={14} fill="currentColor" />
           <span>COMPILE & FLASH TO ROM</span>

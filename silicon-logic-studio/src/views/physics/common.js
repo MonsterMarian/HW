@@ -2,17 +2,39 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-export const WIRE_COLORS = { LOW: 0x26364d, HIGH: 0x00f0ff, Z: 0xff8400, CONFLICT: 0xff003c };
+// Portfolio palette: amber = logic 1, muted slate = 0, grey = floating (Z), red = short / unknown (X)
+export const WIRE_COLORS = { LOW: 0x4a5566, HIGH: 0xffa909, Z: 0x8a8a86, CONFLICT: 0xde3b3d };
 
 export function signalHex(v) {
-  if (v === 1) return WIRE_COLORS.HIGH;
-  if (v === 2) return WIRE_COLORS.Z;
-  if (v === 3) return WIRE_COLORS.CONFLICT;
+  if (v === 'Z') return WIRE_COLORS.Z;
+  if (v === 'X') return WIRE_COLORS.CONFLICT;
+  if (typeof v === 'number' && v !== 0) return WIRE_COLORS.HIGH;
   return WIRE_COLORS.LOW;
 }
 
-// Truthy "logic high" for multi-bit values too (bus with any bit set counts as active)
-export const isActive = (v) => v !== undefined && v !== 0 && v !== 2 && v !== 3;
+// Logic high for 1-bit nets, any bit set for buses; 'Z' / 'X' / undefined are not active
+export const isActive = (v) => typeof v === 'number' && v !== 0;
+
+function popcount(v) {
+  v >>>= 0;
+  let n = 0;
+  while (v) { v &= v - 1; n++; }
+  return n;
+}
+
+/**
+ * Emissive colour + intensity of a copper trace for a net value.
+ * width = bus width in bits; analogMax = full-scale volts for analog nets (null = digital).
+ */
+export function signalStyle(v, width = 1, analogMax = null) {
+  if (v === undefined) return { hex: WIRE_COLORS.LOW, intensity: 0 };
+  if (v === 'Z') return { hex: WIRE_COLORS.Z, intensity: 0.22 };
+  if (v === 'X') return { hex: WIRE_COLORS.CONFLICT, intensity: 1.0 };
+  if (analogMax) return { hex: WIRE_COLORS.HIGH, intensity: 0.12 + 1.0 * Math.min(1, Math.abs(Number(v) || 0) / analogMax) };
+  if (v === 0) return { hex: WIRE_COLORS.LOW, intensity: 0.3 };
+  if (width <= 1) return { hex: WIRE_COLORS.HIGH, intensity: 1.1 };
+  return { hex: WIRE_COLORS.HIGH, intensity: 0.3 + (0.8 * popcount(v)) / Math.min(32, width) };
+}
 
 export function std(color, opts = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.1, ...opts });

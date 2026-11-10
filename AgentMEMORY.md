@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-10 15:12
+Aktualizováno: 2026-11-10 15:27
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -57,6 +57,8 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - Návrh uživatele: kit https://github.com/wheresryan22/anatomy (MIT) jako test dalšího pohledu – malé díly ve velkém
   výkresu bez přepínání. `src/vendor/anatomy/iso-kit.js` = beze změny `kit/iso-kit.mjs` (commit 1482e84), README tamtéž.
   Výkres `src/views/anatomy/figures.js` (čistý, testy `tests/anatomy.test.js`), UI `views/AnatomyView.jsx`.
+  3D režim (výchozí): `anatomy/scene3d.js` + `Anatomy3D.jsx` – modely z economic/models.js, `orient` u dílu =
+  kam míří osy modelu (X, Y, Z) v osách sestavy; sestava (x, y, z↑) → three (X = x, Y = z, Z = -y).
 - PC sestava: polohy uvnitř T5810 jsou odhad (sloty po 21,5 mm, deska, vestavěný zdroj, chladič); limit 312 mm a
   kolize krytu+9733 s držákem karet jsou zvýrazněné červeně. Kamera kitu: divák na +x +y, z nahoru.
 - Fakta z rešerše videa (popis + storyboard): autor používá "ducted fan shroud", 2. zdroj mimo skříň, teploty 61/53 °C;
@@ -97,3 +99,5 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - 2026-11-10 15:12 — „velikost P100 a vejde se do Dellu? ventilátory? zkontroluj 3D model; návrh repa anatomy jako test view“
   → P100 se vejde (267/312 mm), s krytem 9733 ne; TD404 místo rozbočovače; opravené lopatky ventilátorů; ANATOMY test
   view s kitem Anatomy; 126/126 testů.
+- 2026-11-10 15:27 — „3D pohled pro anatomii, pak schémata dílů PC“ → ANATOMY 3D (modely v sestavě, rozložení,
+  čísla), logo P100 čitelné po instalaci; schémata rozpracována (rešerše pinoutů běží).

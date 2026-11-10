@@ -201,7 +201,7 @@ function tesla([L, H, T]) {
     c.fillStyle = '#76b900'; c.beginPath(); c.ellipse(70, h / 2, 46, 30, 0, 0, 7); c.fill();
     c.fillStyle = '#e9eaec'; c.font = 'bold 74px Arial'; c.textBaseline = 'middle'; c.fillText('NVIDIA', 140, h / 2 + 4);
   });
-  vDecal(g, nv, 56, 14, 0, (yS + T) / 2, sz0 - 0.05, Math.PI);
+  vDecal(g, nv, 56, 14, 0, (yS + T) / 2, sz0 - 0.05, Math.PI).rotation.z = Math.PI; // čitelné po instalaci do toweru (chladičem dolů)
   // "East edge": otevřený konec žebrování + EPS 8 pin mířící podélně ven
   const fin = new THREE.BoxGeometry(0.8, T - yS - 4, 1.0);
   const fins = [];

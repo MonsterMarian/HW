@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { ISO_CSS } from '../vendor/anatomy/iso-kit.js';
 import { anatomyFigure } from './anatomy/figures.js';
 import { fmtKc } from '../engine/economic/catalog.js';
+import { Anatomy3D } from './anatomy/Anatomy3D.jsx';
 
 // Barvy portfolia místo výchozích šedých tónů kitu (jantar = zvýrazněný díl, červená = kolize)
 const THEME_CSS = `
@@ -18,12 +19,15 @@ const THEME_CSS = `
 .an-root .an-focus .an-dot{fill:#FFA909}
 .an-root .an-warn{fill:var(--anatomy-red);font:700 11px "Courier New",monospace}
 .an-root [data-part]{cursor:pointer}
+.an3d-ball{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:700 10px "Courier New",monospace;color:#c9c6c0;background:rgba(7,8,10,.85);border:1px solid #7a7d82;transform:translateY(-50%)}
+.an3d-ball.an3d-on{background:#FFA909;border-color:#FFA909;color:#07080a}
 `;
 
 export function AnatomyView({ project }) {
   const [explode, setExplode] = useState(0);
   const [focus, setFocus] = useState(null);
-  const fig = useMemo(() => anatomyFigure(project, { explode, focus }), [project, explode, focus]);
+  const [mode, setMode] = useState('3d'); // '3d' = modely z ECONOMIC, '2d' = izometrický výkres kitu Anatomy
+  const fig = useMemo(() => anatomyFigure(project, { explode, focus: mode === '2d' ? focus : null }), [project, explode, focus, mode]);
   const byId = useMemo(() => new Map(project.bom.map((it) => [it.id, it])), [project]);
   const sel = focus && byId.get(focus);
 
@@ -36,12 +40,22 @@ export function AnatomyView({ project }) {
     <div className="relative w-full h-full flex bg-(--bg-dark) overflow-hidden font-mono an-root iso" data-theme="dark">
       <style>{ISO_CSS + THEME_CSS}</style>
       <div className="relative flex-1 min-w-0 flex items-center justify-center p-4">
-        <div
-          className="w-full h-full flex items-center justify-center [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:max-w-full"
-          onPointerOver={onOver}
-          onPointerLeave={() => setFocus(null)}
-          dangerouslySetInnerHTML={{ __html: fig.svg }}
-        />
+        {mode === '2d' ? (
+          <div
+            className="w-full h-full flex items-center justify-center [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:max-w-full"
+            onPointerOver={onOver}
+            onPointerLeave={() => setFocus(null)}
+            dangerouslySetInnerHTML={{ __html: fig.svg }}
+          />
+        ) : (
+          <Anatomy3D project={project} explode={explode} focus={focus} onFocus={setFocus} />
+        )}
+
+        <div className="absolute top-3 right-3 z-20 flex items-stretch bg-(--bg-dark)/90 border border-(--line) text-[11px] uppercase tracking-[0.1em]">
+          {[['3d', '3D MODEL'], ['2d', 'VÝKRES']].map(([m, t]) => (
+            <button key={m} data-anatomy-mode={m} onClick={() => setMode(m)} className={`px-3 py-1.5 font-bold ${mode === m ? 'bg-(--accent-amber) text-(--bg-dark)' : 'text-gray-400 hover:text-(--text-light)'}`}>{t}</button>
+          ))}
+        </div>
 
         {sel && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-(--bg-dark) border border-gray-700 px-5 py-2.5 pointer-events-none max-w-xl">
@@ -61,7 +75,7 @@ export function AnatomyView({ project }) {
           </div>
           <div className="serif-accent text-[14px]">Anatomie sestavy (test)</div>
           <div className="text-gray-400 space-y-0.5 text-[11px]">
-            <div>Izometrický výkres v mm, kit Anatomy (MIT)</div>
+            <div>{mode === '3d' ? '3D modely dílů v mm, otáčení myší' : 'Izometrický výkres v mm, kit Anatomy (MIT)'}</div>
             <div>Číslo ve výkresu = řádek níže</div>
             {project.id === 'p100pc' && <div className="text-(--conflict)">Červeně: limit 312 mm a kolize krytu s držákem</div>}
           </div>

@@ -13,9 +13,14 @@ const PCIE_FULL_LENGTH = 312; // mm, karta plné délky (PCI Express CEM), T5810
 // ---------------------------------------------------------------- díly
 // part = { id: položka kusovníku, key, b: [x, y, z, w, d, h], r, explode: [dx, dy, dz], tone, lines(P, o) }
 const part = (id, key, b, explode = [0, 0, 0], extra = {}) => ({ id, key, b, explode, r: 1, ...extra });
+// orient = kam míří osy 3D modelu z ECONOMIC (X, Y, Z; Y nahoru) v osách sestavy (x, y, z; z nahoru).
+// Karta v towerech: kontakty (+Z modelu) k desce (-x), záslepka (-X) dozadu (-y), chladič (+Y) dolů (-z).
+const CARD = ['y', '-z', '-x'];
+const FLAT = ['x', 'z', '-y']; // díl ležící na stole tak, jak ho kreslí ECONOMIC
+const FLAT_TURNED = ['-y', 'z', '-x']; // totéž otočené o 90° (délka podél y)
 
 /** AI PC: Dell T5810 v řezu (levý bok a víko sundané), karty v PCIe slotech, druhý zdroj za skříní. */
-function pcParts() {
+export function pcParts() {
   const W = 172.6, D = 471, H = 414;
   const P = [];
   // ---- skříň (stěny vzadu a vlevo od diváka, zbytek jen obrys)
@@ -28,34 +33,34 @@ function pcParts() {
   P.push(part('dell_t5810', 'retention', [40, PCIE_FULL_LENGTH, 40, 130, 12, 170], [0, 0, 0], { tone: 'mid' })); // držák karet
   P.push(part('dell_t5810', 'bays', [10, 400, 3, 160, 52, 150], [0, 0, 0], { tone: 'lo' })); // šachty disků vpředu dole
   // ---- CPU, RAM
-  P.push(part('cpu', 'cpu', [6, 228, 282, 4.8, 45, 52.5], [180, 0, 40]));
-  [0, 1].forEach((i) => P.push(part('ram', `ram${i}`, [6, 182, 362 + i * 14, 31.25, 133.35, 4.2], [160 + i * 30, 0, 60 + i * 20])));
-  [0, 1].forEach((i) => P.push(part('ram', `ram${i + 2}`, [6, 182, 232 + i * 14, 31.25, 133.35, 4.2], [160 + i * 30, 0, -20 - i * 20])));
+  P.push(part('cpu', 'cpu', [6, 228, 282, 4.8, 45, 52.5], [180, 0, 40], { orient: ['z', 'x', 'y'] }));
+  [0, 1].forEach((i) => P.push(part('ram', `ram${i}`, [6, 182, 362 + i * 14, 31.25, 133.35, 4.2], [160 + i * 30, 0, 60 + i * 20], { orient: CARD })));
+  [0, 1].forEach((i) => P.push(part('ram', `ram${i + 2}`, [6, 182, 232 + i * 14, 31.25, 133.35, 4.2], [160 + i * 30, 0, -20 - i * 20], { orient: CARD })));
   // ---- karty: sloty po 21,5 mm (odhad ze zadního panelu), dvouslotové P100 visí pod svým slotem
   const slotZ = (s) => 186 - (s - 1) * 21.5;
   [2, 4].forEach((s, i) => {
     const z0 = slotZ(s) - 37;
-    P.push(part('p100', `p100_${i}`, [12, 4, z0, 111.15, 267, 37], [260, 0, 80 - i * 60], {
+    P.push(part('p100', `p100_${i}`, [12, 4, z0, 111.15, 267, 37], [260, 0, 80 - i * 60], { orient: CARD,
       lines: (pr, o) => lineSvg(lineOnTop([o[0] + 8, o[1] + 20], [o[0] + 8, o[1] + 247], o[2] + 37, pr), { tone: 'faint' })
         + lineSvg(lineOnTop([o[0] + 103, o[1] + 20], [o[0] + 103, o[1] + 247], o[2] + 37, pr), { tone: 'faint' }),
     }));
-    P.push(part('shroud', `shroud_${i}`, [12, 271, z0, 111.15, 91, 37], [260, 90, 80 - i * 60], { tone: 'mid' }));
-    P.push(part('blower', `blower_${i}`, [20, 318, z0 + 2, 94, 97, 33], [260, 190, 80 - i * 60], {
+    P.push(part('shroud', `shroud_${i}`, [12, 271, z0, 111.15, 91, 37], [260, 90, 80 - i * 60], { tone: 'mid', orient: CARD }));
+    P.push(part('blower', `blower_${i}`, [20, 318, z0 + 2, 94, 97, 33], [260, 190, 80 - i * 60], { orient: CARD,
       lines: (pr, o) => lineSvg(ringOn(o[0] + 50, o[1] + 50, 30, o[2] + 33, pr, 40), { tone: 'mid' }),
     }));
   });
-  P.push(part('k620', 'k620', [12, 4, slotZ(6) - 18, 68.9, 160, 18], [200, 0, -40]));
-  P.push(part('m2_adapter', 'm2a', [12, 4, slotZ(7) - 12, 60, 100, 12], [200, 0, -90]));
-  P.push(part('ssd', 'ssd', [40, 14, slotZ(7) - 14.3, 22, 80, 2.3], [260, 40, -140]));
+  P.push(part('k620', 'k620', [12, 4, slotZ(6) - 18, 68.9, 160, 18], [200, 0, -40], { orient: CARD }));
+  P.push(part('m2_adapter', 'm2a', [12, 4, slotZ(7) - 12, 60, 100, 12], [200, 0, -90], { orient: CARD }));
+  P.push(part('ssd', 'ssd', [40, 14, slotZ(7) - 14.3, 22, 80, 2.3], [260, 40, -140], { orient: FLAT_TURNED }));
   // ---- za skříní: druhý zdroj, Add2PSU, regulátor; volné díly na stole
-  P.push(part('psu2', 'psu2', [10, -190, 0, 150, 140, 86], [0, -60, 0], { tone: 'mid' }));
-  P.push(part('add2psu', 'add2psu', [30, -170, 86, 70, 30, 17], [0, -60, 40]));
-  P.push(part('pwm_ctrl', 'pwm', [110, -170, 86, 32, 63, 20.3], [0, -60, 60]));
-  P.push(part('eps_cable', 'eps0', [200, -150, 0, 50, 140, 15.1], [80, -40, 0]));
-  P.push(part('eps_cable', 'eps1', [260, -150, 0, 50, 140, 15.1], [120, -40, 0]));
-  P.push(part('case_fan', 'fan0', [200, 20, 0, 120, 120, 25], [80, 0, 0], { round: true }));
-  P.push(part('case_fan', 'fan1', [200, 160, 0, 120, 120, 25], [80, 0, 0], { round: true }));
-  P.push(part('paste', 'paste', [215, 300, 0, 15, 92, 15], [80, 0, 0], { round: 'x' }));
+  P.push(part('psu2', 'psu2', [10, -190, 0, 150, 140, 86], [0, -60, 0], { tone: 'mid', orient: FLAT }));
+  P.push(part('add2psu', 'add2psu', [30, -170, 86, 70, 30, 17], [0, -60, 40], { orient: FLAT }));
+  P.push(part('pwm_ctrl', 'pwm', [110, -170, 86, 32, 63, 20.3], [0, -60, 60], { orient: FLAT_TURNED }));
+  P.push(part('eps_cable', 'eps0', [200, -150, 0, 50, 140, 15.1], [80, -40, 0], { orient: FLAT_TURNED }));
+  P.push(part('eps_cable', 'eps1', [260, -150, 0, 50, 140, 15.1], [120, -40, 0], { orient: FLAT_TURNED }));
+  P.push(part('case_fan', 'fan0', [200, 20, 0, 120, 120, 25], [80, 0, 0], { round: true, orient: FLAT }));
+  P.push(part('case_fan', 'fan1', [200, 160, 0, 120, 120, 25], [80, 0, 0], { round: true, orient: FLAT }));
+  P.push(part('paste', 'paste', [215, 300, 0, 15, 92, 15], [80, 0, 0], { round: 'x', orient: FLAT_TURNED }));
   return {
     parts: P,
     shell: { W, D, H },
@@ -65,7 +70,7 @@ function pcParts() {
 }
 
 /** Karta NV1: deska podle PCB pohledu (3,7 px/mm), součástky na skutečných pozicích. */
-function nv1Parts(circuit) {
+export function nv1Parts(circuit) {
   const mm = (px) => px / PX_PER_MM;
   const HEIGHT = { NV1_CORE: 3.65, RAMDAC_STG1764: 2.95, DRAM_256K16: 3.6, AD1845: 4.45, EPROM_27C256: 4.4, CRYSTAL: 13.46, VGA_DB15: 12.5, GAME_PORT: 13.5, AUDIO_JACK: 6 };
   const ID = { NV1_CORE: 'nv1', RAMDAC_STG1764: 'ramdac', DRAM_256K16: 'dram', AD1845: 'codec', EPROM_27C256: 'eprom', VGA_DB15: 'de15', GAME_PORT: 'rj45', AUDIO_JACK: 'jack' };
@@ -75,7 +80,7 @@ function nv1Parts(circuit) {
     if (!id) continue;
     const { w, h } = componentDims(c, 'hardware');
     const lift = 18 + (Object.keys(ID).indexOf(c.type) % 3) * 6;
-    P.push(part(id, c.id, [mm(c.x), mm(c.y), 1.6, mm(w), mm(h), HEIGHT[c.type]], [0, 0, lift], { tone: 'hi', r: 0.6 }));
+    P.push(part(id, c.id, [mm(c.x), mm(c.y), 1.6, mm(w), mm(h), HEIGHT[c.type]], [0, 0, lift], { tone: 'hi', r: 0.6, orient: FLAT, freqHz: c.freqHz }));
   }
   return { parts: P, card: nv1CardOutline().map(([x, y]) => [mm(x), mm(y)]), tab: NV1_CARD.tab };
 }

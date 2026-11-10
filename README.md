@@ -51,7 +51,8 @@ v původní měně i v Kč (kurz ČNB), stav (nové / repas / použité) a zda b
 jen z výpisu vyhledávače. Ceny jsou dohledané 10. 11. 2026 v `src/engine/economic/offers.js` a časem zastarají.
 Kusovníky jsou v `src/engine/economic/catalog.js`, modely v `src/views/economic/models.js`.
 
-**ANATOMY (test)** kreslí celou sestavu jako jeden izometrický výkres (kit
+**ANATOMY (test)** má dva režimy: **3D MODEL** (přesné modely dílů z ECONOMIC natočené do skutečné polohy
+ve skříni, otáčení myší) a **VÝKRES**, který kreslí celou sestavu jako jeden izometrický výkres (kit
 [Anatomy](https://github.com/wheresryan22/anatomy), MIT, převzatý do `src/vendor/anatomy`). Malé díly jsou vidět ve velkém
 celku přes očíslované popisky propojené s kusovníkem vpravo, posuvník ROZLOŽIT sestavu rozloží. U AI PC ukazuje
 skříň Dell v řezu a červeně limit 312 mm (plná délka PCIe), za který P100 s krytem a ventilátorem 9733 přesahuje;

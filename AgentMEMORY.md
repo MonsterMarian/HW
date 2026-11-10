@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-10 15:41
+Aktualizováno: 2026-11-10 15:12
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -94,6 +94,6 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - 2026-11-10 14:29 — „skutečné ceny z více e-shopů s URL, přesné modely PC, oprav varování, pokračuj“ → rešerše 5 agentů
   (offers.js, 16+13 položek), modely podle manuálu Dell / NVIDIA PB / Samsung datasheetu, oxlint 0 varování,
   L2 floorplan bez překryvu, kompaktní 3D breadcrumb; 121/121 testů.
-- 2026-11-10 15:41 — „velikost P100 a vejde se do Dellu? ventilátory? zkontroluj 3D model; návrh repa anatomy jako test view“
+- 2026-11-10 15:12 — „velikost P100 a vejde se do Dellu? ventilátory? zkontroluj 3D model; návrh repa anatomy jako test view“
   → P100 se vejde (267/312 mm), s krytem 9733 ne; TD404 místo rozbočovače; opravené lopatky ventilátorů; ANATOMY test
   view s kitem Anatomy; 126/126 testů.

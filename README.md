@@ -99,3 +99,6 @@ npm test          # testy jádra, karty, hierarchie a routeru
 npm run build
 npm run desktop   # Electron okno
 ```
+
+## Deník práce
+Podrobný záznam práce z 10. 11. 2026 (zadání, postup, zdroje, chyby, otevřené body): [`docs/PRACOVNI_DENIK_2026-11-10.md`](docs/PRACOVNI_DENIK_2026-11-10.md).

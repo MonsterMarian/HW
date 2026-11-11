@@ -262,7 +262,7 @@ function nv1State(comp) {
     mem: { st: 'idle', rasActive: false, row: -1, openFor: 0, sinceRefresh: 0, req: null },
     readReq: null, // PCI read of the frame buffer waiting for the DRAM controller
     vid: { h: 0, v: 0, frame: 0, fifo: [], owed: 0, fetchY: 0, fetchX: 0, underflows: 0 },
-    aud: { st: 'idle', bytes: null, i: 0 },
+    aud: { ph: 'idle', wait: 0, q: [], cur: null, inited: false },
     rom: { st: 'idle', i: 0, wait: 0, bytes: [] },
     sat: { sel: 0, cnt: 0, state: 0xFFFF },
   };
@@ -284,7 +284,8 @@ function nv1Reset(comp, s) {
   out.md0 = Z; out.md1 = Z; out.md2 = Z; out.md3 = Z;
   out.hsync = 1; out.vsync = 1; out.blank_n = 0; out.pix = 0;
   out.rom_ce_n = 1; out.rom_oe_n = 1;
-  out.aud_d = Z; out.aud_wr_n = 1; out.aud_dack_n = 1;
+  out.aud_d = Z; out.aud_wr_n = 1; out.aud_rd_n = 1; out.aud_pd_n = 1;
+  s.aud = { ph: 'idle', wait: 0, q: [], cur: null, inited: false };
   for (const f of s.cfg) { f[1] &= 0xFFFF0000; f[12] = 0; f[15] |= 0xFF; }
   s.cfg[1][3] = 0x00800000; s.cfg[1][4] = 0x00000008;
   s.crtc.ctrl = 0; s.audioCtrl = 0;
@@ -464,41 +465,62 @@ function nv1Rom(comp, s) {
   }
 }
 
-// Wavetable synth -> AD1845 byte bus (handshake DRQ / DACK# / WR#), PCI clock domain
+// Wavetable synth -> audio codec (STG2000 datasheet ch. 6, fig. 30): an 8-bit data bus AUD[7:0], two address bits
+// AUA[1:0] and independent strobes AUR# / AUW#. The codec's interrupt and DMA (DRQ/DACK) are NOT used, so the codec
+// runs in PIO mode: NV1 polls the status register and, when PRDY says the sample register is free, writes 4 bytes.
+// Timing in periods of the memory clock (tables 12 and 13): address 4 T before the strobe, strobe 13 T wide,
+// write data held 7 T, 15 T between read strobes. How often the real chip polls is not documented (POLL = model).
+const AU = { SETUP: 4, STROBE: 13, HOLD: 7, GAP: 15, POLL: 128 };
+const CODEC = { INDEX: 0, DATA: 1, STATUS: 2, PIO: 3, PRDY: 0x02 };
+function mixVoices(s) {
+  let l = 0;
+  let r = 0;
+  for (const v of s.voices) {
+    if (!v.vol || !v.inc) continue;
+    const smp = (wave(v.wave, v.phase) * Math.min(255, v.vol)) / 255 / 4;
+    const pan = v.pan & 0xFF;
+    l += (smp * (255 - pan)) / 255;
+    r += (smp * pan) / 255;
+    v.phase = (v.phase + v.inc) >>> 0;
+  }
+  const clamp = (x) => Math.max(-32768, Math.min(32767, Math.round(x))) & 0xFFFF;
+  l = clamp(l); r = clamp(r);
+  return [l & 0xFF, l >> 8, r & 0xFF, r >> 8]; // 16 bit little endian, left then right
+}
 function nv1Audio(comp, s) {
   const a = s.aud;
   const out = comp.outputs;
-  const drq = comp.inputs.aud_drq === 1;
-  if (a.st === 'idle') {
-    if (!drq) return;
-    let l = 0;
-    let r = 0;
-    if (s.audioCtrl & 1) {
-      for (const v of s.voices) {
-        if (!v.vol || !v.inc) continue;
-        const smp = (wave(v.wave, v.phase) * Math.min(255, v.vol)) / 255 / 4;
-        const pan = v.pan & 0xFF;
-        l += (smp * (255 - pan)) / 255;
-        r += (smp * pan) / 255;
-        v.phase = (v.phase + v.inc) >>> 0;
-      }
+  if (a.wait > 0) { a.wait--; return; }
+  if (a.ph === 'idle') {
+    if (!a.q.length) {
+      if (!(s.audioCtrl & 1)) { a.inited = false; return; }
+      if (!a.inited) {
+        // AD1848-compatible setup with MCE set: I8 = 0x5C (48 kHz from XTAL1, stereo, 16 bit linear), I9 = 0x41 (PEN + PPIO)
+        a.inited = true;
+        a.q.push({ a: CODEC.INDEX, d: 0x48 }, { a: CODEC.DATA, d: 0x5C }, { a: CODEC.INDEX, d: 0x49 }, { a: CODEC.DATA, d: 0x41 }, { a: CODEC.INDEX, d: 0x09 });
+      } else a.q.push({ a: CODEC.STATUS, rd: true });
     }
-    const clamp = (x) => Math.max(-32768, Math.min(32767, Math.round(x))) & 0xFFFF;
-    l = clamp(l); r = clamp(r);
-    a.bytes = [l & 0xFF, l >> 8, r & 0xFF, r >> 8];
-    a.i = 0;
-    a.st = 'byte';
-  }
-  if (a.st === 'byte') {
-    out.aud_dack_n = 0; out.aud_a = a.i; out.aud_d = a.bytes[a.i]; out.aud_wr_n = 0;
-    a.st = 'strobe';
-  } else if (a.st === 'strobe') {
-    out.aud_wr_n = 1; // rising WR# latches the byte in the codec
-    a.i++;
-    a.st = a.i < 4 ? 'byte' : 'done';
-  } else if (a.st === 'done') {
-    out.aud_dack_n = 1; out.aud_d = Z;
-    if (!drq) a.st = 'idle';
+    a.cur = a.q.shift();
+    out.aud_a = a.cur.a;
+    out.aud_d = a.cur.rd ? Z : a.cur.d;
+    a.ph = 'setup'; a.wait = AU.SETUP - 1;
+  } else if (a.ph === 'setup') {
+    if (a.cur.rd) out.aud_rd_n = 0; else out.aud_wr_n = 0;
+    a.ph = 'strobe'; a.wait = AU.STROBE - 1;
+  } else if (a.ph === 'strobe') {
+    if (a.cur.rd) {
+      const status = num(comp.inputs.aud_d) ? comp.inputs.aud_d : 0; // sampled at the rising edge of AUR#
+      out.aud_rd_n = 1;
+      const ready = (status & CODEC.PRDY) !== 0;
+      if (ready) for (const d of mixVoices(s)) a.q.push({ a: CODEC.PIO, d });
+      a.ph = 'idle'; a.wait = (ready ? AU.GAP : AU.POLL) - 1;
+    } else {
+      out.aud_wr_n = 1; // the rising edge of AUW# latches the byte in the codec
+      a.ph = 'hold'; a.wait = AU.HOLD - 1;
+    }
+  } else {
+    out.aud_d = Z;
+    a.ph = 'idle';
   }
 }
 
@@ -692,20 +714,20 @@ export const NV1_DEVICES = {
       inputs: {
         pci_clk: 0, rst_n: 0, ad: Z, cbe_n: Z, frame_n: 1, irdy_n: 1, idsel: 0,
         mclk: 0, vclk: 0, md0: Z, md1: Z, md2: Z, md3: Z,
-        rom_d: Z, aud_drq: 0, sat_d: 0xF,
+        rom_d: Z, aud_d: Z, sat_d: 0xF,
       },
       outputs: {
         ad: Z, trdy_n: Z, devsel_n: Z, inta_n: Z,
         ma: 0, ras_n: 1, cas0_n: 3, cas1_n: 3, cas2_n: 3, cas3_n: 3, we_n: 1, oe_n: 1, md0: Z, md1: Z, md2: Z, md3: Z,
         pix: 0, blank_n: 0, hsync: 1, vsync: 1,
         rom_a: 0, rom_ce_n: 1, rom_oe_n: 1,
-        aud_d: Z, aud_a: 0, aud_wr_n: 1, aud_dack_n: 1,
+        aud_d: Z, aud_a: 0, aud_wr_n: 1, aud_rd_n: 1, aud_pd_n: 1,
         sat_sel: 0,
       },
     },
     widths: { ad: 32, cbe_n: 4, ma: 9, cas0_n: 2, cas1_n: 2, cas2_n: 2, cas3_n: 2, md0: 16, md1: 16, md2: 16, md3: 16, pix: 15, rom_a: 15, rom_d: 8, aud_d: 8, aud_a: 2, sat_sel: 2, sat_d: 4 },
     edgeInputs: { pci_clk: 'r', mclk: 'r', vclk: 'r' },
-    netNames: { ma: 'MA[8:0]', ras_n: 'RAS#', we_n: 'WE#', oe_n: 'OE#', md0: 'MD[15:0]', md1: 'MD[31:16]', md2: 'MD[47:32]', md3: 'MD[63:48]', cas0_n: 'CAS#[1:0]', cas1_n: 'CAS#[3:2]', cas2_n: 'CAS#[5:4]', cas3_n: 'CAS#[7:6]', pix: 'P[14:0] RGB555', blank_n: 'BLANK#', hsync: 'HSYNC', vsync: 'VSYNC', rom_a: 'ROM A[14:0]', rom_d: 'ROM D[7:0]', aud_d: 'CODEC D[7:0]', aud_wr_n: 'CODEC WR#', aud_dack_n: 'DACK#', sat_sel: 'TH/TR', sat_d: 'PAD D[3:0]' },
+    netNames: { ma: 'MA[8:0]', ras_n: 'RAS#', we_n: 'WE#', oe_n: 'OE#', md0: 'MD[15:0]', md1: 'MD[31:16]', md2: 'MD[47:32]', md3: 'MD[63:48]', cas0_n: 'CAS#[1:0]', cas1_n: 'CAS#[3:2]', cas2_n: 'CAS#[5:4]', cas3_n: 'CAS#[7:6]', pix: 'P[14:0] RGB555', blank_n: 'BLANK#', hsync: 'HSYNC', vsync: 'VSYNC', rom_a: 'ROM A[14:0]', rom_d: 'ROM D[7:0]', aud_d: 'AUD[7:0]', aud_a: 'AUA[1:0]', aud_wr_n: 'AUW#', aud_rd_n: 'AUR#', aud_pd_n: 'AUPD#', sat_sel: 'TH/TR', sat_d: 'PAD D[3:0]' },
     init(comp) { delete comp._s; },
     eval(comp) {
       const s = nv1State(comp);
@@ -716,10 +738,9 @@ export const NV1_DEVICES = {
       if (pe === 'r') {
         nv1Pci(comp, s);
         nv1Rom(comp, s);
-        nv1Audio(comp, s);
         nv1GamePort(comp, s);
       }
-      if (me === 'r') nv1Mem(comp, s);
+      if (me === 'r') { nv1Mem(comp, s); nv1Audio(comp, s); }
       if (ve === 'r') nv1Video(comp, s);
     },
   },
@@ -805,38 +826,58 @@ export const NV1_DEVICES = {
   },
 
   AD1845: {
-    meta: { ref: 'U7', part: 'Analog Devices AD1845JP SoundPort codec', pkg: 'PLCC-68', desc: '16bitový stereo kodek 48 kHz. NV1 do něj posílá vzorky ze syntézy po 8bitové sběrnici. Takt bere z audio PLL RAMDACu (ACLK), vlastní krystal nemá. Skutečný čip nepoužívá DRQ/DACK kodeku, jen strobe AUR#/AUW# (v modelu zjednodušeno).' },
+    meta: { ref: 'U7', part: 'Analog Devices AD1845JP SoundPort codec', pkg: 'PLCC-68', desc: '16bitový stereo kodek 48 kHz, registry kompatibilní s AD1848. Čtyři adresy: 0 index, 1 data registru, 2 stav, 3 data vzorku (PIO). NV1 ho ovládá jen strobe AUR#/AUW# po 8bitové sběrnici; DRQ/DACK ani přerušení kodeku karta nepoužívá. Takt bere z audio PLL RAMDACu (ACLK), vlastní krystal nemá.' },
     pins: {
-      inputs: { xtal: Z, d: Z, a: 0, wr_n: 1, dack_n: 1, lin_l: Z, lin_r: Z, mic: Z },
-      outputs: { drq: 0, lout: 0, rout: 0 },
+      inputs: { xtal: Z, d: Z, a: 0, wr_n: 1, rd_n: 1, pd_n: 1, lin_l: Z, lin_r: Z, mic: Z },
+      outputs: { d: Z, lout: 0, rout: 0 },
     },
     widths: { d: 8, a: 2 },
     risingOnlyClocks: true,
-    netNames: { drq: 'DRQ', lout: 'LINE OUT L (analog)', rout: 'LINE OUT R (analog)' },
+    netNames: { lout: 'LINE OUT L (analog)', rout: 'LINE OUT R (analog)' },
+    // I8 selects the sample rate: with the 24.576 MHz clock on XTAL1 (CSL = 0) the divider is 512 for 48 kHz
+    fsDivider: { 0: 3072, 1: 1536, 2: 896, 3: 768, 6: 512, 7: 2560 },
     clocks(comp) {
       const f = comp.inputs.xtal;
-      return num(f) && Math.abs(f - 24.576e6) < 0.3e6 ? [{ name: 'fs', hz: f / 512 }] : [];
+      const reg = comp._c?.reg;
+      if (!num(f) || Math.abs(f - 24.576e6) > 0.3e6 || !reg || !(reg[9] & 1) || (reg[8] & 1)) return []; // no clock, playback off or XTAL2 selected
+      const div = NV1_DEVICES.AD1845.fsDivider[(reg[8] >> 1) & 7];
+      return div ? [{ name: 'fs', hz: f / div }] : [];
     },
     eval(comp, eng) {
-      const c = (comp._c = comp._c || { bytes: [0, 0, 0, 0], i: 0, next: [0, 0], samples: 0 });
-      const locked = num(comp.inputs.xtal);
+      const c = (comp._c = comp._c || { index: 0x40, reg: new Uint8Array(32), bytes: [], next: null, samples: 0, underruns: 0 });
+      const inp = comp.inputs;
+      const locked = num(inp.xtal);
       if (comp._locked !== locked) { comp._locked = locked; eng.clocksChanged(); }
-      if (edge(comp, 'wr_n') === 'r' && comp.inputs.dack_n === 0 && num(comp.inputs.d)) {
-        c.bytes[c.i & 3] = comp.inputs.d & 0xFF;
-        if (++c.i >= 4) {
-          const s16 = (lo, hi) => { const v = lo | (hi << 8); return v >= 0x8000 ? v - 0x10000 : v; };
-          c.next = [s16(c.bytes[0], c.bytes[1]), s16(c.bytes[2], c.bytes[3])];
-          comp.outputs.drq = 0;
+      const a = num(inp.a) ? inp.a & 3 : 0;
+      if (edge(comp, 'wr_n') === 'r' && num(inp.d)) {
+        const d = inp.d & 0xFF;
+        if (a === 0) c.index = d & 0x7F; // bit 6 = MCE, bits 4:0 = register index
+        else if (a === 1) { c.reg[c.index & 0x1F] = d; eng.clocksChanged(); }
+        else if (a === 3 && (c.reg[9] & 0x40) && !c.next) { // PIO playback data, low byte first, left then right
+          c.bytes.push(d);
+          if (c.bytes.length === 4) {
+            const s16 = (lo, hi) => { const v = lo | (hi << 8); return v >= 0x8000 ? v - 0x10000 : v; };
+            c.next = [s16(c.bytes[0], c.bytes[1]), s16(c.bytes[2], c.bytes[3])];
+            c.bytes = [];
+          }
         }
       }
       if (ownRising(comp, 'fs')) {
-        // DAC: output the sample received during the last period (1 V peak line level), request the next one
-        comp.outputs.lout = Math.round((c.next[0] / 32768) * 1000) / 1000;
-        comp.outputs.rout = Math.round((c.next[1] / 32768) * 1000) / 1000;
-        c.samples++;
-        c.i = 0;
-        comp.outputs.drq = 1;
+        // DAC: play the sample waiting in the PIO register (1 V peak line level) and free the register
+        if (c.next) {
+          comp.outputs.lout = Math.round((c.next[0] / 32768) * 1000) / 1000;
+          comp.outputs.rout = Math.round((c.next[1] / 32768) * 1000) / 1000;
+          c.next = null;
+          c.samples++;
+        } else c.underruns++;
       }
+      if (inp.rd_n === 0) {
+        // status: PRDY = sample register free, PL/R = left sample expected, PU/L = upper byte expected
+        const prdy = (c.reg[9] & 0x41) === 0x41 && !c.next ? 1 : 0;
+        const status = (prdy << 1) | ((c.bytes.length < 2 ? 1 : 0) << 2) | ((c.bytes.length & 1) << 3);
+        comp.outputs.d = [c.index, c.reg[c.index & 0x1F], status, 0][a];
+      } else comp.outputs.d = Z;
+      if (inp.pd_n === 0) { comp.outputs.lout = 0; comp.outputs.rout = 0; }
     },
   },
 

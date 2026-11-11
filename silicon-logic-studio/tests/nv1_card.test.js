@@ -139,6 +139,19 @@ describe('NV1 board in operation', () => {
     assert.equal(e.components.get('nv1_core')._s.vid.underflows, 0, 'scan-out FIFO must never run dry');
   });
 
+  it('codec interface: 8-bit data, 2 address bits, AUR#/AUW# strobes, no DRQ/DACK (STG2000 datasheet ch. 6)', () => {
+    const pinsOf = (id) => NV1_BOARD.wires.filter((w) => w.from.id === id || w.to.id === id).map((w) => (w.from.id === id ? w.from.pin : w.to.pin));
+    assert.deepEqual(pinsOf('codec').filter((p) => /drq|dack/i.test(p)), []);
+    for (const p of ['d', 'a', 'wr_n', 'rd_n', 'pd_n', 'xtal']) assert.ok(pinsOf('codec').includes(p), p);
+    const e = board();
+    const codec = e.components.get('codec');
+    assert.ok(runUntil(e, () => codec._c?.samples > 3, 5_000_000));
+    // NV1 programmed the codec through its index registers: 48 kHz 16 bit stereo, playback enabled in PIO mode
+    assert.equal(codec._c.reg[8], 0x5C);
+    assert.equal(codec._c.reg[9], 0x41);
+    assert.equal(codec._c.underruns, 0);
+  });
+
   it('audio: wavetable voices reach the line-out jack as an analog signal at 48 kHz', () => {
     const e = board();
     const codec = e.components.get('codec');

@@ -149,9 +149,9 @@ def('dram_inside', {
 def('ad1845_inside', {
   level: 2,
   name: 'Analog Devices AD1845 — SoundPort kodek',
-  subtitle: '16bitový stereo kodek s ΣΔ převodníky, paralelní sběrnice 8 bitů + 2 bity adresy. Model používá DRQ/DACK#, skutečná karta jen strobe AUR#/AUW#. Analogový mixer a filtry nejsou simulovatelné (vynechány). Rozmístění = model.',
+  subtitle: '16bitový stereo kodek s ΣΔ převodníky, paralelní sběrnice 8 bitů + 2 bity adresy se strobe RD#/WR# (DRQ/DACK karta nepoužívá, vzorky jdou režimem PIO). Analogový mixer a filtry nejsou simulovatelné (vynechány). Rozmístění = model.',
   components: [
-    blk('pad_bus', 'PADY: D[7:0] WR# DACK#', 60, 140, [], ['D[7:0]'], 'io_pad'),
+    blk('pad_bus', 'PADY: D[7:0] A[1:0] RD# WR#', 60, 140, [], ['D[7:0]'], 'io_pad'),
     blk('regs', 'INDEXOVANÉ REGISTRY', 220, 140, ['D[7:0]', 'ADC'], ['vzorky'], 'mmio_regs'),
     blk('dac', 'ΣΔ DAC L/R', 390, 80, ['vzorky'], ['LOUT/ROUT'], 'sigma_delta'),
     blk('adc', 'ΣΔ ADC L/R', 390, 220, ['LINE/MIC'], ['vzorky'], 'sigma_delta'),

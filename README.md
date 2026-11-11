@@ -33,7 +33,8 @@ Co se děje po spuštění (RUN, rychlost MAX):
 2. NV1 zapisuje do DRAM cykly RAS#/CAS# ve fast page mode a každých 776 taktů MCLK (15,52 µs) dělá refresh.
 3. NV1 čte obraz zpátky do scan-out FIFO a posílá pixely RGB555 do RAMDACu. RAMDAC z nich dělá analogové
    napětí 0–0,7 V a monitor skládá obraz jen z napětí a časování synchronizace.
-4. 32hlasá syntéza v NV1 posílá vzorky do AD1845 a na line-out je analogový signál.
+4. 32hlasá syntéza v NV1 naprogramuje AD1845 přes indexové registry, čte jeho stav a posílá vzorky strobe `AUW#`
+   (režim PIO, bez DRQ/DACK jako na skutečné kartě); na line-out je analogový signál.
 5. Saturn pad se čte přes výběr TH/TR.
 
 Simulace je přesná na takty, a proto pomalá: celý snímek 640×480 trvá v reálném čase zhruba minutu.
@@ -103,7 +104,7 @@ Kde se model od datasheetu **vědomě liší** (zatím nepředěláno, v aplikac
 - **Pixely:** model je posílá po `P[14:0]`. Čip je do Palette-DAC nahrává přímo z `MD` (signály `LOADCLK`, `BLANK#`).
 - **BIOS ROM:** model má vlastní piny. Čip čte ROM přes `MD[7:0]` (adresa na `MD[30:16]`, výběr `ROMCS#`).
 
-- **Kodek:** model používá DRQ/DACK#. Karta je nepoužívá, má jen strobe `AUR#`/`AUW#` a 2 bity adresy.
+
 - **Game port:** model má jednu cestu k Saturn padu. Na kartě jsou dva headery 2×5 (J5/J6) na zvláštní Sega bracket
   přes čip SEGA rozhraní za Palette-DAC; modulární zásuvka na bracketu je PC joystick/MIDI port.
 - **Časování DRAM:** model čte za 2 takty od RAS#, čip za 3 (tRAC = 3T − 2 ns).

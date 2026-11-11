@@ -9,7 +9,7 @@ export const PROJECTS = [
     id: 'nv1',
     tab: 'NV1 KARTA',
     title: 'Diamond Edge 3D 2120 · NV1 (1995)',
-    subtitle: 'NVIDIA NV1 / STG2000X, 2 MB DRAM, PCI',
+    subtitle: 'NVIDIA NV1 / STG2000X, 2 MB DRAM (1 MB + 1 MB v paticích), PCI 2.0',
     circuit: NV1_BOARD, // simulovaný obvod: všechny pohledy
     bom: NV1_BOM,
     views: ['schematic', 'hardware', 'physics', 'economic', 'anatomy'],

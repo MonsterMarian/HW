@@ -288,13 +288,6 @@ export const OFFERS = {
       o('TME', '14.31M-HC49-S YIC 14.31818 MHz', 'https://www.tme.eu/en/details/14.31m-hc49-s/tht-quartz-crystals/yic/', 0.6, 'USD', 13, 'nové', 'fetched', 'nyní 0 ks skladem'),
     ],
   },
-  xtal_24: {
-    note: 'Jen nízké pouzdro HC-49/US; plné HC-49/U 24,576 MHz s ověřenou cenou nenalezeno.',
-    offers: [
-      o('GME.cz', 'QM 24,576MHz HC49U/S krystal (131-231)', 'https://gme.cz/krystal-hc49s-qm-24-576mhz', 6.5, 'CZK', 7, 'nové', 'snippet'),
-      o('DigiKey', 'Citizen HC-49/U-S24576000ABJB 24.576 MHz', 'https://www.digikey.com/en/products/detail/citizen-finedevice-co-ltd/HC-49-U-S24576000ABJB/284235', 0.52, 'USD', 11, 'nové', 'fetched'),
-    ],
-  },
   de15: {
     note: 'GME ani Hadex úhlovou HD15 zásuvku do DPS nevedou.',
     offers: [

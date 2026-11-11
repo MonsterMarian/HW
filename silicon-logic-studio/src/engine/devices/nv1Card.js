@@ -1,6 +1,6 @@
 // Behavioural models of the parts on the Diamond Edge 3D 2120 (NVIDIA NV1 / SGS-Thomson STG2000X) and of
 // the devices plugged into it. The models talk to each other only through pins and nets, using the real
-// interfaces: PCI 2.1 bus cycles (FRAME#/IRDY#/TRDY#/DEVSEL#, multiplexed AD[31:0]), fast-page-mode DRAM
+// interfaces: PCI 2.0 bus cycles (FRAME#/IRDY#/TRDY#/DEVSEL#, multiplexed AD[31:0]), fast-page-mode DRAM
 // cycles (RAS#/CAS#/WE#/OE#, multiplexed address), a 15-bit pixel bus into the RAMDAC, analog RGB + TTL sync
 // into the VGA connector, a byte-wide strobed bus into the AD1845 codec and the Saturn pad select/data lines.
 //
@@ -485,7 +485,7 @@ function nv1Mem(comp, s) {
     case 'idle': {
       let req = null;
       const wordsPerLine = (c.hdisp * 2) >> 3;
-      if (m.sinceRefresh > 780) req = { kind: 'refresh' }; // 15.6 us at 50 MHz
+      if (m.sinceRefresh >= 776) req = { kind: 'refresh' }; // STG2000 datasheet: every 776 MCLK periods = 15.52 us at 50 MHz
       else if ((c.ctrl & 1) && v.fifo.length < 96 && v.fetchY < c.vdisp) {
         req = { kind: 'scan', word: ((c.fbStart + v.fetchY * c.pitch) >> 3) + v.fetchX };
         if (++v.fetchX >= wordsPerLine) { v.fetchX = 0; v.fetchY++; }
@@ -631,7 +631,7 @@ export const NV1_DEVICES = {
   },
 
   PCI_EDGE: {
-    meta: { ref: 'J1', part: 'PCI 2.1 32-bit 5 V card edge', pkg: 'EDGE-120', desc: 'Pozlacené kontakty karty. Jen vodiče: spojují sloty základní desky s NV1.' },
+    meta: { ref: 'J1', part: 'PCI 2.0 32-bit 5 V card edge', pkg: 'EDGE-120', desc: 'Pozlacené kontakty karty. Jen vodiče: spojují sloty základní desky s NV1.' },
     passive: true,
     pins: {
       inputs: { clk: Z, rst_n: Z, ad: Z, cbe_n: Z, frame_n: Z, irdy_n: Z, trdy_n: Z, devsel_n: Z, idsel: Z, inta_n: Z },
@@ -643,7 +643,7 @@ export const NV1_DEVICES = {
   },
 
   NV1_CORE: {
-    meta: { ref: 'U1', part: 'NVIDIA NV1 / SGS-Thomson STG2000X', pkg: 'PQFP-208', desc: '0,5 µm CMOS, ~1 mil. tranzistorů, 90 mm². PCI, 2D/3D grafika, 32hlasá syntéza, game port.' },
+    meta: { ref: 'U1', part: 'NVIDIA NV1 / SGS-Thomson STG2000X', pkg: 'PQFP-208', desc: '0,5 µm CMOS, 3 vrstvy kovu, 3,3 V (datasheet STG2000). Počet tranzistorů datasheet neuvádí (Wikipedie ~1 mil. a 90 mm², J. Peddie ~250 tis.). PCI 2.0, 2D/3D grafika, 32hlasá syntéza, game port.' },
     pins: {
       inputs: {
         pci_clk: 0, rst_n: 0, ad: Z, cbe_n: Z, frame_n: 1, irdy_n: 1, idsel: 0,
@@ -723,10 +723,10 @@ export const NV1_DEVICES = {
   },
 
   RAMDAC_STG1764: {
-    meta: { ref: 'U2', part: 'SGS-Thomson STG1764X (RAMDAC + PLL)', pkg: 'PQFP-128', desc: 'Převádí 15bitové pixely na analogové RGB 0–0,7 V. PLL z krystalu 14,31818 MHz dělá takt pixelů a paměti.' },
-    pins: { inputs: { xtal: Z, pix: 0, blank_n: 0 }, outputs: { vclk: 0, mclk: 0, r: 0, g: 0, b: 0 } },
+    meta: { ref: 'U2', part: 'SGS-Thomson STG1764X-13 (Palette-DAC 135 MHz + 3× PLL)', pkg: 'PQFP-128', desc: 'Převádí pixely na analogové RGB 0–0,7 V. Tři PLL (paměť, video, audio) z jednoho krystalu dávají takt paměti, pixelů a kodeku (ACLK). Frekvence krystalu a dělicí poměry jsou předpoklad.' },
+    pins: { inputs: { xtal: Z, pix: 0, blank_n: 0 }, outputs: { vclk: 0, mclk: 0, aclk: Z, r: 0, g: 0, b: 0 } },
     widths: { pix: 15 },
-    netNames: { vclk: 'VCLK 25.17 MHz', mclk: 'MCLK 50.1 MHz', r: 'RED (analog)', g: 'GREEN (analog)', b: 'BLUE (analog)' },
+    netNames: { vclk: 'VCLK 25.17 MHz', mclk: 'MCLK 50.1 MHz', aclk: 'ACLK 24.576 MHz', r: 'RED (analog)', g: 'GREEN (analog)', b: 'BLUE (analog)' },
     // PLL: f = fref * M / (N * 2^P)
     risingOnlyClocks: true,
     pll: { vclk: { m: 116, n: 33, p: 1 }, mclk: { m: 7, n: 2, p: 0 } },
@@ -742,6 +742,8 @@ export const NV1_DEVICES = {
     eval(comp, eng) {
       const locked = num(comp.inputs.xtal);
       if (comp._locked !== locked) { comp._locked = locked; eng.clocksChanged(); }
+      // audio PLL: takt pro kodek (STG2000 datasheet obr. 30: ACLK -> XTAL1IN kodeku, kodek vlastní krystal nemá)
+      comp.outputs.aclk = locked ? 24.576e6 : Z;
       if (!ownRising(comp, 'vclk')) return;
       const px = num(comp.inputs.pix) ? comp.inputs.pix : 0;
       const on = comp.inputs.blank_n === 1;
@@ -753,13 +755,13 @@ export const NV1_DEVICES = {
   },
 
   CRYSTAL: {
-    meta: { ref: 'Y1', part: 'Quartz crystal', pkg: 'HC-49/U', desc: 'Referenční frekvence pro PLL / kodek.' },
+    meta: { ref: 'Y1', part: 'Quartz crystal', pkg: 'HC-49/U', desc: 'Referenční frekvence pro tři PLL v RAMDACu. Na kartě je jediný krystal.' },
     pins: { inputs: {}, outputs: { xtal: 0 } },
     eval(comp) { comp.outputs.xtal = comp.freqHz || 14.31818e6; },
   },
 
   AD1845: {
-    meta: { ref: 'U7', part: 'Analog Devices AD1845JP SoundPort codec', pkg: 'PLCC-68', desc: '16bitový stereo kodek 48 kHz. NV1 do něj posílá vzorky ze syntézy po 8bitové sběrnici.' },
+    meta: { ref: 'U7', part: 'Analog Devices AD1845JP SoundPort codec', pkg: 'PLCC-68', desc: '16bitový stereo kodek 48 kHz. NV1 do něj posílá vzorky ze syntézy po 8bitové sběrnici. Takt bere z audio PLL RAMDACu (ACLK), vlastní krystal nemá. Skutečný čip nepoužívá DRQ/DACK kodeku, jen strobe AUR#/AUW# (v modelu zjednodušeno).' },
     pins: {
       inputs: { xtal: Z, d: Z, a: 0, wr_n: 1, dack_n: 1, lin_l: Z, lin_r: Z, mic: Z },
       outputs: { drq: 0, lout: 0, rout: 0 },
@@ -828,7 +830,7 @@ export const NV1_DEVICES = {
   },
 
   GAME_PORT: {
-    meta: { ref: 'J3', part: 'Game port (RJ-45, Diamond proprietary)', pkg: 'RJ45', desc: 'Kabel k bracketu se dvěma porty Sega Saturn.' },
+    meta: { ref: 'J3', part: 'Game port (modulární zásuvka)', pkg: 'RJ45', desc: 'Model: jedna cesta k Saturn padu. Na skutečné kartě je zásuvka PC joystick/MIDI port a Saturn pady jdou přes headery 2×5 (J5 PORT A, J6 PORT B), plochý kabel na zvláštní Sega bracket a čip SEGA rozhraní za Palette-DAC.' },
     passive: true,
     pins: { inputs: { sel: Z, d: Z }, outputs: { 'TH/TR': Z, 'D[3:0]': Z } },
     joins: [['sel', 'TH/TR'], ['d', 'D[3:0]']],

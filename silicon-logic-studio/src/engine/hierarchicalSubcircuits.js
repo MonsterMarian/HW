@@ -52,7 +52,7 @@ const def = (key, sub) => { H[key] = { key, ...sub }; };
 def('nv1_die', {
   level: 2,
   name: 'NVIDIA NV1 / SGS-Thomson STG2000X — die',
-  subtitle: '0,5 µm CMOS, ~1 mil. tranzistorů, 90 mm², PCI, 64bit paměť. Rozmístění bloků = model floorplanu (die-shot neověřen). Bloky jsou popisné, simuluje se jejich RTL o úroveň níž.',
+  subtitle: '0,5 µm CMOS, 3 vrstvy kovu, 3,3 V, PCI 2.0 (datasheet STG2000). Model vede paměť jako jednu 64bitovou sběrnici a pixely po P[14:0]; skutečný čip má 32bitovou MD[31:0] se dvěma bankami a pixely do Palette-DAC bere přímo z MD. Rozmístění bloků = model floorplanu (die-shot neověřen). Bloky jsou popisné, simuluje se jejich RTL o úroveň níž.',
   components: [
     // pad ring
     blk('pad_video', 'PADY: VIDEO → STG1764X', 60, 150, [], ['P[14:0]', 'SYNC'], 'io_pad'),
@@ -101,8 +101,8 @@ def('nv1_die', {
 
 def('stg1764_inside', {
   level: 2,
-  name: 'SGS-Thomson STG1764X — RAMDAC + 2× PLL',
-  subtitle: 'PQFP-128. Vstupní latch pixelů, paleta 256×3×8 (u RGB555 obejitá), 3× 8bit DAC, PLL pro VCLK a MCLK z krystalu 14,31818 MHz. Rozmístění = model.',
+  name: 'SGS-Thomson STG1764X — Palette-DAC + 3× PLL',
+  subtitle: 'PQFP-128. Vstupní latch pixelů, paleta 256×3×8, 3× 8bit DAC, PLL pro VCLK a MCLK (schéma ukazuje dvě ze tří PLL, třetí dává ACLK kodeku). Frekvence krystalu 14,31818 MHz a rozmístění = model.',
   components: [
     blk('pad_pix', 'PADY: P[14:0] BLANK#', 60, 160, [], ['P[14:0]'], 'io_pad'),
     blk('xtal_osc', 'OSCILÁTOR KRYSTALU Y1', 60, 380, [], ['REF'], 'NOT'),
@@ -149,7 +149,7 @@ def('dram_inside', {
 def('ad1845_inside', {
   level: 2,
   name: 'Analog Devices AD1845 — SoundPort kodek',
-  subtitle: '16bitový stereo kodek s ΣΔ převodníky, paralelní sběrnice s DRQ/DACK#. Analogový mixer a filtry nejsou simulovatelné (vynechány). Rozmístění = model.',
+  subtitle: '16bitový stereo kodek s ΣΔ převodníky, paralelní sběrnice 8 bitů + 2 bity adresy. Model používá DRQ/DACK#, skutečná karta jen strobe AUR#/AUW#. Analogový mixer a filtry nejsou simulovatelné (vynechány). Rozmístění = model.',
   components: [
     blk('pad_bus', 'PADY: D[7:0] WR# DACK#', 60, 140, [], ['D[7:0]'], 'io_pad'),
     blk('regs', 'INDEXOVANÉ REGISTRY', 220, 140, ['D[7:0]', 'ADC'], ['vzorky'], 'mmio_regs'),
@@ -241,7 +241,7 @@ def('qtm_forward_diff', {
   name: '3D QTM — dopředné diference (kvadratika)',
   subtitle: 'x(n) = 3n² + 2n + 5: x += Δ, Δ += 2A (jen sčítačky). NV1 počítá kvadratické plochy (u,v) z 9 kontrolních bodů; zde 1 osa a 8 bitů – model šířky.',
   components: [
-    clock('clk', 'TAKT JÁDRA 75 MHz', 0, 0, 75e6),
+    clock('clk', 'TAKT JÁDRA 75 MHz (NEOVĚŘENO)', 0, 0, 75e6),
     inp('load', 'LOAD (start křivky)', 0, 1, 0),
     k('k_c', 'C = 5', 0, 2, 5),
     k('k_dx0', 'Δ₀ = A+B = 5', 0, 3, 5),

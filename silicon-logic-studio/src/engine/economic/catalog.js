@@ -164,18 +164,17 @@ const MY_PC_ITEMS = [
 // model.kind 'chip' staví stejné pouzdro jako PCB pohled (buildRealPart), typ = model zařízení v engine/devices.
 const NV1_ITEMS = [
   { id: 'nv1', name: 'NVIDIA NV1 / SGS-Thomson STG2000X', part: 'Grafický čip karty, PQFP-208 (28 × 28 mm)', qty: 1, dims: [30.6, 30.6, 3.65], dimsSrc: 'ověřeno: JEDEC PQFP-208', model: { kind: 'chip', type: 'NV1_CORE' } },
-  { id: 'ramdac', name: 'SGS-Thomson STG1764X', part: 'RAMDAC + PLL, PQFP-128 (14 × 20 mm)', qty: 1, dims: [17.2, 23.2, 2.95], dimsSrc: 'ověřeno: JEDEC PQFP-128', model: { kind: 'chip', type: 'RAMDAC_STG1764' } },
-  { id: 'dram', name: 'Samsung KM416C256', part: '256K × 16 FPM DRAM, SOJ-40; 4 kusy = 2 MB na 64bitové sběrnici', qty: 4, dims: [26.03, 11.2, 3.6], dimsSrc: 'ověřeno: SOJ-40 400 mil', model: { kind: 'chip', type: 'DRAM_256K16' } },
+  { id: 'ramdac', name: 'SGS-Thomson STG1764X', part: 'Palette-DAC 135 MHz + 3× PLL (STG1764X-13), PQFP', qty: 1, dims: [17.2, 23.2, 2.95], dimsSrc: 'odhad: 14 × 20 mm je předpoklad; na fotografii karty (vgamuseum) je čip čtvercový, asi 28 × 28 mm', model: { kind: 'chip', type: 'RAMDAC_STG1764' } },
+  { id: 'dram', name: 'DRAM 256K × 16 (např. Samsung KM416C256-5)', part: 'FPM DRAM 50 ns, SOJ-40; 2 připájené + 2 v paticích = 2 MB (dvě banky po 1 MB na 32bitové sběrnici MD)', qty: 4, dims: [26.03, 11.2, 3.6], dimsSrc: 'ověřeno: SOJ-40 400 mil', model: { kind: 'chip', type: 'DRAM_256K16' } },
   { id: 'codec', name: 'Analog Devices AD1845JP', part: 'SoundPort stereo kodek 16 bit / 48 kHz, PLCC-68', qty: 1, dims: [25.2, 25.2, 4.45], dimsSrc: 'ověřeno: PLCC-68 24,2 mm', model: { kind: 'chip', type: 'AD1845' } },
   { id: 'eprom', name: 'EPROM 27C256 (32K × 8)', part: 'Video BIOS karty, DIP-28 600 mil', qty: 1, dims: [36.8, 15.24, 4.4], dimsSrc: 'ověřeno: DIP-28 600 mil', model: { kind: 'chip', type: 'EPROM_27C256' } },
-  { id: 'xtal_14', name: 'Krystal 14,31818 MHz', part: 'HC-49/U, reference pro PLL v RAMDACu', qty: 1, dims: [11.05, 4.65, 13.46], dimsSrc: 'ověřeno: HC-49/U', model: { kind: 'chip', type: 'CRYSTAL', freqHz: 14.31818e6 } },
-  { id: 'xtal_24', name: 'Krystal 24,576 MHz', part: 'HC-49/U, takt kodeku AD1845 (48 kHz × 512)', qty: 1, dims: [11.05, 4.65, 13.46], dimsSrc: 'ověřeno: HC-49/U', model: { kind: 'chip', type: 'CRYSTAL', freqHz: 24.576e6 } },
+  { id: 'xtal_14', name: 'Krystal 14,31818 MHz', part: 'HC-49/U, jediný krystal karty: reference pro 3 PLL v RAMDACu (frekvence je předpoklad, na fotografii karty čteme 12,096 MHz)', qty: 1, dims: [11.05, 4.65, 13.46], dimsSrc: 'ověřeno: HC-49/U', model: { kind: 'chip', type: 'CRYSTAL', freqHz: 14.31818e6 } },
   { id: 'de15', name: 'Konektor DE-15 (VGA) zásuvka', part: 'Do plošného spoje, úhlový, se šroubky 4-40', qty: 1, dims: [16.7, 30.8, 12.5], dimsSrc: 'ověřeno: DE-15 R/A', model: { kind: 'connector', build: 'de15' } },
-  { id: 'rj45', name: 'Konektor RJ-45 (game port)', part: 'Zásuvka do plošného spoje, 8 kontaktů', qty: 1, dims: [17, 15.9, 13.5], dimsSrc: 'ověřeno: RJ-45 R/A', model: { kind: 'connector', build: 'rj45' } },
+  { id: 'rj45', name: 'Modulární zásuvka (game/MIDI port)', part: 'Zásuvka do plošného spoje; zdroje se liší, zda RJ-45 (8) nebo RJ-50 (10 kontaktů)', qty: 1, dims: [17, 15.9, 13.5], dimsSrc: 'ověřeno: RJ-45 R/A', model: { kind: 'connector', build: 'rj45' } },
   { id: 'jack', name: 'Konektor jack 3,5 mm stereo', part: 'Line in, line out a mikrofon', qty: 3, dims: [13, 6, 6], dimsSrc: 'odhad: typický jack do DPS', model: { kind: 'connector', build: 'jack35' } },
   { id: 'crt', name: 'VGA CRT monitor', part: 'Analogový VGA monitor, 640 × 480 @ 60 Hz (model 14palcový)', qty: 1, dims: [360, 380, 328], dimsSrc: 'odhad: typický 14" CRT', model: { kind: 'crt' } },
   { id: 'speakers', name: 'Aktivní reproduktory 2.0', part: 'Vstup line in 3,5 mm', qty: 1, dims: [260, 130, 143], dimsSrc: 'odhad', model: { kind: 'speakers' } },
-  { id: 'pad', name: 'Sega Saturn ovladač', part: 'Originální pad, na kartu přes Diamond game port adaptér', qty: 1, dims: [157, 70, 30], dimsSrc: 'odhad: obecný model padu', model: { kind: 'gamepad' } },
+  { id: 'pad', name: 'Sega Saturn ovladač', part: 'Originální pad; na skutečné kartě přes headery J5/J6 a zvláštní Sega bracket (model: přes game port)', qty: 1, dims: [157, 70, 30], dimsSrc: 'odhad: obecný model padu', model: { kind: 'gamepad' } },
 ];
 
 const median = (v) => (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2);

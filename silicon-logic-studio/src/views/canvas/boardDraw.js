@@ -82,7 +82,7 @@ export function drawCard(ctx) {
   ctx.fillText('DIAMOND EDGE 3D 2120', x + w - 172, y + h - 54);
   ctx.font = `700 8px ${THEME.mono}`;
   ctx.fillStyle = 'rgba(232, 230, 223, 0.7)';
-  ctx.fillText('NVIDIA NV1 · PCI 2.1 · 2 MB DRAM', x + w - 172, y + h - 40);
+  ctx.fillText('NVIDIA NV1 · PCI 2.0 · 2 MB DRAM', x + w - 172, y + h - 40);
 
   // klíč 5 V konektoru (výřez ve zlatých kontaktech)
   ctx.fillStyle = THEME.bg;

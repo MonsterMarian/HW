@@ -42,9 +42,10 @@ describe('NV1 board netlist', () => {
   it('contains the real parts of a Diamond Edge 3D 2120', () => {
     const types = NV1_BOARD.components.map((c) => c.type);
     for (const t of ['NV1_CORE', 'RAMDAC_STG1764', 'AD1845', 'EPROM_27C256', 'PCI_EDGE', 'VGA_DB15', 'GAME_PORT']) assert.ok(types.includes(t), t);
-    assert.equal(types.filter((t) => t === 'DRAM_256K16').length, 4, '2 MB on a 64-bit bus = 4x 256Kx16');
+    assert.equal(types.filter((t) => t === 'DRAM_256K16').length, 4, '2 MB = 4x 256Kx16 (2 soldered + 2 socketed)');
     assert.equal(types.filter((t) => t === 'AUDIO_JACK').length, 3, 'line in, line out, mic');
-    assert.equal(types.filter((t) => t === 'CRYSTAL').length, 2);
+    assert.equal(types.filter((t) => t === 'CRYSTAL').length, 1, 'one crystal: the codec is clocked by ACLK from the RAMDAC');
+    assert.ok(NV1_BOARD.wires.some((w) => w.from.id === 'ramdac' && w.from.pin === 'aclk' && w.to.id === 'codec'));
     assert.match(DEVICES.NV1_CORE.meta.part, /STG2000X/);
     assert.match(DEVICES.RAMDAC_STG1764.meta.part, /STG1764X/);
   });

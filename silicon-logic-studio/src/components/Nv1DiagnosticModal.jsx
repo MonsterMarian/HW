@@ -72,7 +72,7 @@ const STAGES = [
   },
   {
     category: 'DRAM',
-    name: 'Refresh DRAM (CAS před RAS, nejvýš 15,6 µs na řádek)',
+    name: 'Refresh DRAM (CAS před RAS, každých 776 taktů MCLK = 15,52 µs; čip snese 15,6 µs)',
     maxNs: 100_000,
     fixed: true,
     begin: (e, ctx) => { ctx.r0 = part(e, 'dram0')._d.refreshes; ctx.t0 = e.simTime; },
@@ -83,7 +83,7 @@ const STAGES = [
       const same = drams.every((d) => d._d.refreshes === drams[0]._d.refreshes);
       return {
         passed: perUs >= 1 / 15.6 - 0.01 && same,
-        detail: `${(perUs * 15.6).toFixed(2)} refreshe za 15,6 µs · ${same ? 'všechny 4 čipy současně' : 'čipy nejsou obnovovány současně'} · celkem ${drams[0]._d.refreshes}`,
+        detail: `${(perUs * 15.6).toFixed(2)} refreshe za 15,6 µs (limit paměti) · ${same ? 'všechny 4 čipy současně' : 'čipy nejsou obnovovány současně'} · celkem ${drams[0]._d.refreshes}`,
       };
     },
   },

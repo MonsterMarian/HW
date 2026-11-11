@@ -1,9 +1,12 @@
-// Diamond Edge 3D 2120 (NVIDIA NV1 / SGS-Thomson STG2000X, 2 MB DRAM, 1995) as a netlist of real parts.
+// Diamond Edge 3D 2120 upgraded to 2 MB (NVIDIA NV1 / SGS-Thomson STG2000X, 1995) as a netlist of real parts.
+// The 2120 shipped with 1 MB (2 soldered 256Kx16 chips) and 2 empty SOJ sockets; with all 4 chips it equals the 2200.
 // Positions are 2D world px at 3.7 px/mm (shared by the PCB view and the 3D board, see boardLayout.js).
 // sx/sy = position in the schematic view (laid out by signal flow: host -> J1 -> U1 -> memory / video / audio / pad).
 // Part list: NV1 (STG2000X), STG1764X RAMDAC, 2 MB 50 ns SEC DRAM, AD1845 codec, video BIOS EPROM,
 // VGA DE-15, 3.5 mm jacks, proprietary RJ-45 game port (sources: vgamuseum.ru, thandor.net, dosdays.co.uk,
-// vintage3d.org). The 4x 256Kx16 split of the 2 MB / 64-bit memory and the EPROM type are our assumption.
+// vintage3d.org; STG2000 datasheet Sep 1996). Known simplifications against the datasheet are listed in README
+// ("Co je model"): the real chip has a 32-bit MD bus with two interleaved banks, loads pixels into the DAC from MD,
+// reads the ROM over MD, reaches the game port through the DAC and is a two-function PCI device.
 
 const c = (id, type, label, x, y, extra = {}, [sx, sy] = []) => ({ id, type, label, x, y, sx, sy, inputs: {}, outputs: {}, ...extra });
 const w = (fromId, fromPin, toId, toPin) => ({ from: { id: fromId, pin: fromPin }, to: { id: toId, pin: toPin } });
@@ -11,7 +14,7 @@ const w = (fromId, fromPin, toId, toPin) => ({ from: { id: fromId, pin: fromPin 
 const DRAMS = [0, 1, 2, 3];
 
 export const NV1_BOARD = {
-  name: 'Diamond Edge 3D 2120 — NVIDIA NV1 (1995)',
+  name: 'Diamond Edge 3D 2120 (2 MB) — NVIDIA NV1 (1995)',
   prompt: 'Diamond Edge 3D: NV1 / STG2000X, STG1764X RAMDAC, 2 MB DRAM, AD1845, Sega Saturn game port, VGA',
   components: [
     // on the card
@@ -21,7 +24,6 @@ export const NV1_BOARD = {
     ...DRAMS.map((k) => c(`dram${k}`, 'DRAM_256K16', `U${3 + k} KM416C256 MD[${16 * k + 15}:${16 * k}]`, 560 + k * 50, 40, {}, [960, -430 + k * 140])),
     c('bios_rom', 'EPROM_27C256', 'U8 VIDEO BIOS 27C256', 560, 196, {}, [960, 140]),
     c('codec', 'AD1845', 'U7 AD1845JP', 196, 236, {}, [960, 420]),
-    c('y2_crystal', 'CRYSTAL', 'Y2 24.576 MHz', 306, 296, { freqHz: 24.576e6 }, [650, 690]),
     c('j1_pci', 'PCI_EDGE', 'J1 PCI 32-BIT 5V', 275, 386, {}, [290, 140]),
     // on the bracket edge of the card (body on the PCB, mating face through the bracket)
     c('j2_vga', 'VGA_DB15', 'J2 VGA', 121, 38, {}, [1260, 260]),
@@ -50,11 +52,11 @@ export const NV1_BOARD = {
     w('nv1_core', 'devsel_n', 'j1_pci', 'B37 DEVSEL#'),
     w('j1_pci', 'A26 IDSEL', 'nv1_core', 'idsel'),
     w('nv1_core', 'inta_n', 'j1_pci', 'A6 INTA#'),
-    // clocks: crystal -> RAMDAC PLL -> pixel and memory clocks
+    // clocks: the only crystal -> three PLLs in the RAMDAC -> pixel, memory and codec clocks
     w('y1_crystal', 'xtal', 'ramdac', 'xtal'),
     w('ramdac', 'vclk', 'nv1_core', 'vclk'),
     w('ramdac', 'mclk', 'nv1_core', 'mclk'),
-    // 64-bit DRAM bus: shared address/RAS#/WE#/OE#, one 16-bit data slice and CAS# pair per chip
+    // DRAM bus (model: one 64-bit bus; real chip: 32-bit MD with two banks): shared address/RAS#/WE#/OE#, one 16-bit slice and CAS# pair per chip
     ...DRAMS.flatMap((k) => [
       w('nv1_core', 'ma', `dram${k}`, 'a'),
       w('nv1_core', 'ras_n', `dram${k}`, 'ras_n'),
@@ -83,7 +85,7 @@ export const NV1_BOARD = {
     w('j2_vga', '13 HSYNC', 'monitor', 'hsync'),
     w('j2_vga', '14 VSYNC', 'monitor', 'vsync'),
     // audio: NV1 synth -> AD1845 -> jacks
-    w('y2_crystal', 'xtal', 'codec', 'xtal'),
+    w('ramdac', 'aclk', 'codec', 'xtal'),
     w('nv1_core', 'aud_d', 'codec', 'd'),
     w('nv1_core', 'aud_a', 'codec', 'a'),
     w('nv1_core', 'aud_wr_n', 'codec', 'wr_n'),

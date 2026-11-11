@@ -105,7 +105,7 @@ export function nv1Parts(circuit) {
   const ID = { NV1_CORE: 'nv1', RAMDAC_STG1764: 'ramdac', DRAM_256K16: 'dram', AD1845: 'codec', EPROM_27C256: 'eprom', VGA_DB15: 'de15', GAME_PORT: 'rj45', AUDIO_JACK: 'jack' };
   const P = [];
   for (const c of circuit.components) {
-    const id = c.type === 'CRYSTAL' ? (c.freqHz > 20e6 ? 'xtal_24' : 'xtal_14') : ID[c.type];
+    const id = c.type === 'CRYSTAL' ? 'xtal_14' : ID[c.type];
     if (!id) continue;
     const { w, h } = componentDims(c, 'hardware');
     const lift = 18 + (Object.keys(ID).indexOf(c.type) % 3) * 6;

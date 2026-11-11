@@ -141,6 +141,183 @@ def('gen9_display', {
   drills: { planes: 'cell_sram', blend: 'cell_mac', timing: 'cell_lt', ddi: 'MUX', pll: 'D_FF', pipes: 'cell_decoder' },
 });
 
+// ================================================================ čipset B360 (Intel 300 Series PCH, datasheet 337347)
+def('pch_xhci', {
+  name: 'Řadič USB xHCI (B360) — USB 3.1 i USB 2.0',
+  subtitle: 'Intel 300 Series PCH datasheet 337347: jediný řadič xHCI obsluhuje všechny porty (USB 2.0 i 3.1 Gen1/Gen2). Ovladač mu dává práci přes kruhové fronty v paměti (příkazový kruh, přenosové kruhy pro každý endpoint, kruh událostí), řadič je sám čte a zapisuje DMA. USB 2.0 část: 480/12/1,5 Mb/s, NRZI s vkládáním bitů; USB 3.1: 5/10 Gb/s, kódování 8b/10b (Gen1) a 128b/132b (Gen2) – linky Gen1/Gen2 sdílí s HSIO.',
+  components: [
+    blk('mmio', 'REGISTRY xHCI (MMIO)', 50, 50, [], ['DOORBELL'], 'CAPABILITY, OPERATIONAL, RUNTIME', 210, 80),
+    blk('cmd', 'PŘÍKAZOVÝ KRUH', 50, 170, ['DOORBELL'], ['TRB'], 'ADRESACE ZAŘÍZENÍ, ENDPOINTY', 210, 70),
+    blk('xfer', 'PŘENOSOVÉ KRUHY (DMA)', 320, 50, ['TRB'], ['DATA'], 'BULK / INTERRUPT / ISOCH / CONTROL', 220, 80),
+    blk('evt', 'KRUH UDÁLOSTÍ + PŘERUŠENÍ', 320, 170, [], [], 'MSI DO CPU', 220, 70),
+    blk('sch', 'PLÁNOVAČ (MIKRORÁMCE 125 µs)', 320, 280, [], [], 'PERIODICKÉ PŘENOSY NAPŘED', 220, 70),
+    blk('u2', 'USB 2.0: SIE + PHY', 600, 50, ['DATA'], [], 'NRZI, VKLÁDÁNÍ BITŮ, CRC5 / CRC16', 230, 80),
+    blk('u3', 'USB 3.1: LINKOVÁ + FYZICKÁ VRSTVA', 600, 170, ['DATA'], [], '8b/10b · 128b/132b, CRC32', 230, 80),
+    blk('ports', 'ROOT HUB + PORTY', 600, 290, [], [], 'DETEKCE PŘIPOJENÍ, OVERCURRENT', 230, 70),
+  ],
+  wires: [w('mmio.DOORBELL', 'cmd.DOORBELL'), w('cmd.TRB', 'xfer.TRB'), w('xfer.DATA', 'u2.DATA'), w('xfer.DATA', 'u3.DATA')],
+  drills: { mmio: 'cell_sram', cmd: 'cell_decoder', xfer: 'cell_sram', evt: 'cell_arbiter', sch: 'cell_arbiter', u2: 'cell_parity', u3: 'cell_parity', ports: 'cell_lt' },
+});
+
+def('pch_ahci', {
+  name: 'Řadič SATA AHCI (B360) — 6 portů 6 Gb/s',
+  subtitle: 'Intel 300 Series PCH datasheet 337347 + specifikace AHCI 1.3: každý port má v paměti seznam až 32 příkazů (NCQ), řadič posílá rámce FIS (Register, DMA Setup, Data) přes linkovou vrstvu SATA (primitiva, CRC32, scrambler) a fyzickou vrstvu 6 Gb/s s kódováním 8b/10b. Na desce: 6 portů + M.2_1 v režimu SATA (pak vypne SATA6G_2). V mém PC zapojené disky nejsou, 970 EVO Plus jde přes NVMe.',
+  components: [
+    blk('hba', 'REGISTRY HBA (ABAR)', 50, 50, [], ['PŘÍKAZY'], 'GLOBÁLNÍ + PRO KAŽDÝ PORT', 210, 70),
+    blk('cl', 'SEZNAM PŘÍKAZŮ (32 SLOTŮ NCQ)', 50, 160, ['PŘÍKAZY'], ['FIS'], 'PRDT = TABULKA DMA', 210, 80),
+    blk('dma', 'DMA ENGINE', 320, 50, [], [], 'DATA MEZI DISKEM A RAM', 200, 70),
+    blk('tl', 'TRANSPORTNÍ VRSTVA (FIS)', 320, 160, ['FIS'], ['RÁMCE'], 'REGISTER / DMA SETUP / DATA', 200, 80),
+    blk('ll', 'LINKOVÁ VRSTVA', 580, 50, ['RÁMCE'], ['SYMBOLY'], 'PRIMITIVA, CRC32, SCRAMBLER', 220, 70),
+    blk('phy', 'FYZICKÁ VRSTVA 6 Gb/s', 580, 160, ['SYMBOLY'], [], '8b/10b, OOB SIGNALIZACE', 220, 70),
+  ],
+  wires: [w('hba.PŘÍKAZY', 'cl.PŘÍKAZY'), w('cl.FIS', 'tl.FIS'), w('tl.RÁMCE', 'll.RÁMCE'), w('ll.SYMBOLY', 'phy.SYMBOLY')],
+  drills: { hba: 'cell_sram', cl: 'cell_sram', dma: 'FULL_ADDER', tl: 'cell_decoder', ll: 'cell_parity', phy: 'MUX' },
+});
+
+def('pch_hda', {
+  name: 'Řadič HD Audio (B360) — linka ke kodeku ALC887',
+  subtitle: 'Intel High Definition Audio Specification 1.0a: řadič posílá kodeku příkazy přes kruh CORB a odpovědi čte z RIRB, zvukové proudy přenáší DMA podle seznamu bufferů (BDL). Linka HDA: hodiny BCLK 24 MHz, rámec 20,83 µs (48 kHz), výstup SDO, vstupy SDI, synchronizace SYNC. Kodek ALC887 je na desce zvlášť.',
+  components: [
+    blk('corb', 'CORB (PŘÍKAZY KODEKU)', 50, 50, [], ['VERBY'], 'KRUH V PAMĚTI', 200, 70),
+    blk('rirb', 'RIRB (ODPOVĚDI)', 50, 150, [], [], 'KRUH V PAMĚTI', 200, 70),
+    blk('dma', 'DMA PROUDŮ (BDL)', 320, 50, [], ['VZORKY'], 'VÝSTUPNÍ A VSTUPNÍ PROUDY', 200, 70),
+    blk('link', 'LINKA HDA: BCLK 24 MHz · SDO · SDI · SYNC', 580, 50, ['VERBY', 'VZORKY'], [], 'RÁMEC 48 kHz', 250, 80),
+    blk('wall', 'ČÍTAČ RÁMCŮ (WALL CLOCK)', 320, 150, [], [], 'SYNCHRONIZACE PROUDŮ', 200, 70),
+  ],
+  wires: [w('corb.VERBY', 'link.VERBY'), w('dma.VZORKY', 'link.VZORKY')],
+  drills: { corb: 'cell_sram', rirb: 'cell_sram', dma: 'FULL_ADDER', link: 'MUX', wall: 'FULL_ADDER' },
+});
+
+def('pch_spi', {
+  name: 'SPI + eSPI/LPC (B360) — BIOS flash a Super I/O',
+  subtitle: 'Intel datasheet 337347: řadič SPI čte flash s BIOSem; flash je rozdělená deskriptorem na oblasti (Descriptor, CSME, BIOS, případně GbE) s právy čtení/zápisu. Soft straps v deskriptoru nastavují i Flex I/O. Rozhraní eSPI nebo LPC vede k Super I/O NCT6796D – které z nich ASUS použil, neověřeno.',
+  components: [
+    blk('desc', 'DESKRIPTOR FLASH', 50, 50, [], ['OBLASTI'], 'DESCRIPTOR · CSME · BIOS · SOFT STRAPS', 230, 80),
+    blk('ctl', 'ŘADIČ SPI (ČTENÍ / ZÁPIS / MAZÁNÍ)', 330, 50, ['OBLASTI'], ['SPI'], 'OCHRANA OBLASTÍ', 240, 80),
+    blk('pins', 'SPI: CLK · CS# · MOSI · MISO', 620, 50, ['SPI'], [], 'FLASH 128 Mb NA DESCE', 220, 70),
+    blk('espi', 'eSPI / LPC → SUPER I/O', 330, 180, [], [], 'NCT6796D (OVĚŘENO)', 240, 70),
+  ],
+  wires: [w('desc.OBLASTI', 'ctl.OBLASTI'), w('ctl.SPI', 'pins.SPI')],
+  drills: { desc: 'cell_eeprom', ctl: 'cell_decoder', pins: 'MUX', espi: 'MUX' },
+});
+
+def('pch_smbus', {
+  name: 'SMBus řadič (B360) — čtení SPD pamětí',
+  subtitle: 'Intel datasheet 337347 + SMBus 2.0: dvouvodičová sběrnice (SMBCLK, SMBDATA, otevřený kolektor s pull-upy), 100 kHz. BIOS přes ni čte SPD EEPROM všech 4 modulů (adresy 0x50–0x53) a podle nich nastaví časování 2666 CL16. Stejnou sběrnici čte i LibreHardwareMonitor.',
+  components: [
+    blk('host', 'HOST ŘADIČ (REGISTRY)', 50, 50, [], ['TRANSAKCE'], 'BYTE / WORD / BLOCK READ', 210, 70),
+    blk('fsm', 'STAVOVÝ AUTOMAT: START · ADRESA · ACK · DATA · STOP', 320, 50, ['TRANSAKCE'], ['SCL/SDA'], 'MASTER', 270, 80),
+    blk('pins', 'SMBCLK + SMBDATA (OTEVŘENÝ KOLEKTOR)', 650, 50, ['SCL/SDA'], [], 'PULL-UPY NA DESCE', 220, 80),
+    blk('spd', 'SPD 0x50 · 0x51 · 0x52 · 0x53', 650, 170, [], [], '4 MODULY HYPERX FURY', 220, 70),
+  ],
+  wires: [w('host.TRANSAKCE', 'fsm.TRANSAKCE'), w('fsm.SCL/SDA', 'pins.SCL/SDA')],
+  drills: { host: 'cell_sram', fsm: 'cell_decoder', pins: 'AND', spd: 'cell_eeprom' },
+});
+
+def('csme12', {
+  name: 'CSME 12 — Converged Security and Management Engine',
+  subtitle: 'Intel (veřejné prezentace a výzkum Positive Technologies): od ME 11 malé x86 jádro (Minute IA, odvozené z Quarku) s vlastní ROM, SRAM a kryptografickým blokem (AES, SHA, RSA), firmware leží v oblasti CSME ve SPI flash. Běží i ve vypnutém PC z pohotovostního napájení. Na B360 bez vzdálené správy AMT; poskytuje fTPM (PTT) a Boot Guard. Vnitřní zapojení Intel nezveřejňuje.',
+  components: [
+    blk('core', 'JÁDRO MINUTE IA (x86)', 50, 50, [], ['SBĚRNICE'], 'ODVOZENÉ Z QUARKU', 210, 80),
+    blk('rom', 'ROM (ZAVADĚČ)', 320, 50, ['SBĚRNICE'], [], 'OVĚŘUJE PODPIS FIRMWARU', 190, 70),
+    blk('sram', 'SRAM CSME', 320, 150, ['SBĚRNICE'], [], 'VELIKOST NEZVEŘEJNĚNA', 190, 70),
+    blk('crypto', 'KRYPTO: AES · SHA · RSA', 570, 50, ['SBĚRNICE'], [], 'fTPM (PTT), BOOT GUARD', 220, 80),
+    blk('dma', 'DMA DO HLAVNÍ PAMĚTI', 570, 170, ['SBĚRNICE'], [], 'PŘES PCH', 220, 70),
+    blk('fuses', 'POJISTKY (KLÍČE, KONFIGURACE)', 50, 170, [], [], 'JEDNORÁZOVĚ ZAPSANÉ', 210, 70),
+  ],
+  wires: [w('core.SBĚRNICE', 'rom.SBĚRNICE'), w('core.SBĚRNICE', 'sram.SBĚRNICE'), w('core.SBĚRNICE', 'crypto.SBĚRNICE'), w('core.SBĚRNICE', 'dma.SBĚRNICE')],
+  drills: { core: 'FULL_ADDER', rom: 'cell_decoder', sram: 'cell_sram', crypto: 'XOR', dma: 'FULL_ADDER', fuses: 'cell_eeprom' },
+});
+
+def('pch_hsio', {
+  name: 'Flex I/O (HSIO) — sdílené vysokorychlostní linky B360',
+  subtitle: 'Intel datasheet 337347: 24 aktivních linek HSIO, každá je buď PCIe 3.0, SATA 6 Gb/s, nebo USB 3.1 – volí se pevně soft strapy v deskriptoru flash podle toho, co výrobce desky na linku zapojil. Která linka jde u PRIME B360-PLUS kam, je neověřené (ASUS to nezveřejňuje).',
+  components: [
+    blk('straps', 'SOFT STRAPY Z DESKRIPTORU', 50, 50, [], ['VOLBA'], 'NASTAVENO VÝROBCEM DESKY', 220, 70),
+    ...[0, 1, 2, 3].map((i) => blk(`ln${i}`, `LINKA ${i * 6}–${i * 6 + 5}: PCIe / SATA / USB 3`, 330, 50 + i * 85, ['VOLBA'], [], 'MULTIPLEXOR', 240, 70)),
+    blk('phy', 'SDÍLENÁ FYZICKÁ VRSTVA', 640, 50, [], [], 'SERDES S PLL, EKVALIZACE', 220, 70),
+  ],
+  wires: [0, 1, 2, 3].map((i) => w('straps.VOLBA', `ln${i}.VOLBA`)),
+  drills: { straps: 'cell_eeprom', ln0: 'MUX', ln1: 'MUX', ln2: 'MUX', ln3: 'MUX', phy: 'D_FF' },
+});
+
+def('pch_icc', {
+  name: 'ICC — integrovaný generátor hodin (B360)',
+  subtitle: 'Intel datasheet 337347: z krystalu na desce (kmitočet neověřen) dělá PLL referenční hodiny 100 MHz pro procesor (BCLK), PCIe sloty a M.2 a další interní takty. Hodiny reálného času RTC běží z baterie CR2032 (32,768 kHz).',
+  components: [
+    blk('xtal', 'OSCILÁTOR KRYSTALU', 50, 50, [], ['REF'], 'KRYSTAL NA DESCE', 200, 70),
+    blk('pll', 'PLL + DĚLIČKY', 320, 50, ['REF'], ['100 MHz'], 'FÁZOVÝ ZÁVĚS', 200, 70),
+    blk('out', 'VÝSTUPY 100 MHz (DIFERENCIÁLNÍ)', 580, 50, ['100 MHz'], [], 'BCLK, PCIe, M.2', 230, 70),
+    blk('rtc', 'RTC 32,768 kHz + CMOS', 320, 170, [], [], 'BATERIE CR2032', 200, 70),
+  ],
+  wires: [w('xtal.REF', 'pll.REF'), w('pll.100 MHz', 'out.100 MHz')],
+  drills: { xtal: 'NOT', pll: 'D_FF', out: 'MUX', rtc: 'FULL_ADDER' },
+});
+
+// ================================================================ čipy na desce B360-PLUS
+def('rtl8111h', {
+  name: 'Realtek RTL8111H — síťový řadič 1 Gb/s',
+  subtitle: 'Realtek: řadič Gigabit Ethernet s integrovanou fyzickou vrstvou, k PCH přes PCIe x1. MAC přenáší rámce DMA podle kruhů deskriptorů a počítá kontrolní součet FCS (CRC32) a kontrolní součty IP/TCP/UDP. PHY 1000BASE-T: 4 páry kroucené dvojlinky, kódování PAM-5 na 125 MBd, potlačení ozvěny a přeslechů v DSP, automatické křížení MDI/MDI-X. Vnitřní zapojení nezveřejněno.',
+  components: [
+    blk('pcie', 'PCIe x1 ROZHRANÍ', 50, 50, [], ['DMA'], 'K PCH', 190, 70),
+    blk('rings', 'KRUHY DESKRIPTORŮ TX / RX', 50, 160, ['DMA'], ['RÁMCE'], 'V HLAVNÍ PAMĚTI', 190, 70),
+    blk('mac', 'MAC: RÁMCE + FCS (CRC32)', 300, 50, ['RÁMCE'], ['GMII'], 'KONTROLNÍ SOUČTY IP/TCP', 220, 80),
+    blk('fifo', 'FIFO TX / RX', 300, 170, [], [], 'VYROVNÁNÍ RYCHLOSTÍ', 220, 70),
+    blk('pcs', 'PCS: KÓDOVÁNÍ PAM-5', 580, 50, ['GMII'], ['SYMBOLY'], '4 PÁRY × 125 MBd', 220, 70),
+    blk('dsp', 'DSP: POTLAČENÍ OZVĚNY + PŘESLECHŮ', 580, 150, ['SYMBOLY'], [], 'ADAPTIVNÍ FILTRY', 220, 80),
+    blk('afe', 'ANALOG: DAC / ADC + MDI-X', 580, 260, [], [], 'KONEKTOR RJ-45', 220, 70),
+  ],
+  wires: [w('pcie.DMA', 'rings.DMA'), w('rings.RÁMCE', 'mac.RÁMCE'), w('mac.GMII', 'pcs.GMII'), w('pcs.SYMBOLY', 'dsp.SYMBOLY')],
+  drills: { pcie: 'MUX', rings: 'cell_sram', mac: 'cell_parity', fifo: 'cell_sram', pcs: 'cell_decoder', dsp: 'cell_mac', afe: 'cell_lt' },
+});
+
+def('alc887', {
+  name: 'Realtek ALC887-VD2 — zvukový kodek HD Audio',
+  subtitle: 'Realtek datasheet ALC887: kodek HD Audio, 8 kanálů výstupu (7.1) přes DAC, 2 stereo ADC pro mikrofon/linku, mixéry, zesilovač sluchátek, detekce zasunutého jacku. K PCH přes linku HDA (BCLK 24 MHz). Rozlišení a odstup signálu podle datasheetu – přesná čísla neověřena.',
+  components: [
+    blk('link', 'ROZHRANÍ HDA (SDO / SDI)', 50, 50, [], ['VZORKY'], 'Z PCH B360', 200, 70),
+    blk('widgets', 'WIDGETY: VERBY → NASTAVENÍ', 50, 160, [], [], 'PROPOJENÍ UZLŮ KODEKU', 200, 70),
+    blk('dac', 'DAC 7.1 (SIGMA-DELTA)', 320, 50, ['VZORKY'], ['ANALOG'], '4 STEREO PÁRY', 200, 70),
+    blk('adc', 'ADC STEREO × 2', 320, 160, [], ['VZORKY'], 'MIKROFON, LINKA', 200, 70),
+    blk('mix', 'MIXÉRY + HLASITOST', 580, 50, ['ANALOG'], ['VÝSTUP'], '', 200, 70),
+    blk('hp', 'ZESILOVAČ SLUCHÁTEK', 580, 160, ['VÝSTUP'], [], 'JACKY VZADU A NA ČELE', 200, 70),
+    blk('jack', 'DETEKCE JACKU', 580, 270, [], [], 'ODPOROVÁ SÍŤ', 200, 70),
+  ],
+  wires: [w('link.VZORKY', 'dac.VZORKY'), w('dac.ANALOG', 'mix.ANALOG'), w('mix.VÝSTUP', 'hp.VÝSTUP')],
+  drills: { link: 'MUX', widgets: 'cell_decoder', dac: 'cell_mac', adc: 'cell_lt', mix: 'cell_mac', hp: 'cell_buck', jack: 'cell_lt' },
+});
+
+// ================================================================ periferie: USB zařízení a MCU klávesnice
+def('usb_fs_device', {
+  name: 'USB 2.0 rozhraní zařízení (full speed 12 Mb/s)',
+  subtitle: 'USB 2.0 Specification: klávesnice, myš i mikrofon jsou zařízení full speed. Diferenciální pár D+/D−, kódování NRZI s vložením nuly po 6 jedničkách, paket = SYNC + PID + data + CRC5/CRC16 + EOP. SIE skládá pakety a odpovídá ACK/NAK, endpoint 0 slouží k výčtu (deskriptory), HID data jdou přerušovacím endpointem dotazovaným každou 1 ms (1000 Hz).',
+  components: [
+    blk('phy', 'TRANSCEIVER D+ / D−', 50, 50, [], ['BITY'], 'PULL-UP 1,5 kΩ NA D+ = FULL SPEED', 220, 80),
+    blk('nrzi', 'NRZI + VKLÁDÁNÍ BITŮ', 320, 50, ['BITY'], ['PAKETY'], 'SYNC, EOP', 200, 70),
+    blk('sie', 'SIE: PID · CRC5 / CRC16 · ACK / NAK', 580, 50, ['PAKETY'], ['ENDPOINTY'], '', 240, 80),
+    blk('ep0', 'ENDPOINT 0: DESKRIPTORY', 320, 170, ['ENDPOINTY'], [], 'VÝČET PŘI PŘIPOJENÍ', 200, 70),
+    blk('ep1', 'ENDPOINT 1 IN: HID / AUDIO', 580, 170, ['ENDPOINTY'], [], 'DOTAZ KAŽDOU 1 ms', 240, 70),
+  ],
+  wires: [w('phy.BITY', 'nrzi.BITY'), w('nrzi.PAKETY', 'sie.PAKETY'), w('sie.ENDPOINTY', 'ep0.ENDPOINTY'), w('sie.ENDPOINTY', 'ep1.ENDPOINTY')],
+  drills: { phy: 'cell_lt', nrzi: 'XOR', sie: 'cell_parity', ep0: 'cell_sram', ep1: 'cell_sram' },
+});
+
+def('cortex_m0', {
+  name: 'ARM Cortex-M0 — jádro MCU klávesnice (NXP LPC11U37F)',
+  subtitle: 'ARM Cortex-M0 Technical Reference Manual: architektura ARMv6-M, instrukce Thumb, 3stupňová pipeline (fetch, decode, execute), 16 registrů r0–r15 po 32 bitech, NVIC až 32 přerušení, sběrnice AHB-Lite. LPC11U37F: 128 KB flash, USB device na čipu. Že je v klávesnici právě tento MCU, je jen z výpisu vyhledávače (TechPowerUp).',
+  components: [
+    blk('fetch', 'FETCH (32 BIT, 2 INSTRUKCE)', 50, 50, [], ['INSTR'], 'Z FLASH PŘES AHB-LITE', 210, 70),
+    blk('dec', 'DECODE THUMB', 320, 50, ['INSTR'], ['ŘÍZENÍ'], '16bitové instrukce', 190, 70),
+    blk('rf', 'REGISTRY r0–r15', 320, 160, ['ŘÍZENÍ'], ['OPERANDY'], 'SP, LR, PC', 190, 70),
+    blk('alu', 'ALU 32 BIT + POSUVNÍK', 570, 50, ['OPERANDY'], [], 'SČÍTÁNÍ, LOGIKA', 200, 70),
+    blk('mul', 'NÁSOBIČKA 32 × 32', 570, 160, ['OPERANDY'], [], 'VARIANTA PODLE VÝROBCE', 200, 70),
+    blk('nvic', 'NVIC (PŘERUŠENÍ)', 50, 160, [], [], 'USB, ČASOVAČE, GPIO', 210, 70),
+    blk('mem', 'FLASH 128 KB + SRAM', 50, 270, [], [], 'PROGRAM SKENOVÁNÍ MATICE', 210, 70),
+  ],
+  wires: [w('fetch.INSTR', 'dec.INSTR'), w('dec.ŘÍZENÍ', 'rf.ŘÍZENÍ'), w('rf.OPERANDY', 'alu.OPERANDY'), w('rf.OPERANDY', 'mul.OPERANDY')],
+  drills: { fetch: 'D_FF', dec: 'cell_decoder', rf: 'cell_sram', alu: 'FULL_ADDER', mul: 'cell_mac', nvic: 'cell_arbiter', mem: 'cell_eeprom' },
+});
+
 // dvojkliky bloků jednotek → buňky L5
 for (const sub of Object.values(UNIT_SUBCIRCUITS)) {
   for (const comp of sub.components) if (sub.drills?.[comp.id]) comp.drill = sub.drills[comp.id];

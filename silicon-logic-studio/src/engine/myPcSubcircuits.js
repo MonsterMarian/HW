@@ -641,8 +641,8 @@ def('mypc_mic', 2, {
 const SERDES = 'cell_serdes';
 const DRILLS = {
   nct6796d: { lpc: SERDES, acpi: 'cell_pwrbtn', hwm: 'cell_lt', temp: 'cell_lt', fanctl: 'cell_lt', tach: 'cell_toggle', kbc: SERDES, uart: SERDES, gpio: 'REGISTER_8BIT' },
-  mypc_board: { sio: 'nct6796d', fan: 'cell_lt', vrm: 'cell_buck', dimma: 'ddr4_8g_x8', dimmb: 'ddr4_8g_x8', x16: 'pcie3_ctrl', disp: 'gen9_display', lan: SERDES, pci: 'pci_target', sata: SERDES, usb: SERDES, m2: 'phoenix_ctl', slots: 'pcie3_ctrl', audio: 'sigma_delta', bios: 'cell_eeprom' },
-  b360_pch: { dmi: 'pcie3_ctrl', hsio: 'MUX', pcie: 'pcie3_ctrl', sata: SERDES, usb3: SERDES, usb2: SERDES, hda: SERDES, spi: SERDES, smb: SERDES, me: 'ADDER_8BIT', cnvi: SERDES, clk: 'cell_toggle' },
+  mypc_board: { sio: 'nct6796d', fan: 'cell_lt', vrm: 'cell_buck', dimma: 'ddr4_8g_x8', dimmb: 'ddr4_8g_x8', x16: 'pcie3_ctrl', disp: 'gen9_display', lan: 'rtl8111h', pci: 'pci_target', sata: 'pch_ahci', usb: 'pch_xhci', m2: 'phoenix_ctl', slots: 'pcie3_ctrl', audio: 'alc887', bios: 'cell_eeprom' },
+  b360_pch: { dmi: 'pcie3_ctrl', hsio: 'pch_hsio', pcie: 'pcie3_ctrl', sata: 'pch_ahci', usb3: 'pch_xhci', usb2: 'pch_xhci', hda: 'pch_hda', spi: 'pch_spi', smb: 'pch_smbus', me: 'csme12', cnvi: SERDES, clk: 'pch_icc' },
   cfl_die: { ring: 'cfl_ring', gt: 'gen9_gt2', pcu: 'cfl_pcu', sa: 'cfl_sa', imc: 'cfl_imc', peg: 'pcie3_ctrl', dmi: 'pcie3_ctrl', disp: 'gen9_display' },
   cfl_core: { fe: 'cell_decoder', ooo: 'cell_match', prf: 'cell_sram', p0: 'FULL_ADDER', p1: 'FULL_ADDER', p5: 'MUX', p6: 'MUX', p23: 'FULL_ADDER', p4: 'cell_sram', p7: 'FULL_ADDER', l1d: 'cell_sram' },
   mypc_gpu_board: { edge: 'pcie3_ctrl', vrm: 'cell_buck', mvdd: 'cell_buck', m0: 'ddr4_cells', m1: 'ddr4_cells', out: SERDES, fan: 'cell_lt' },
@@ -650,14 +650,14 @@ const DRILLS = {
   ampere_sm: { ic: 'cell_sram', pb0: 'cell_arbiter', pb1: 'cell_arbiter', pb2: 'cell_arbiter', pb3: 'cell_arbiter', rf: 'cell_sram', fp32: 'FULL_ADDER', fpint: 'FULL_ADDER', tc: 'cell_mac', ldst: 'FULL_ADDER', sfu: 'cell_decoder', rt: 'cell_lt', l1: 'cell_sram', tex: 'cell_mac' },
   va249_inside: { hdmi: SERDES, vga: 'sigma_delta', edid: 'cell_eeprom', psu: 'cell_buck', scaler: 'crtc', panel: 'cell_tft', led: 'cell_lt' },
   pwm_fan_inside: { drv: 'cell_buck', note: 'cell_lt' },
-  mypc_keyboard: { usb: SERDES, mcu: 'ADDER_8BIT', mx: 'cell_decoder', led: 'cell_lt' },
-  mypc_mouse: { usb: SERDES, mcu: 'ADDER_8BIT', sensor: 'cell_aps', wheel: 'cell_quad', rgb: 'cell_lt' },
+  mypc_keyboard: { usb: 'usb_fs_device', mcu: 'cortex_m0', mx: 'cell_decoder', led: 'cell_lt' },
+  mypc_mouse: { usb: 'usb_fs_device', mcu: 'ADDER_8BIT', sensor: 'cell_aps', wheel: 'cell_quad', rgb: 'cell_lt' },
   mypc_psu: { pfc: 'cell_buck', main: 'cell_buck', r12: 'cell_buck', dcdc: 'cell_buck', sb: 'cell_buck', sup: 'cell_lt', fan: 'cell_lt' },
   evo_plus_ssd: { pwr: 'cell_buck', dram: 'ddr4_cells', nand: 'cell_nand', tw: 'cell_nand', therm: 'cell_lt' },
   phoenix_ctl: { host: SERDES, cores: 'ADDER_8BIT', ftl: 'RAM', ecc: 'cell_parity', dramc: 'COMPARATOR_8BIT', ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [`ch${i}`, SERDES])) },
   fury_module: { spd: 'cell_eeprom' },
   ddr4_8g_x8: { cmd: 'cell_decoder', mr: 'REGISTER_8BIT', ref: 'ADDER_8BIT', rmux: 'MUX', rdec: 'cell_decoder', bg: 'cell_decoder', cdec: 'cell_decoder', sa: 'NOT', iog: 'REGISTER_8BIT', io: SERDES, dll: 'D_FF' },
-  mypc_mic: { cap: 'nmos_transistor', pre: 'NOT', codec: 'sigma_delta', usb: SERDES },
+  mypc_mic: { cap: 'nmos_transistor', pre: 'NOT', codec: 'sigma_delta', usb: 'usb_fs_device' },
 };
 for (const [key, map] of Object.entries(DRILLS)) {
   for (const comp of MY_PC_SUBCIRCUITS[key].components) if (map[comp.id]) comp.drill = map[comp.id];

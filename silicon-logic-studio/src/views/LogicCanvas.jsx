@@ -64,6 +64,7 @@ export function LogicCanvas({
   onDrillDown,
 }) {
   const canvasRef = useRef(null);
+  const navRef = useRef(null); // drobečková navigace + podtitulek (fitView pod ně odsadí obvod)
   const [viewState, setViewState] = useState({ x: 80, y: 70, zoom: 1.0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
@@ -115,7 +116,9 @@ export function LogicCanvas({
     const W = canvas.clientWidth || canvas.width;
     const H = canvas.clientHeight || canvas.height;
     const pad = 36;
-    const top = (hierarchyStack?.length || 1) > 1 ? 112 : 44; // místo pro HUD a drobečkovou navigaci s podtitulkem
+    // místo pro HUD a drobečkovou navigaci s podtitulkem – podle skutečné výšky banneru (dlouhý popis se zalomí)
+    const nav = navRef.current;
+    const top = (hierarchyStack?.length || 1) > 1 ? Math.max(112, nav ? nav.offsetTop + nav.offsetHeight + 14 : 0) : 44;
     const bottom = displayMode === 'schematic' ? 96 : pad; // rohové razítko schématu
     const zoom = Math.max(0.25, Math.min(1.6, Math.min((W - 2 * pad) / (x1 - x0), (H - bottom - top) / (y1 - y0))));
     setViewState({ zoom, x: (W - (x1 - x0) * zoom) / 2 - x0 * zoom, y: top + (H - top - bottom - (y1 - y0) * zoom) / 2 - y0 * zoom });
@@ -1544,7 +1547,7 @@ export function LogicCanvas({
 
       {/* Hierarchical Drill-Down Breadcrumb Navigation Bar */}
       {hierarchyStack && hierarchyStack.length > 1 && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-auto">
+        <div ref={navRef} className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-auto">
           <div className="flex items-stretch bg-(--bg-dark) border border-gray-700 font-mono text-[11px] uppercase tracking-[0.1em]">
             {/* Level Up Button */}
             <button

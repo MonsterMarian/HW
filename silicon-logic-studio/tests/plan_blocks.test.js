@@ -1,7 +1,7 @@
 // Bloky z PLAN_PROJEKTU.md §4.3–4.4: aritmetické akcelerátory, MMIO dekodér, řadič přerušení, DMA, režimy monitoru.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { LogicEngine, WireState, screenInfo, screenRgb, formatProbe } from '../src/engine/logicEngine.js';
+import { LogicEngine, WireState, screenInfo, screenRgb, formatProbe, findEdge, memory256 } from '../src/engine/logicEngine.js';
 
 const part = (id, type, extra = {}) => ({ id, type, x: 0, y: 0, inputs: {}, outputs: {}, ...extra });
 const sw = (id, v = 0) => part(id, 'INPUT', { outputs: { out: v } });
@@ -218,5 +218,52 @@ describe('zbytky z review knihovny', () => {
     assert.equal(out(e, 'fa').cout, 0);
     set(e, 'b', 1);
     assert.equal(out(e, 'fa').cout, X);
+  });
+});
+
+describe('logický analyzátor (PLAN_PROJEKTU §6: měření zpoždění, hledání hran)', () => {
+  it('každý vzorek má simulovaný čas, hrany se dají dohledat oběma směry', () => {
+    const e = new LogicEngine();
+    e.loadCircuit({ components: [{ id: 'clk', type: 'CLOCK', x: 0, y: 0, inputs: {}, outputs: { out: 0 }, freqHz: 1e6 }], wires: [] });
+    for (let i = 0; i < 10; i++) e.stepClock();
+    const hist = e.waveformHistory.get('clk.out');
+    assert.equal(hist.length, 10);
+    assert.equal(e.waveformTimes.length, 10);
+    assert.equal(e.waveformCount, 10);
+    // hodiny 1 MHz: hrana každých 500 ns, mezi dvěma náběžnými hranami přesně jedna perioda
+    assert.equal(e.waveformTimes[9] - e.waveformTimes[7], 1000);
+    const rise = findEdge(hist, 0, 1);
+    assert.equal(hist[rise - 1] !== hist[rise], true);
+    assert.equal(findEdge(hist, rise, 1), rise + 1);
+    assert.equal(findEdge(hist, rise + 1, -1), rise);
+    assert.equal(findEdge([0, 0, 0], 0, 1), -1);
+    assert.equal(findEdge(hist, 0, -1), -1);
+    e.maxWaveformPoints = 10;
+    for (let i = 0; i < 3; i++) e.stepClock();
+    assert.deepEqual([e.waveformTimes.length, hist.length], [10, 10], 'časy se zkracují spolu s průběhy');
+    assert.equal(e.waveformCount, 13);
+  });
+});
+
+describe('editace paměti za běhu (PLAN_PROJEKTU §4.2)', () => {
+  it('bajt přepsaný v paměti RAM je hned na výstupu, i když hodiny stojí', () => {
+    const e = new LogicEngine();
+    e.loadCircuit({
+      components: [
+        { id: 'a', type: 'INPUT', x: 0, y: 0, inputs: {}, outputs: { out: 5 } },
+        { id: 'ram', type: 'RAM', x: 200, y: 0, inputs: {}, outputs: {} },
+        { id: 'p', type: 'PROBE', x: 400, y: 0, inputs: { in: 'Z' }, outputs: {} },
+      ],
+      wires: [{ from: { id: 'a', pin: 'out' }, to: { id: 'ram', pin: 'addr' } }, { from: { id: 'ram', pin: 'dout' }, to: { id: 'p', pin: 'in' } }],
+    });
+    e.propagate();
+    const ram = e.components.get('ram');
+    assert.equal(e.components.get('p').inputs.in, 0);
+    // totéž dělá components/MemoryEditor.jsx
+    ram.memory = memory256(ram.memory, 0);
+    ram.memory[5] = 0xAB;
+    e.propagate();
+    assert.equal(e.components.get('p').inputs.in, 0xAB);
+    assert.equal(ram.memory.length, 256);
   });
 });

@@ -201,8 +201,8 @@ def('cell_toggle', 4, {
 });
 
 def('cell_pwrbtn', 4, {
-  name: 'Super I/O — logika tlačítka POWER',
-  subtitle: 'Super I/O běží z +5VSB i ve vypnutém PC. Každý stisk tlačítka (náběžná hrana) přepne stav; když je +5VSB v pořádku a stav „zapnuto“, stáhne PS_ON# na nulu a zdroj naběhne. Skutečný čip má navíc 4s vypnutí a ACPI stavy S3–S5.',
+  name: 'Logika tlačítka POWER (PCH + Super I/O)',
+  subtitle: 'Běží z +5VSB i ve vypnutém PC. Každý stisk tlačítka (náběžná hrana) přepne stav; když je +5VSB v pořádku a stav „zapnuto“, jde PS_ON# na nulu a zdroj naběhne. Na skutečné desce drží stav PCH B360: přijme PWRBTN#, uvolní SLP_S3# a teprve ten přes Super I/O stáhne PS_ON#. Navíc má 4s vypnutí a ACPI stavy S3–S5; schéma to spojuje do jednoho klopného obvodu.',
   components: [
     inp('btn', 'TLAČÍTKO (HRANA)', 50, 80), inp('sb', '+5VSB V POŘÁDKU', 50, 300),
     c('ff', 'D_FF', 'STAV ZAPNUTO', 220, 70), c('and', 'AND', 'POVOLENÍ', 380, 200), c('inv', 'NOT', 'AKTIVNÍ V NULE', 520, 205),

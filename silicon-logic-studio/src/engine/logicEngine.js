@@ -100,6 +100,12 @@ export function screenRgb(comp, p) {
 }
 
 // ---- sonda: zobrazení hodnoty sběrnice (PLAN §5.4)
+/** Logic analyzer: index of the nearest sample after (dir = 1) or before (dir = -1) `from` where the signal changed, or -1. */
+export function findEdge(hist, from, dir) {
+  for (let i = from + dir; i > 0 && i < hist.length; i += dir) if (hist[i] !== hist[i - 1]) return i;
+  return -1;
+}
+
 export const PROBE_FORMATS = ['DEC', 'HEX', 'BIN', 'ASCII'];
 export function formatProbe(v, format = 'DEC') {
   if (v === undefined || v === null) return '-';
@@ -111,7 +117,7 @@ export function formatProbe(v, format = 'DEC') {
 }
 
 // Paměť 256 × 8: uložené obvody ji nesou jako krátké pole (JSON); zbytek je smazaný stav (EPROM/EEPROM = 0xFF)
-function memory256(m, blank) {
+export function memory256(m, blank) {
   if (m instanceof Uint8Array && m.length === 256) return m;
   const full = new Uint8Array(256).fill(blank);
   full.set(Array.from(m || []).slice(0, 256));
@@ -183,6 +189,8 @@ export class LogicEngine {
     this.simTime = 0; // simulated time in nanoseconds
     this.tickCount = 0; // processed clock events
     this.waveformHistory = new Map();
+    this.waveformTimes = []; // simulated time (ns) of every recorded sample, aligned with the end of each history
+    this.waveformCount = 0; // samples recorded so far (number of the newest sample + 1)
     this.maxWaveformPoints = 120;
     this.listeners = new Set();
     this.thermalMap = new Map(); // componentId -> °C (rises with switching activity)
@@ -922,6 +930,9 @@ export class LogicEngine {
 
   // ---------------------------------------------------------------- instruments
   recordWaveforms() {
+    this.waveformTimes.push(this.simTime);
+    if (this.waveformTimes.length > this.maxWaveformPoints) this.waveformTimes.shift();
+    this.waveformCount++;
     for (const [id, comp] of this.components.entries()) {
       for (const [pin, val] of Object.entries(comp.outputs)) {
         const key = `${id}.${pin}`;
@@ -964,6 +975,8 @@ export class LogicEngine {
     this.wires = [];
     this.thermalMap.clear();
     this.waveformHistory.clear();
+    this.waveformTimes.length = 0;
+    this.waveformCount = 0;
     this.tickCount = 0;
     this.simTime = 0;
     this.clockState = 0;

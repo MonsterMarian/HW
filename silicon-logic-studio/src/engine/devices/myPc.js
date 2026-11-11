@@ -35,7 +35,7 @@ export const MY_PC_DEVICES = {
 
   // ASUS PRIME B360-PLUS: tlačítko, VRM (VCORE, VCCSA/IO), VDDQ pro DIMM, sloty, PCH B360 (M.2, USB), hlavičky ventilátorů
   MYPC_BOARD: {
-    meta: { ref: 'MB1', part: 'ASUS PRIME B360-PLUS', pkg: 'ATX', desc: 'Super I/O z +5VSB hlídá tlačítko a stáhne PS_ON#. Po PWR_OK + EPS 12 V naběhne VRM CPU a VDDQ pamětí, PLTRST# uvolní CPU. PCH B360 je přes DMI 3.0 x4 na CPU a dává M.2_2 (x4) a USB.' },
+    meta: { ref: 'MB1', part: 'ASUS PRIME B360-PLUS', pkg: 'ATX', desc: 'Tlačítko přijme PCH (běží z pohotovostní větve +5VSB), uvolní SLP_S3# a Super I/O stáhne PS_ON#; model to má jako jeden krok desky. Po PWR_OK + EPS 12 V naběhne VRM CPU a VDDQ pamětí, PCH uvolní PLTRST# a tím CPU. PCH B360 je přes DMI 3.0 x4 na CPU a dává M.2_2 (x4) a USB.' },
     pins: {
       inputs: {
         'PANEL PWRBTN': 0, '24P +12V': Z, '24P +5V': Z, '24P +3,3V': Z, '24P COM': Z, '9 +5VSB': Z, '8 PWR_OK': Z,

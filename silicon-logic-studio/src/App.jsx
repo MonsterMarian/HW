@@ -10,6 +10,7 @@ import { PhysicsView } from './views/PhysicsView';
 import { EconomicView } from './views/EconomicView';
 import { AnatomyView } from './views/AnatomyView';
 import { WaveformViewer } from './components/WaveformViewer';
+import { MemoryEditor } from './components/MemoryEditor';
 import { AsmEditor } from './components/AsmEditor';
 import { AiPanel } from './components/AiPanel';
 import { GalleryDrawer } from './components/GalleryDrawer';
@@ -204,6 +205,9 @@ export default function App() {
               onNavigateUp={handleNavigateUp}
               onDrillDown={handleDrillDown}
             />
+          )}
+          {selectedComponentId && (viewMode === 'schematic' || viewMode === 'hardware') && (
+            <MemoryEditor key={selectedComponentId} engine={engine} compId={selectedComponentId} />
           )}
           {drillHint && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-(--bg-dark) border border-(--accent-amber) text-(--text-light) text-xs font-mono pointer-events-none">

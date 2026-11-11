@@ -994,7 +994,7 @@ export const NV1_DEVICES = {
   },
 
   AD1845: {
-    meta: { ref: 'U7', part: 'Analog Devices AD1845JP SoundPort codec', pkg: 'PLCC-68', desc: '16bitový stereo kodek 48 kHz, registry kompatibilní s AD1848. Čtyři adresy: 0 index, 1 data registru, 2 stav, 3 data vzorku (PIO). NV1 ho ovládá jen strobe AUR#/AUW# po 8bitové sběrnici; DRQ/DACK ani přerušení kodeku karta nepoužívá. Takt bere z audio PLL RAMDACu (ACLK), vlastní krystal nemá.' },
+    meta: { ref: 'U6', part: 'Analog Devices AD1845JP SoundPort codec', pkg: 'PLCC-68', desc: '16bitový stereo kodek 48 kHz, registry kompatibilní s AD1848. Čtyři adresy: 0 index, 1 data registru, 2 stav, 3 data vzorku (PIO). NV1 ho ovládá jen strobe AUR#/AUW# po 8bitové sběrnici; DRQ/DACK ani přerušení kodeku karta nepoužívá. Takt bere z audio PLL RAMDACu (ACLK), vlastní krystal nemá.' },
     pins: {
       inputs: { xtal: Z, d: Z, a: 0, wr_n: 1, rd_n: 1, pd_n: 1, lin_l: Z, lin_r: Z, mic: Z },
       outputs: { d: Z, lout: 0, rout: 0 },

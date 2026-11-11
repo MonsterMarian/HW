@@ -22,14 +22,14 @@ až k atomům křemíku, ve 2D (schéma, plošný spoj) i ve 3D.
 | U23, U24 | 2× 256K×16 FPM DRAM v paticích: banka 1 na sběrnici SDB (rozšíření na 2 MB) | SOJ-40 |
 | U25–U28 | 4× Pericom PI5C3245Q, sběrnicový spínač mezi MD a SDB (řídí ho `EN64`) | QSOP-20 |
 | U34 | NVIDIA nvSGP, rozhraní pro ovladače Sega Saturn | PLCC-44 |
-| U7 | Analog Devices AD1845 kodek | PLCC-68 |
+| U6 | Analog Devices AD1845 kodek | PLCC-68 |
 | U12 | video BIOS EPROM 32 KB | DIP-28 |
 | Y1 | jediný krystal 12,096 MHz, reference pro 3 PLL | HC-49/U |
 | J5, J6 | headery 2×5 PORT A / PORT B pro ovladače Saturn | lišta 2,54 mm |
 | J1 | PCI 2.0, 32 bit, 5 V (klíč na kontaktech 50/51, jazýček 79,14 mm) | hrana karty |
 | P1, P2 + 3 jacky | modulární zásuvka 10P10C (PC joystick), VGA DE-15, mic, line in, line out | bracket |
 
-Označení U1, U2 a U7 nemá zdroj (na fotografii není čitelné). Rozmístění součástek je odměřené z fotografie
+Označení U1 a U2 nemá zdroj (na fotografii není čitelné). Rozmístění součástek je odměřené z fotografie
 karty (vgamuseum.info), s přesností asi 1,5 mm.
 
 Mimo kartu: hostitelské PC, VGA monitor, reproduktory a Sega Saturn pad.
@@ -131,6 +131,9 @@ V paletě **GPU**: násobička 8×8, barrel shifter, FPU half-precision (IEEE 75
 (0xF000–0xFFFF), řadič DMA (kopíruje blok RAM → VRAM, po dokončení IRQ) a řadič přerušení. Virtuální monitor má
 rozlišení 64×64, 160×120 nebo 320×240, režimy 1 bit / 8bit paleta / RGB565 a výstupy H-Sync a V-Sync.
 Klik na sondu přepíná DEC / HEX / BIN / ASCII, `Tab` přepíná SCHEMATIC ↔ DIE 3D, v liště je půlkrok a krok o celý takt.
+Vybraná RAM nebo ROM ukáže vpravo nahoře živý šestnáctkový výpis 256 bajtů; klik na bajt ho přepíše i za běhu.
+Logický analyzátor (WAVE) má dva měřicí kurzory: klik do průběhu položí A, další klik B, nahoře je simulovaný čas obou
+a jejich rozdíl; šipky HRANA posunou kurzor na nejbližší hranu kanálu, do kterého se kliklo.
 Stack zůstává React + Electron + JS engine; z plánu chybí RC zpoždění, difuze tepla, JIT a skutečný AI copilot.
 
 ## Spuštění

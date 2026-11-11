@@ -7,7 +7,7 @@
 // Wiring follows the STG2000 datasheet (Sep 1996): 32-bit MD bus with two interleaved DRAM banks, the second bank
 // behind a bus switch (EN64), pixels loaded from both banks straight into the 64-bit port of the Palette-DAC,
 // BIOS ROM and DAC registers on the same MD bus, Saturn pads through the game port of the DAC and the nvSGP chip.
-// Reference designators without a source (not readable on the photo): U1, U2, U7.
+// Reference designators without a source (not readable on the photo): U1, U2.
 
 const c = (id, type, label, x, y, extra = {}, [sx, sy] = []) => ({ id, type, label, x, y, sx, sy, inputs: {}, outputs: {}, ...extra });
 const w = (fromId, fromPin, toId, toPin) => ({ from: { id: fromId, pin: fromPin }, to: { id: toId, pin: toPin } });
@@ -31,7 +31,7 @@ export const NV1_BOARD = {
     ...DRAMS.map((d) => c(`dram${d.k}`, 'DRAM_256K16', `${d.ref} 256K×16 ${d.bus}`, d.x, d.y, {}, [960, -430 + d.k * 140])),
     c('bus_switch', 'BUS_SWITCH_32', 'U25–U28 PI5C3245Q', 549, 113, {}, [1200, -290]),
     c('bios_rom', 'EPROM_27C256', 'U12 VIDEO BIOS 27C256', 621, 199, {}, [960, 140]),
-    c('codec', 'AD1845', 'U7 AD1845JP', 310, 247, {}, [960, 470]),
+    c('codec', 'AD1845', 'U6 AD1845JP', 310, 247, {}, [960, 470]),
     c('sega_asic', 'SEGA_ASIC', 'U34 nvSGP', 415, 115, {}, [960, 700]),
     c('j5_sega_a', 'SEGA_HEADER', 'J5 PORT A', 386, 57, {}, [1260, 750]),
     c('j6_sega_b', 'SEGA_HEADER', 'J6 PORT B', 448, 57, {}, [1260, 840]),

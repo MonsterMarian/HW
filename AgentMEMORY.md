@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-11 17:19
+Aktualizováno: 2026-11-11 17:33
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -138,8 +138,11 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   (MONO / INDEXED8 / RGB565) a výstupy hsync/vsync (skener = 1 pixel na takt); kreslí ho `views/canvas/screen.js`
   (2D i 3D). Sonda: klik přepíná DEC/HEX/BIN/ASCII (`comp.format`). Tab = SCHEMATIC ↔ DIE 3D. Lišta: ½ STEP a CYCLE.
   Testy `tests/plan_blocks.test.js`.
-- Z plánu NENÍ: RC zpoždění hran, 2D difuze tepla + bitové chyby z přehřátí, WebGPU/SDF dráty, JIT/bit-slicing,
-  Monaco, editace RAM za běhu, měření zpoždění ve waveformu, skutečný AI copilot (aiCopilot.js = klíčová slova → presety).
+- Doplněno 11. 11. odpoledne: editace paměti za běhu (`components/MemoryEditor.jsx`, ukáže se u vybrané RAM/ROM ve SCHEMATIC/PCB)
+  a měření v logickém analyzátoru (`WaveformViewer.jsx`: kurzory A/B, `engine.waveformTimes`/`waveformCount`, `findEdge`).
+  Analyzátor vzorkuje jednou za krok STEP nebo jednou za snímek při běhu, takže Δ mezi kurzory je přesná jen při krokování.
+- Z plánu NENÍ a nebude (rozhodnuto): RC zpoždění hran, 2D difuze tepla + bitové chyby z přehřátí, WebGPU/SDF dráty,
+  JIT/bit-slicing, Monaco, skutečný AI copilot (aiCopilot.js = klíčová slova → presety).
 - Past: Bash nástroj tu startuje 30–120 s → používat PowerShell. Skripty, které přepisují soubory, musí zachovat CRLF
   (Toolbar.jsx, boardLayout.js, LogicCanvas.jsx jsou CRLF).
 
@@ -162,7 +165,7 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - Co fotka ukazuje a model NEMÁ: DRAM jsou Hyundai HY514260B (JC-70 připájené, JC-60 v paticích) – model má obecné
   256K×16; stabilizátor LM2941CT (U18, TO-220 naležato vpravo dole), U35/U36 (dvě širší pouzdra mezi zásuvkou a RAMDACem),
   EEPROM 93C46, 2× OZ, CD audio J4/J12; levý dolní roh desky sahá níž (jacky jsou proto v modelu o 2–3 mm výš).
-  Nesimuluje se zachycení MD[7:0] při RST#. Označení U1/U2/U7 a pořadí jacků nemají spolehlivý zdroj.
+  Nesimuluje se zachycení MD[7:0] při RST#. Označení U1/U2 a pořadí jacků nemají spolehlivý zdroj (kodek je U6 – čitelné na zvětšené fotce).
 - Kusovník: nové položky `busswitch`, `nvsgp`, `hdr2x5`, `xtal_12` (`xtal_14` zrušen).
 
 ## Review ostatních projektů (2026-11-11)
@@ -175,8 +178,7 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   výchozí hodnotu z PRIMITIVE_PINS, odpojený drát se na ni vrací, plovoucí síť (odpojený třístavový budič) = Z → hradla X.
   Smazaná ROM čte 0xFF, VIRTUAL_SCREEN bere jen tolik bitů souřadnice, kolik potřebuje (64 → 6). `verifyCircuit`
   v aiCopilot.js opravdu simuluje (ustálení + zkraty), funkci neověřuje. Assembler hlásí chyby rozsahu (LDI jen 0–3).
-- Nedořešeno z review knihovny: SR latch po zakázaném stavu skončí 1/1 místo X; DEMUX nemá drill-down;
-  primitivní FULL_ADDER je s X pesimističtější než hradlový model.
+- Nedořešeno z review knihovny: primitivní FULL_ADDER je s X pesimističtější než hradlový model (SR latch → X a DEMUX do hloubky jsou hotové).
 ## Další kroky / známé vady
 - Nabídky stárnou (inzeráty z Bazoše zmizí) – při další
   práci přerešeršovat. eBay/Alza/Heureka blokují stahování (403): jejich ceny jsou jen z výpisu vyhledávače.
@@ -231,3 +233,4 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - 2026-11-11 12:32 — „vyřeš konflikt a dej to do mainu“ → rebase na 8f1587a (MŮJ PC, L1–L11), konflikty aiCopilot.js / models.js / AgentMEMORY vyřešeny, 257/257 testů.
 - 2026-11-11 13:03 — „dořeš zbytky“, pak „zastav a sepiš plán“ → review MŮJ PC + L7–L11, PCI dvě funkce, kodek PIO, schémata bloků z plánu, ukázka DMA/IRQ; přestavba paměťové sběrnice karty zastavena ve fázi návrhu → docs/PLAN_DOKONCENI_2026-11-11.md; 274/274 testů.
 - 2026-11-11 17:19 — „pokračuj s modelováním a dalšími věcmi z plánu“ → přestavba karty NV1 podle datasheetu hotová (sběrnice MD, dvě banky, spínač EN64, pixely do DAC, ROM a registry DAC na MD, game port přes DAC + nvSGP, krystal 12,096 MHz), rozmístění z fotky, 2D/3D/hierarchie/kusovník, engine bez prázdných kroků; 278/278 testů.
+- 2026-11-11 17:33 — pokračování téhož zadání → nabídky nových dílů karty (rešerše), kodek = U6, popisy zapnutí MŮJ PC (PCH → SLP_S3# → PS_ON#), z původního plánu editor paměti RAM/ROM a měření v logickém analyzátoru; 280/280 testů.

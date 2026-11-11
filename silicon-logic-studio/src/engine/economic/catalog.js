@@ -23,8 +23,8 @@ const P100_PC_ITEMS = [
   },
   {
     id: 'p100', name: 'NVIDIA Tesla P100 16 GB PCIe', part: 'GP100 Pascal, 16 GB HBM2 732 GB/s, pasivní, bez video výstupů (PCIe, ne SXM2!)',
-    qty: 2, dims: [267, 111.15, 37], dimsSrc: 'ověřeno: NVIDIA PB-08248 + PNY product brief, dual slot', model: { kind: 'tesla' },
-    note: 'Do Dellu se samotná karta vejde: délka 267 z max. 312 mm, výška 111,15 z max. 111,3 mm. Napájí se 8pinovým EPS (CPU) konektorem na čele karty, ne PCIe! V sestavě omezené na 150 W (nvidia-smi -pl 150).',
+    qty: 2, dims: [267, 111.15, 37], dimsSrc: 'ověřeno: NVIDIA PB-08248 obr. 2 (266,7 × 111,15 mm, dual slot); tloušťka 37 mm je odhad', model: { kind: 'tesla' },
+    note: 'Do Dellu se samotná karta vejde: délka 266,7 z max. 312 mm, výška 111,15 mm (plná výška PCIe). Váží 1177 g, chce průtok aspoň 12 CFM (26 CFM při 45 °C na vstupu), GPU zpomaluje při 82 °C a vypíná při 85 °C (PB-08248). Napájí se 8pinovým EPS (CPU) konektorem na čele karty, ne PCIe! V sestavě omezené na 150 W (nvidia-smi -pl 150).',
   },
   {
     id: 'shroud', name: 'Adaptér chlazení (shroud) pro P100', part: 'Plastový kryt pro radiální ventilátor 97 × 33 mm, šrouby a klíč',
@@ -34,7 +34,7 @@ const P100_PC_ITEMS = [
   {
     id: 'blower', name: 'Radiální ventilátor 9733 (Delta BFB1012VH)', part: '97 × 94 × 33 mm, 12 V, 4 pin – ke každému adaptéru jeden',
     qty: 2, dims: [97, 94, 33], dimsSrc: 'ověřeno: 97 × 94 × 33 mm (Newegg, Sensdar)', model: { kind: 'blower' },
-    note: 'Bere 1,8 A při 12 V. Zapoj do regulátoru TD404, ne do desky.',
+    note: 'Bere 1,5 A při 12 V (datasheet Delta: 18 W, 4500 ot/min, 38 CFM; na štítku 1,80 A). Zapoj do regulátoru TD404, ne do desky. Verze bez přípony má jen 2 vodiče – kup PWM variantu se 4 piny.',
   },
   {
     id: 'k620', name: 'NVIDIA Quadro K620 2 GB', part: 'Low profile, single slot, DVI-I + DisplayPort, 45 W bez přídavného napájení',
@@ -47,23 +47,24 @@ const P100_PC_ITEMS = [
     note: 'Místo NVMe s redukcí: v T5810 pro redukci nezbývá slot (jediný volný slot 1 má K620) a ve videu NVMe není. Do 3,5" rámečku Dellu se 2,5" disk šroubuje přímo (manuál Dell), na desce je 6× SATA 6 Gb/s. Model 22 GB se načte asi za 40 s.',
   },
   {
-    id: 'psu2', name: 'Druhý zdroj Seasonic Core GX-650', part: '650 W 80+ Gold, plně modulární, 150 × 86 × 140 mm (nástupce Focus GX-650)',
-    qty: 1, dims: [150, 140, 86], dimsSrc: 'ověřeno: ATX 150 × 86 × 140 mm (Seasonic Focus GX)', model: { kind: 'psu' },
-    note: 'Jako ve videu napájí jen druhou P100 (první jede ze zdroje Dellu přes jeho 2× 6 pin). Sám se nezapne, potřebuje Add2PSU.',
+    id: 'psu2', name: 'Druhý zdroj Seasonic Core GX-650', part: '650 W 80+ Gold, plně modulární, 150 × 86 × 140 mm (řada Core GX ATX 3, 2024)',
+    qty: 1, dims: [150, 140, 86], dimsSrc: 'ověřeno: 150 × 86 × 140 mm (Geizhals, Mironet)', model: { kind: 'psu' },
+    note: 'Jako ve videu napájí jen druhou P100 (první jede ze zdroje Dellu přes jeho 2× 6 pin). Sám se nezapne, potřebuje Add2PSU. Má jen jeden PCIe kabel se dvěma konektory 6+2 (a 12V-2x6): oba jdou do redukce, což při limitu 150 W stačí; +12 V 54 A.',
   },
   {
     id: 'add2psu', name: 'Add2PSU modul', part: 'Sepne druhý zdroj současně s PC (24pinová zásuvka, vstup Molex/SATA, relé)',
     qty: 1, dims: [70, 30, 17], dimsSrc: 'ověřeno: ~70 × 30 mm (prodejci ±1 cm), výška odhad', model: { kind: 'add2psu' },
+    note: 'Originál má vstup 4pin Molex. Zdroj Dellu má jen SATA napájení, takže je potřeba redukce SATA → Molex, nebo verze modulu se SATA vstupem.',
   },
   {
     id: 'eps_cable', name: 'Redukce 2× PCIe 8 pin → EPS 8 pin', part: 'NVIDIA 030-0571-000, ze dvou PCIe kabelů zdroje udělá 1× EPS pro P100',
-    qty: 2, dims: [140, 50, 15.1], dimsSrc: 'ověřeno: kabel 10 cm (gekko), Mini-Fit Jr 18 × 15,1 × 19,6 mm', model: { kind: 'epsCable' },
-    note: 'KRITICKÉ: PCIe a EPS mají +12 V a zem prohozené. Kabel PCIe zapojený přímo do P100 zkratuje zdroj nebo kartu. Redukce bere i 2× 6 pin (NVIDIA PB-08248 tab. 8) – tak se připojí první karta k Dellu.',
+    qty: 2, dims: [140, 50, 15.1], dimsSrc: 'ověřeno: vodiče 70 ± 20 mm (NVIDIA PB-08248 obr. 4), Mini-Fit Jr 18 × 15,1 × 19,6 mm; celek 120–140 mm', model: { kind: 'epsCable' },
+    note: 'KRITICKÉ: PCIe a EPS mají +12 V a zem prohozené. Kabel PCIe zapojený přímo do P100 zkratuje zdroj nebo kartu. Redukce bere i 2× 6 pin (NVIDIA PB-08248 tab. 8, kabely 6 pin mají podle NVIDIA unést 120 W) – tak se připojí první karta k Dellu.',
   },
   {
     id: 'pwm_ctrl', name: 'PWM regulátor s knoflíkem napájený ze SATA (ModDIY TD404)', part: '4 porty 4 pin PWM, napájení SATA 12 V, max. 60 W, knoflík 0–100 %',
     qty: 1, dims: [63, 32, 20.3], dimsSrc: 'ověřeno: ModDIY 63 × 32 × 20,3 mm (s knoflíkem)', model: { kind: 'pwmController' },
-    note: 'Ventilátory NEZAPOJUJ do desky Dellu: konektory ventilátorů na desce T5810 jsou proprietární (jiné zapojení pinů) a dva BFB1012VH berou 2 × 1,8 A = 3,6 A, což jeden konektor na desce nesnese. Regulátor se napájí SATA kabelem z druhého zdroje a utáhne 2× 9733 + 2× P12 (~3,8 A z 5 A).',
+    note: 'Ventilátory NEZAPOJUJ do desky Dellu: deska T5810 má 3× 4pin pro systémové ventilátory a nestandardní 5pin pro CPU/HDD (manuál Dell, tab. 30), zapojení pinů Dell neuvádí, a dva BFB1012VH berou 2 × 1,5 A = 3,0 A (podle štítků 3,6 A), což jeden konektor na desce nesnese. Regulátor se napájí SATA kabelem z druhého zdroje a utáhne 2× 9733 + 2× P12 (~3,2 A typicky, 3,8 A podle štítků, z 5 A).',
   },
   {
     id: 'paste', name: 'Teplovodivá pasta Arctic MX-6 4 g', part: 'Na přepastování obou GP100 (původní pasta z roku 2016 je vyschlá)',

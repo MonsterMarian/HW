@@ -19,7 +19,7 @@ const def = (key, sub) => { PC_SUBCIRCUITS[key] = { key, level: 2, ...sub }; };
 // ---------------------------------------------------------------- redukce NVIDIA 030-0571-000, pin po pinu
 def('eps_adapter_wiring', {
   name: 'NVIDIA 030-0571-000 — 2× PCIe 8 pin → EPS 8 pin',
-  subtitle: 'Výkres NVIDIA PB-08248 obr. 4. P2/P3 = PCIe ze zdroje, P1 = EPS do karty. +12 V z pinů 1–3 jde na EPS 5–8; zem 5–8 a Sense na EPS 1–4. Pozor: PCIe kabel přímo do EPS = +12 V na zem karty. Kabel 6 pin (Dell) obsadí pozice 1–3 a 5–7 – odvozeno, PB-08248 tab. 8 2× 6 pin povoluje.',
+  subtitle: 'Výkres NVIDIA PB-08248 obr. 4. P2/P3 = PCIe ze zdroje, P1 = EPS do karty. +12 V z pinů 1–3 jde na EPS 5–8; zem 5–8 a Sense na EPS 1–4. Pozor: PCIe kabel přímo do EPS = +12 V na zem karty. Kabel 6 pin (Dell) obsadí pozice 1–3 a 5–7 – odvozeno; PB-08248 tab. 8 2× 6 pin povoluje, ale žádá kabel 6 pin dimenzovaný na 120 W (běžná specifikace je 75 W).',
   components: [
     c('p2', 'CONN_PCIE8', 'P2 PCIe 8 pin (kabel zdroje 1)', 60, 50),
     c('p3', 'CONN_PCIE8', 'P3 PCIe 8 pin (kabel zdroje 2)', 60, 330),
@@ -38,7 +38,7 @@ def('eps_adapter_wiring', {
 // ---------------------------------------------------------------- Add2PSU: relé spíná PS_ON# druhého zdroje
 def('add2psu_inside', {
   name: 'Add2PSU — synchronní zapnutí druhého zdroje',
-  subtitle: 'Patent US8878390 + recenze LegitReviews: na desce je jediné relé Golden GB-1C12L, spouštění 4pin Molexem z prvního zdroje, 24pin do druhého. Že kontakt spíná pin 16 PS_ON# na COM, je odvozené z ATX specifikace.',
+  subtitle: 'Patent US8878390 + recenze LegitReviews: na desce je jediné relé Golden GB-1C12L, spouštění 4pin Molexem z prvního zdroje (Dell má jen SATA napájení → redukce SATA → Molex, nebo klon se SATA vstupem), 24pin do druhého. Že kontakt spíná pin 16 PS_ON# na COM, je odvozené z ATX specifikace.',
   components: [
     c('v12', 'INPUT', 'Molex pin 1 +12 V (zdroj 1)', 50, 60, { outputs: { out: 0 } }),
     c('g1', 'GND', 'Molex pin 2 GND (zdroj 1)', 60, 240),
@@ -85,7 +85,7 @@ def('atx_psu_inside', {
     blk('dcdc', 'DC-DC 12 → 5 V / 3,3 V', 770, 200, ['+12V'], ['+5V', '+3,3V'], 'DCEŘINÁ DESKA', 170, 100, { drill: 'psu_secondary' }),
     blk('sb', 'POHOTOVOSTNÍ ZDROJ +5VSB', 290, 230, ['~380 V DC'], ['+5VSB'], 'DVOJKLIK → SOUČÁSTKY', 190, 90, { drill: 'psu_standby' }),
     blk('sup', 'SUPERVIZOR (PS_ON#, PWR_OK, OCHRANY)', 530, 230, ['PS_ON#', '+5VSB'], ['ŘÍZENÍ', 'PWR_OK'], 'OVP 13,4 / 5,74 / 3,76 V', 200, 100, { drill: 'psu_secondary' }),
-    blk('mod', 'MODULÁRNÍ PANEL', 530, 400, ['+12V', '+5V', '+3,3V', 'PWR_OK'], ['24 PIN', '2× CPU 8 PIN', '4× PCIe 8 PIN', 'SATA/MOLEX'], '24 PIN, CPU, PCIe, SATA, MOLEX', 220, 130),
+    blk('mod', 'MODULÁRNÍ PANEL', 530, 400, ['+12V', '+5V', '+3,3V', 'PWR_OK'], ['24 PIN', '2× CPU 8 PIN', '2× PCIe 6+2, 12V-2x6', 'SATA/MOLEX'], '24 PIN, CPU, PCIe, SATA, MOLEX', 220, 130),
   ],
   wires: [
     w('emi.AC', 'pfc.AC'), w('pfc.~380 V DC', 'main.~380 V DC'), w('pfc.~380 V DC', 'sb.~380 V DC'),

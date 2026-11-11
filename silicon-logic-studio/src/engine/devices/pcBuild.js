@@ -24,7 +24,7 @@ const cablePins = (c) => ({ [`${c}1-3 +12V`]: Z, [`${c}4-8 GND`]: 0 });
 export const PC_DEVICES = {
   // Dell T5810 jako celek: vypínač → vestavěný zdroj 685 W → SATA napájení (pro Add2PSU a regulátor)
   DELL_T5810: {
-    meta: { ref: 'PC1', part: 'Dell Precision T5810 (deska C612 + zdroj 685 W)', pkg: 'TOWER', desc: 'Vypínač zapne vestavěný zdroj: SATA napájí Add2PSU, 2× PCIe 6 pin (přes PSU extended card, Dell KB 000140822) napájí kartu G1 jako ve videu. Grafika max. 225 W na kartu.' },
+    meta: { ref: 'PC1', part: 'Dell Precision T5810 (deska C612 + zdroj 685 W)', pkg: 'TOWER', desc: 'Vypínač zapne vestavěný zdroj: SATA napájí Add2PSU, 2× PCIe 6 pin (přes PSU extended card, Dell KB 000140822) napájí kartu G1 jako ve videu. Grafika: až 2 karty plné výšky a délky, max. 225 W (manuál Dell, tab. 24); se zdrojem 685 W celkem 300 W na oba sloty x16 (spec sheet).' },
     pins: {
       inputs: { 'POWER': 0 },
       outputs: { 'SATA13 +12V': Z, 'SATA4 GND': Z, '6PIN-1 1-3 +12V': Z, '6PIN-1 4-6 GND': 0, '6PIN-2 1-3 +12V': Z, '6PIN-2 4-6 GND': 0, 'SLOT2 PCIe x16': Z, 'SLOT4 PCIe x16': Z, 'SLOT GND': 0 },
@@ -43,7 +43,7 @@ export const PC_DEVICES = {
 
   // Druhý zdroj: PS_ON# má uvnitř pull-up na +5VSB, zdroj běží, když ho něco stáhne na COM
   ATX_PSU: {
-    meta: { ref: 'PS2', part: 'Seasonic Core GX-650 ATX 3 (650 W)', pkg: 'ATX', desc: 'Jako ve videu napájí jen kartu G2. Zapne se, když je PS_ON# (pin 16) spojený s COM. Má 4× PCIe 6+2, použité 2: piny 1–3 +12 V, 4–8 zem.' },
+    meta: { ref: 'PS2', part: 'Seasonic Core GX-650 ATX 3 (650 W)', pkg: 'ATX', desc: 'Jako ve videu napájí jen kartu G2. Zapne se, když je PS_ON# (pin 16) spojený s COM. Má 2× PCIe 6+2 na jednom kabelu a 1× 12V-2x6; oba 6+2 jdou do redukce W2 (piny 1–3 +12 V, 4–8 zem). +12 V 54 A na jedné větvi.' },
     pins: {
       inputs: { '16 PS_ON#': Z },
       outputs: {
@@ -121,9 +121,9 @@ export const PC_DEVICES = {
     },
   },
 
-  // Radiální ventilátor 9733 (Delta BFB1012VH 12 V 1,8 A): otáčky podle PWM, tacho 2 pulzy na otáčku
+  // Radiální ventilátor 9733 (Delta BFB1012VH: datasheet 12 V 1,50 A / 18 W / 4500 ot/min, štítek 1,80 A): otáčky podle PWM, tacho 2 pulzy na otáčku
   BLOWER_9733: {
-    meta: { ref: 'M1', part: 'Delta BFB1012VH (9733, 12 V, 1,8 A)', pkg: 'FAN', desc: 'Pin 1 GND, 2 +12 V, 3 tacho, 4 PWM. Bez +12 V stojí – karta P100 se pak přehřeje.' },
+    meta: { ref: 'M1', part: 'Delta BFB1012VH (9733, 12 V, 1,5 A typ.)', pkg: 'FAN', desc: 'Pin 1 GND, 2 +12 V, 3 tacho, 4 PWM. Bez +12 V stojí – karta P100 se pak přehřeje.' },
     pins: { inputs: { '1 GND': Z, '2 +12V': Z, '4 PWM': Z }, outputs: { '3 OT/MIN': 0 } },
     eval(comp) {
       const on = is12(comp.inputs['2 +12V']) && isGnd(comp.inputs['1 GND']);

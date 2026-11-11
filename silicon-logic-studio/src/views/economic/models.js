@@ -8,7 +8,7 @@
 //  Tesla P100  – NVIDIA PB-08248-001 (EPS 8 pin na "East edge", nápis TESLA u záslepky, lišty se 4 šrouby)
 //  RDIMM       – Samsung M393A1G40EB1 datasheet (PCB 1,4 mm, 9 + 9 čipů, RCD uprostřed, klíč 64,6 mm)
 //  K620        – NVIDIA datasheet 75509 (68,9 × 160 mm), 870 EVO – Samsung datasheet (100 × 69,85 × 6,8 mm); Xeon IHS – Intel TMSDG 330786
-//  P12         – arctic.de (5 lopatek, kabel 400 mm, PST), 030-0571-000 – gekko (10 cm), Mini-Fit Jr – RS 39-01-2080
+//  P12         – arctic.de (5 lopatek, kabel 400 mm, PST), 030-0571-000 – NVIDIA PB-08248 obr. 4 (vodiče 70 ± 20 mm), Mini-Fit Jr – RS 39-01-2080
 // Odhady (bez výkresu): rozmístění čela Dellu ±5 mm, MX-6 stříkačka. Kontakty PCIe podle CEM 3.0.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -169,7 +169,7 @@ function tower([D, W, H]) {
   // ---- záda: I/O sloupec, 7 záslepek slotů, zdroj s IEC a modrou páčkou (pohled zezadu: vlevo = +X)
   const bz = -fz - 0.3, XB = (xb) => W / 2 - xb;
   add(g, new THREE.BoxGeometry(45, 135, 0.6), M.satin(), XB(37), Y(108), bz);
-  for (let i = 0; i < 7; i++) add(g, new THREE.BoxGeometry(110, 15, 0.8), M.steel(), XB(88), Y(228 + i * 21.5), bz);
+  for (let i = 0; i < 7; i++) add(g, new THREE.BoxGeometry(110, 15, 0.8), M.steel(), XB(88), Y(228 + i * 20.32), bz); // rozteč slotů PCI/PCIe 0,8"
   add(g, new THREE.BoxGeometry(150, 34, 0.6), M.satin(), 0, Y(397), bz);
   add(g, new THREE.BoxGeometry(24, 16, 3), M.plastic(), XB(140), Y(397), bz - 1.5);
   add(g, new THREE.BoxGeometry(14, 22, 3), M.blue(), XB(40), Y(397), bz - 1.5);
@@ -305,7 +305,7 @@ function rdimm([L, W, T]) {
   const back = [0, 1, 2, 3].map((i) => x0 + 8 + i * 12.4).concat([0, 1, 2, 3, 4].map((i) => x0 + 74 + i * 12.4));
   g.add(instanced(chip, M.chip(), front.map((x) => mat4(x, top, z))), instanced(chip, M.chip(), back.map((x) => mat4(x, bot, z))));
   slab(g, 9, 1.0, 9, M.chip(), x0 + 72.5, pcbY + pcbT, z); // registrový budič (RCD)
-  decal(g, label([{ text: '8GB 1Rx4 PC4-2400T-RE1', font: 'bold 44px Arial', color: '#222' }, { text: 'ECC REGISTERED', font: '600 34px Arial', color: '#444' }], 512, 128, { bg: '#ecebe6' }), 34, 8.5, x0 + 105, pcbY + pcbT + 1.21, z);
+  decal(g, label([{ text: '8GB 1Rx4 PC4-2400T-RC1', font: 'bold 44px Arial', color: '#222' }, { text: 'ECC REGISTERED', font: '600 34px Arial', color: '#444' }], 512, 128, { bg: '#ecebe6' }), 34, 8.5, x0 + 105, pcbY + pcbT + 1.21, z);
   return g;
 }
 
@@ -321,7 +321,7 @@ function ssd25([L, W, H]) {
   return g;
 }
 
-/** ATX zdroj 150 × 86 × 140 mm (Seasonic Core/Focus GX-650): ventilátor 120 mm nahoře, plně modulární. */
+/** ATX zdroj 150 × 86 × 140 mm (Seasonic Core GX-650 ATX 3 a podobné): ventilátor 120 mm nahoře, plně modulární. */
 function psu([W, D, H], { marking = ['SEASONIC', 'CORE GX-650  80+ GOLD'], modular = true } = {}) {
   const g = new THREE.Group();
   const Hb = H - 3.5; // mřížka ventilátoru drží celkovou výšku 86 mm
@@ -343,7 +343,7 @@ function psu([W, D, H], { marking = ['SEASONIC', 'CORE GX-650  80+ GOLD'], modul
     for (let i = 0; i < 6; i++) cable(g, [[-W / 2 + 34 + i * 2.5, D / 2 + 4], [-W / 2 + 30 + i * 14, D / 2 + 60], [-W / 2 + 10 + i * 26, D / 2 + 140 + (i % 2) * 30]], 2.6, M.black(), 4 + i * 1.2);
     return g;
   }
-  // čelo: modulární zásuvky (24 pin, 2× CPU, 4× PCIe, 4× periferie)
+  // čelo: modulární zásuvky – rozložení je odhad (Core GX-650 má 24 pin, 2× CPU, 1 kabel se 2× PCIe 6+2, 12V-2x6, SATA/Molex)
   slab(g, 32, 12, 2, M.hole(), -W / 2 + 24, 12, D / 2 + 0.2);
   for (let i = 0; i < 6; i++) slab(g, 18, 9, 2, M.hole(), -W / 2 + 54 + (i % 3) * 22, 14 + Math.floor(i / 3) * 16, D / 2 + 0.2);
   for (let i = 0; i < 4; i++) slab(g, 9, 9, 2, M.hole(), W / 2 - 12 - i * 12, 56, D / 2 + 0.2); // periferie (SATA/Molex)
@@ -365,7 +365,7 @@ function add2psu([L, W, H]) {
   return g;
 }
 
-/** Redukce 2× PCIe 8 pin (zásuvka) → EPS 8 pin (zástrčka), NVIDIA 030-0571-000, kabel ~10 cm. */
+/** Redukce 2× PCIe 8 pin (zásuvka) → EPS 8 pin (zástrčka), NVIDIA 030-0571-000, vodiče 70 ± 20 mm (PB-08248 obr. 4). */
 function epsCable([L, W]) {
   const g = new THREE.Group();
   const xa = -L / 2 + 9.8, xb = L / 2 - 9.8;

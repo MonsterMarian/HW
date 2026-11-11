@@ -1,6 +1,6 @@
-// Hlubší úrovně AI PC (L3–L5): GP100, Xeon (Haswell-EP), RDIMM / DDR4, M.2 redukce a SSD.
+// Hlubší úrovně AI PC (L3–L5): GP100, Xeon (Haswell-EP), RDIMM / DDR4, SATA SSD a Quadro K620.
 // Zdroje (mimo jiné): NVIDIA Pascal whitepaper WP-08019 (obr. 7 a 8) + PB-08248; Intel ARK E5-1650 v3, Optimization
-// Reference Manual 356477 (Haswell), Hot Chips 25; Samsung RDIMM M393A1G40EB1 datasheet, Samsung K4A4G165WE
+// Reference Manual 356477 (Haswell), Hot Chips 25; Samsung RDIMM M393A1G40EB1 datasheet (18× K4A4G045WE, 1 Gb × 4)
 // a Micron 4Gb DDR4 (obr. 2); Samsung 870 EVO datasheet + KitGuru;
 // NVIDIA Quadro K620 datasheet 75509, GM107 (Tom's Hardware, AnandTech). Neověřené údaje mají v popisku "neověřeno".
 // Bloky (PC_BLOCK) jsou popisné; "příklad" = skutečný simulovaný prvek, kterým vede cesta dál až k atomům.
@@ -81,7 +81,7 @@ def('gp100_sm', 4, {
 // ================================================================ Intel Xeon E5-1650 v3 (Haswell-EP)
 def('xeon_die', 3, {
   name: 'Intel Xeon E5-1650 v3 — čip',
-  subtitle: 'ARK: 6 jader / 12 vláken, 3,5/3,8 GHz, L3 15 MB (6 × 2,5 MB), 4 kanály DDR4-2133 68 GB/s, 40 linek PCIe 3.0, QPI 0, 140 W, 22 nm. Porty PCIe x8 + 2× x16 + DMI2 x4. Že jde o 8jádrový LCC die s jedním kruhem, je neověřené.',
+  subtitle: 'ARK: 6 jader / 12 vláken, 3,5/3,8 GHz, L3 15 MB (6 × 2,5 MB), 4 kanály DDR4-2133 68 GB/s, 40 linek PCIe 3.0, QPI 0, 140 W, 22 nm. Porty PCIe x8 + 2× x16 + DMI2 x4. Podle recenzí (AnandTech, PCPer) jde o 8jádrový die Haswell-EP LCC (~354 mm²) s jedním kruhem, ze kterého model používá 6 jader; Intel to u E5-1650 v3 neuvádí.',
   components: [
     ...[0, 1, 2, 3, 4, 5].map((i) => blk(`core${i}`, `JÁDRO ${i} + L3 2,5 MB`, 50 + (i % 3) * 170, 50 + Math.floor(i / 3) * 95, ['RING'], [], 'DVOJKLIK → JÁDRO', 155, 75, { drill: 'haswell_core' })),
     blk('ring', 'KRUHOVÁ SBĚRNICE (RING)', 50, 260, [], ['RING'], 'POČET KRUHŮ NEOVĚŘEN', 480, 60),
@@ -143,7 +143,7 @@ def('rdimm_module', 3, {
 
 def('ddr4_chip', 4, {
   name: 'DDR4 4 Gb x4 (K4A4G045WE) — vnitřek čipu',
-  subtitle: '4 bank groups × 4 banky, 65 536 řádků × 1 024 sloupců × 4 bit, stránka 512 B, prefetch 8n, 1,2 V / VPP 2,5 V (Samsung K4A4G165WE, Micron obr. 2). Bloky podle funkčního diagramu Micronu.',
+  subtitle: '4 bank groups × 4 banky, 65 536 řádků × 1 024 sloupců × 4 bit, stránka 512 B, prefetch 8n, 1,2 V / VPP 2,5 V (Samsung K4A4G045WE = 1 Gb × 4, Micron obr. 2). Bloky podle funkčního diagramu Micronu.',
   components: [
     blk('cmd', 'ŘÍZENÍ + DEKODÉR PŘÍKAZŮ', 50, 50, [], ['PŘÍKAZ'], 'ACT, RAS, CAS, WE, CS, CKE, PAR', 210, 80),
     blk('mr', 'MODE REGISTRY', 50, 170, ['PŘÍKAZ'], [], '', 210, 60),
@@ -189,7 +189,7 @@ def('k620_board', 3, {
     blk('mem', '2 GB DDR3 · 128 BIT · 29 GB/s', 680, 60, ['DDR3'], [], 'POČET ČIPŮ NEOVĚŘEN', 230, 80),
     blk('out', 'DVI-I DUAL LINK + DisplayPort 1.2', 680, 200, ['DISPLEJ'], [], 'AŽ 4 DISPLEJE PŘES DP MST', 230, 80),
     blk('vrm', 'NAPÁJENÍ KARTY ZE SLOTU', 330, 250, ['+12V/+3,3V'], ['VDD'], 'FÁZE A ŘADIČ NEOVĚŘENY', 260, 80),
-    blk('fan', 'AKTIVNÍ CHLADIČ (ULTRA-QUIET FANSINK)', 50, 260, [], [], 'RADIÁLNÍ VENTILÁTOR', 230, 70),
+    blk('fan', 'AKTIVNÍ CHLADIČ (ULTRA-QUIET FANSINK)', 50, 260, [], [], 'VENTILÁTOR NA CHLADIČI', 230, 70),
   ],
   wires: [w('edge.PCIe', 'gpu.PCIe'), w('edge.+12V/+3,3V', 'vrm.+12V/+3,3V'), w('vrm.VDD', 'gpu.VDD'), w('gpu.DDR3', 'mem.DDR3'), w('gpu.DISPLEJ', 'out.DISPLEJ')],
 });

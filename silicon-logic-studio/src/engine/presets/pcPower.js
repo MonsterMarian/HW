@@ -34,7 +34,7 @@ export const PC_POWER = {
     w('add2psu', '16 PS_ON#', 'psu2', '16 PS_ON#'),
     w('psu2', '15 COM', 'add2psu', '15 COM'),
     // 4 PCIe kabely → 2 redukce → EPS12V karet
-    // G1: 2× 6 pin z Dellu do redukce W1 (NVIDIA PB-08248 tab. 8 povoluje 2× 6 pin; 2 × 75 W stačí na limit 150 W)
+    // G1: 2× 6 pin z Dellu do redukce W1 (NVIDIA PB-08248 tab. 8 povoluje 2× 6 pin, žádá ale kabely na 120 W; běžných 2 × 75 W vyhoví jen díky limitu 150 W)
     w('dell', '6PIN-1 1-3 +12V', 'eps1', 'P1 1-3 +12V'), w('dell', '6PIN-1 4-6 GND', 'eps1', 'P1 4-8 GND'),
     w('dell', '6PIN-2 1-3 +12V', 'eps1', 'P2 1-3 +12V'), w('dell', '6PIN-2 4-6 GND', 'eps1', 'P2 4-8 GND'),
     // G2: 2× 8 pin z druhého zdroje do redukce W2

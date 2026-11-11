@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-11 13:05
+Aktualizováno: 2026-11-11 13:03
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -136,6 +136,13 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   (Toolbar.jsx, boardLayout.js, LogicCanvas.jsx jsou CRLF).
 
 ## Review přesnosti (2026-11-11) – co je opraveno a co ZBÝVÁ
+- **ZAČNI TADY: `docs/PLAN_DOKONCENI_2026-11-11.md`** – stav, hotový návrh přestavby paměťové sběrnice karty (piny, časování
+  v tikách, zásobník DAC na 2 slova, nulování 0-1-0, PLL z 12,096 MHz), co chybí ve skriptu `docs/rozpracovano/rebuild_nv1.mjs`
+  (nespouštěl se, neodpovídá ještě konečnému návrhu) a seznam navazujících úprav. Seznam níže je starší; z něj jsou HOTOVÉ
+  body 4 (PCI, dvě funkce) a 5 (kodek AUR#/AUW#, PIO). Krystal 12,096 MHz, RAMDAC 28 × 28 mm, pořadí konektorů a jazýček PCI
+  79,14 mm už jsou ověřené druhým zdrojem (datasheet STG1732/64, XFree86 3.3.6, PCI 2.1, čtyři karty) – do kódu ještě nezanesené.
+- Hotovo navíc: review MŮJ PC a L7–L11 (opravy v kódu), vnitřní schémata bloků z plánu, předvolba `dma_irq_demo`, kmitající
+  obvod → X. Rozhodnutí: bitové chyby z přehřátí, RC zpoždění, WebGPU/JIT/Monaco a skutečný AI copilot se NEDĚLAJÍ (důvody v plánu).
 - Zdroj č. 1 pro kartu: datasheet SGS-Thomson STG2000, září 1996, 81 stran:
   https://geforcewww.vgamuseum.info/images/doc/st/stg2000_sep96.pdf (text jde vytáhnout přes pypdf). Fotka karty:
   https://www.vgamuseum.info/images/palcal/diamond/588_diamond_edge_3d_2120_top_hq.jpg
@@ -218,4 +225,5 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   (test prochází celý strom); 195/195 testů.
 - 2026-11-11 10:08 — „pokračuj podle plánu, pak review všech projektů a součástek“ → bloky z plánu §4.3–4.4 (násobička, rotátor, FPU, MMIO, IRQ, DMA, režimy monitoru + sync), formáty sondy, Tab, CYCLE; pryč falešná animace „NV1 60 FPS“.
 - 2026-11-11 12:25 — review (3 nezávislé kontroly se zdroji) → opravy knihovny, AI PC a karty NV1 podle datasheetu STG2000; mrtvý inspektor smazán; velké přestavby karty sepsané v sekci Review přesnosti.
-- 2026-11-11 13:05 — „vyřeš konflikt a dej to do mainu“ → rebase na 8f1587a (MŮJ PC, L1–L11), konflikty aiCopilot.js / models.js / AgentMEMORY vyřešeny, 257/257 testů.
+- 2026-11-11 12:32 — „vyřeš konflikt a dej to do mainu“ → rebase na 8f1587a (MŮJ PC, L1–L11), konflikty aiCopilot.js / models.js / AgentMEMORY vyřešeny, 257/257 testů.
+- 2026-11-11 13:03 — „dořeš zbytky“, pak „zastav a sepiš plán“ → review MŮJ PC + L7–L11, PCI dvě funkce, kodek PIO, schémata bloků z plánu, ukázka DMA/IRQ; přestavba paměťové sběrnice karty zastavena ve fázi návrhu → docs/PLAN_DOKONCENI_2026-11-11.md; 274/274 testů.

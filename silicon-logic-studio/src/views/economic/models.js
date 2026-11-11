@@ -442,7 +442,7 @@ function fan120([S, , T], { marking = ['ARCTIC', 'P12 PWM PST'], blades = 5 } = 
 /** M.2 2280 NVMe SSD: deska 80,15 × 22,15 mm, klíč M u kontaktů (+X), půlkruhový výřez pro šroub (-X), štítek přes čipy. */
 function m2ssd([L, W, T], { marking = [] } = {}) {
   const g = new THREE.Group();
-  const pcbT = 0.8, x0 = -L / 2, x1 = L / 2, keyZ = W / 2 - 6.625; // klíč M: piny 59–66
+  const pcbT = 0.8, x0 = -L / 2, x1 = L / 2, keyZ = 6.125; // klíč M (piny 59–66): střed výřezu 6,125 mm od osy karty
   const s = new THREE.Shape();
   s.moveTo(x0, -W / 2); s.lineTo(x1, -W / 2); s.lineTo(x1, keyZ - 0.6); s.lineTo(x1 - 4.2, keyZ - 0.6); s.lineTo(x1 - 4.2, keyZ + 0.6); s.lineTo(x1, keyZ + 0.6);
   s.lineTo(x1, W / 2); s.lineTo(x0, W / 2); s.lineTo(x0, 1.75); s.absarc(x0, 0, 1.75, Math.PI / 2, -Math.PI / 2, true); s.closePath();
@@ -752,7 +752,7 @@ function atxCase([D, W, H], { fans = { front: 0, rear: 1 }, shroudH = 90, mesh =
 }
 
 /**
- * Základní deska ATX ležící součástkami nahoru: dims [305, 244, výška]. Osa X = od horní hrany desky (v),
+ * Základní deska ATX ležící součástkami nahoru: dims [305, 221, výška] (PRIME B360-PLUS; plné ATX má 244). Osa X = od horní hrany desky (v),
  * osa Z = od zadní hrany s I/O (u). Polohy v mm v layoutu jsou [v, u] středů (zdroj v katalogu).
  */
 function atxBoard([L, W], { layout: Lo, marking = 'PRIME B360-PLUS' }) {

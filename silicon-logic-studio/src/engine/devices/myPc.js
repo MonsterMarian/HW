@@ -48,7 +48,8 @@ export const MY_PC_DEVICES = {
         'USB +5V': Z, 'USB DATA': Z,
       },
     },
-    netNames: { 'VCORE': '+1,2V VCORE', 'VCCSA/VCCIO': '+1,05V VCCSA/IO', 'VDDQ A': '+1,2V VDDQ', 'VDDQ B': '+1,2V VDDQ' },
+    // VccSA je 1,05 V; VccIO má u Coffee Lake S vlastní regulátor a typ. 0,95 V (Intel 337344, tab. 7-5 a 7-6) – tady jedna větev
+    netNames: { 'VCORE': '+1,2V VCORE', 'VCCSA/VCCIO': '+1,05V VCCSA (VCCIO 0,95 V)', 'VDDQ A': '+1,2V VDDQ', 'VDDQ B': '+1,2V VDDQ' },
     eval(comp) {
       const i = comp.inputs, o = comp.outputs;
       const sb = at(i['9 +5VSB'], 5);
@@ -61,7 +62,7 @@ export const MY_PC_DEVICES = {
       o['PLTRST#'] = pg ? 1 : 0;
       o['SLOT +12V'] = pg ? 12 : Z;
       o['SLOT +3,3V'] = o['M.2_2 +3,3V'] = pg ? 3.3 : Z;
-      const pch = pg && i['DMI 3.0 x4'] === 1; // PCH jede, až když se CPU přihlásí přes DMI
+      const pch = pg && i['DMI 3.0 x4'] === 1; // model: datové linky PCH (M.2, USB) až po natrénování DMI. Skutečný PCH běží už z pohotovostní větve: přijme PWRBTN#, uvolní SLP_S3# (→ PS_ON#) a po PWR_OK PLTRST#
       o['M.2_2 PCIe x4'] = pch ? 1 : Z;
       o['USB +5V'] = pg ? 5 : Z;
       o['USB DATA'] = pch ? 1 : Z;
@@ -78,7 +79,7 @@ export const MY_PC_DEVICES = {
       inputs: { 'VCORE': Z, 'VCCSA/VCCIO': Z, 'PLTRST#': Z, 'DQ A1': Z, 'DQ A2': Z, 'DQ B1': Z, 'DQ B2': Z },
       outputs: { 'DDR4 A CMD': Z, 'DDR4 B CMD': Z, 'PCIe 3.0 x16': Z, 'DMI 3.0 x4': Z, 'STAV': 0 },
     },
-    netNames: { 'VCORE': '+1,2V VCORE', 'VCCSA/VCCIO': '+1,05V VCCSA/IO' },
+    netNames: { 'VCORE': '+1,2V VCORE', 'VCCSA/VCCIO': '+1,05V VCCSA (VCCIO 0,95 V)' },
     eval(comp) {
       const i = comp.inputs, o = comp.outputs;
       const powered = at(i['VCORE'], VCORE) && at(i['VCCSA/VCCIO'], 1.05) && i['PLTRST#'] === 1;
@@ -104,7 +105,7 @@ export const MY_PC_DEVICES = {
 
   // ASUS Dual RTX 3060 Ti GDDR6X: napájení 2× 8 pin + slot; zem karty je jedna měď
   MYPC_GPU: {
-    meta: { ref: 'G1', part: 'ASUS Dual GeForce RTX 3060 Ti OC 8 GB GDDR6X', pkg: 'PCIe x16', desc: '225 W: 2× PCIe 8 pin (po 150 W) + slot (max. 75 W). Bez kteréhokoli 8 pinu karta nenaběhne. Výstupy HDMI 2.1 + 3× DP 1.4a.' },
+    meta: { ref: 'G1', part: 'ASUS Dual GeForce RTX 3060 Ti OC 8 GB GDDR6X', pkg: 'PCIe x16', desc: '200 W podle NVIDIA (ASUS příkon neuvádí); konektory dovolí 2× 150 W + 75 W ze slotu. Piny 4 a 6 konektoru jsou SENSE (v zástrčce zdroje spojené se zemí) – podle nich karta pozná 8 pin. Bez kteréhokoli 8 pinu karta nenaběhne. Výstupy HDMI 2.1 + 3× DP 1.4a.' },
     pins: {
       inputs: {
         'PCIe x16': Z, 'SLOT +12V': Z, 'SLOT +3,3V': Z, 'SLOT GND': Z,
@@ -126,7 +127,7 @@ export const MY_PC_DEVICES = {
 
   // Samsung 970 EVO Plus v M.2_2: 3,3 V + PCIe x4 z PCH
   MYPC_SSD: {
-    meta: { ref: 'SSD1', part: 'Samsung 970 EVO Plus 500 GB (M.2_2)', pkg: 'M.2 2280', desc: 'Napájení jen 3,3 V ze slotu M.2 (max. ~6 W). PCIe 3.0 x4 z PCH B360, NVMe 1.3.' },
+    meta: { ref: 'SSD1', part: 'Samsung 970 EVO Plus 500 GB (M.2_2)', pkg: 'M.2 2280', desc: 'Napájení jen 3,3 V ze slotu M.2 (průměr 5,8 W, špička 9 W). PCIe 3.0 x4 z PCH B360, NVMe 1.3.' },
     pins: { inputs: { 'PCIe x4': Z, '+3,3V': Z }, outputs: { 'STAV': 0 } },
     eval(comp) {
       comp.outputs.STAV = at(comp.inputs['+3,3V'], 3.3) && comp.inputs['PCIe x4'] === 1 ? 1 : 0;

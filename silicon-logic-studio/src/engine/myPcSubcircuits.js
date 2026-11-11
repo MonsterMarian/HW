@@ -435,7 +435,7 @@ def('va249_inside', 2, {
 // ================================================================ ventilátor 4 pin (chladič Intel, Stratus)
 def('pwm_fan_inside', 2, {
   name: 'Ventilátor 4 pin PWM — vnitřek',
-  subtitle: 'Intel 4-Wire PWM Fan Specification: 1 GND, 2 +12 V, 3 tacho (2 pulzy na otáčku, otevřený kolektor), 4 PWM 25 kHz s pull-upem ve ventilátoru. Uvnitř jednofázový BLDC: řadič s Hallovou sondou přepíná dvě cívky. E97379-003: 12 V, 1200–2500 ot/min, výrobce Foxconn (prodejci); Stratus 120: 200–1400 ot/min. Typ řadiče neověřen.',
+  subtitle: 'Intel 4-Wire PWM Fan Specification: 1 GND, 2 +12 V, 3 tacho (2 pulzy na otáčku, otevřený kolektor), 4 PWM 25 kHz s pull-upem ve ventilátoru. Uvnitř jednofázový BLDC: řadič s Hallovou sondou přepíná dvě cívky. E97379-003: 12 V, 1200–2500 ot/min, výrobce Delta / Foxconn / Nidec podle štítku (Intel); Stratus 120: 200–1400 ot/min. Typ řadiče neověřen.',
   components: [
     c('conn', 'CONN_FAN4', 'J1 4 PIN (CPU_FAN / CHA_FAN1)', 50, 60),
     blk('drv', 'ŘADIČ BLDC 1 FÁZE', 330, 60, ['+12V', 'GND', 'PWM', 'HALL'], ['CÍVKA A', 'CÍVKA B', 'TACHO'], 'TYP NEOVĚŘEN', 240, 130),
@@ -522,7 +522,7 @@ def('mypc_psu', 2, {
 // ================================================================ SSD Samsung 970 EVO Plus 500 GB
 def('evo_plus_ssd', 2, {
   name: 'Samsung 970 EVO Plus 500 GB — vnitřek SSD',
-  subtitle: 'AnandTech, PCPer, FPSReview: řadič Phoenix (S4LR020), 512 MB LPDDR4, V-NAND 5. gen 92 vrstev TLC, čipy 256 Gb (16 × 256 Gb = 500 GB), jednostranná deska, NVMe 1.3, PCIe 3.0 x4, 3500/3200 MB/s, TurboWrite 4 + 18 GB, 3,3 V průměr 5,8 W. Počet pouzder NAND, typ DRAM a PMIC neověřeny.',
+  subtitle: 'AnandTech, PCPer, FPSReview: řadič Phoenix (S4LR020; kusy od roku 2021 mají pod stejným označením řadič Elpis S4LV003 – pozná se podle firmwaru: 2B2QEXM7 = Phoenix), 512 MB LPDDR4, V-NAND 5. gen 92 vrstev TLC, čipy 256 Gb (16 × 256 Gb = 500 GB), jednostranná deska, NVMe 1.3, PCIe 3.0 x4, 3500/3200 MB/s, TurboWrite 4 + 18 GB, 3,3 V průměr 5,8 W. Počet pouzder NAND, typ DRAM a PMIC neověřeny.',
   components: [
     blk('m2', 'M.2 M-KLÍČ · PCIe 3.0 x4', 50, 50, [], ['PCIe x4', '+3,3V'], 'SLOT M.2_2 Z PCH', 200, 80),
     blk('pwr', 'NAPÁJENÍ 3,3 V', 50, 190, ['+3,3V'], [], 'PMIC NEOVĚŘEN · 5,8 W', 200, 80),
@@ -530,7 +530,7 @@ def('evo_plus_ssd', 2, {
     blk('dram', 'LPDDR4 512 MB', 640, 50, ['DRAM'], [], 'MAPOVACÍ TABULKA FTL', 200, 70),
     blk('nand', 'V-NAND V5 TLC · 16 × 256 Gb', 640, 150, ['NAND'], [], '92 VRSTEV · POUZDRA NEOVĚŘENA', 260, 90),
     blk('tw', 'TURBOWRITE 4 + 18 GB', 320, 210, [], [], 'SLC CACHE · POTOM 900 MB/s', 240, 70),
-    blk('therm', 'TEPLOTNÍ ČIDLO', 640, 280, [], [], 'ŠKRCENÍ OD 70 °C', 260, 70),
+    blk('therm', 'TEPLOTNÍ ČIDLO', 640, 280, [], [], 'PROVOZ 0–70 °C · KRITICKÁ MEZ ~85 °C', 260, 70),
   ],
   wires: [w('m2.PCIe x4', 'ctl.PCIe x4'), w('m2.+3,3V', 'pwr.+3,3V'), w('ctl.DRAM', 'dram.DRAM'), w('ctl.NAND', 'nand.NAND')],
 });

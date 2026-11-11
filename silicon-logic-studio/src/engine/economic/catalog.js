@@ -80,14 +80,14 @@ const P100_PC_ITEMS = [
 // Co software nevidí (skříň, zdroj, chladič, typ myši/mikrofonu), je ODHAD – seznam k opravě je v MujPC_odhady.md.
 // Layout desky: ASUS manuál E13832 str. 1-1 (měřeno z vektorového výkresu, ±2 mm), [v od horní hrany, u od zadní hrany I/O].
 export const B360_LAYOUT = {
-  holes: [[6.3, 32.8], [6.3, 164.7], [163.5, 10.2], [165.2, 164.7], [288, 10], [288, 164.7]],
+  holes: [[6.35, 33.02], [6.35, 165.1], [163.83, 10.16], [163.83, 165.1], [288.29, 10.16], [288.29, 165.1]], // otvory ATX F, J, C, H, A, G (palcový rastr)
   socket: [86, 108],
   dimm: { v: 82.7, len: 141.2, u: [164.2, 174, 183, 192.8] }, // od CPU: B1, B2, A1, A2
   slots: [
     { kind: 'x1', v: 162.7, u0: 42, len: 27 }, // PCIEX1_1
-    { kind: 'x16', v: 182.8, u0: 42, len: 89, safe: true }, // PCIEX16_1 – grafika
-    { kind: 'x1', v: 202.9, u0: 42, len: 27 }, // PCIEX1_2
-    { kind: 'x16', v: 243.6, u0: 42, len: 89 }, // PCIEX16_2 (x4)
+    { kind: 'x16', v: 183.02, u0: 42, len: 89, safe: true }, // PCIEX16_1 – grafika (rozteč slotů 20,32 mm)
+    { kind: 'x1', v: 203.34, u0: 42, len: 27 }, // PCIEX1_2
+    { kind: 'x16', v: 243.98, u0: 42, len: 89 }, // PCIEX16_2 (x4)
     { kind: 'pci', v: 264.3, u0: 39, len: 80 }, // PCI1 (most ASM1083)
     { kind: 'pci', v: 284.6, u0: 39, len: 80 }, // PCI2
   ],
@@ -122,12 +122,12 @@ const MY_PC_ITEMS = [
     note: 'SPD kód je stejný pro černou, bílou i červenou verzi (FB/FW/FR) – barva chladiče je odhad.',
   },
   {
-    id: 'my_gpu', name: 'ASUS Dual GeForce RTX 3060 Ti OC 8 GB GDDR6X', part: 'DUAL-RTX3060TI-O8GD6X: GA104, 8 GB GDDR6X 19 Gb/s, boost 1 710 MHz, 225 W, 2× 8 pin, HDMI 2.1 + 3× DP 1.4a',
+    id: 'my_gpu', name: 'ASUS Dual GeForce RTX 3060 Ti OC 8 GB GDDR6X', part: 'DUAL-RTX3060TI-O8GD6X: GA104, 8 GB GDDR6X 19 Gb/s, boost 1 710 MHz, 200 W (NVIDIA), 2× 8 pin, HDMI 2.1 + 3× DP 1.4a',
     qty: 1, dims: [230, 120, 42], dimsSrc: 'ověřeno: asus.com techspec (230 × 120 × 42 mm, 2 sloty)', model: { kind: 'gpu', fans: 2, fanD: 88, power: ['8pin', '8pin'], shroudColor: 0x1b1c1f, accent: 0x8a8f96, marking: ['ASUS', 'DUAL', 'GEFORCE RTX 3060 Ti'] },
     note: 'Subsystém 1043:88AE + VBIOS 94.04.94.00.85 přesně odpovídají verzi OC (TechPowerUp VGA BIOS 254310). Běží v PCIe 3.0 x16. Pořadí výstupů na záslepce a poloha 8 pinů jsou odhad.',
   },
   {
-    id: 'my_ssd', name: 'Samsung 970 EVO Plus 500 GB', part: 'MZ-V7S500BW: NVMe M.2 2280, PCIe 3.0 x4, řadič Phoenix, 512 MB LPDDR4, V-NAND TLC',
+    id: 'my_ssd', name: 'Samsung 970 EVO Plus 500 GB', part: 'MZ-V7S500BW: NVMe M.2 2280, PCIe 3.0 x4, řadič Phoenix (novější kusy Elpis – neověřeno), 512 MB LPDDR4, V-NAND TLC',
     qty: 1, dims: [80.15, 22.15, 2.38], dimsSrc: 'ověřeno: Samsung datasheet', model: { kind: 'm2ssd', marking: ['SAMSUNG', '970 EVO Plus', 'NVMe M.2 · 500GB · MZ-V7S500'] },
   },
   {

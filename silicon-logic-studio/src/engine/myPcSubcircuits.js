@@ -640,23 +640,23 @@ def('mypc_mic', 2, {
 // (konektory, kabely, cívky, kondenzátory, mechanické spínače) – ty jsou už jen měď a plast.
 const SERDES = 'cell_serdes';
 const DRILLS = {
-  nct6796d: { lpc: SERDES, acpi: 'cell_pwrbtn', hwm: 'cell_lt', temp: 'cell_lt', fanctl: 'cell_lt', tach: 'cell_toggle', kbc: SERDES, uart: SERDES, gpio: 'REGISTER_8BIT' },
-  mypc_board: { sio: 'nct6796d', fan: 'cell_lt', vrm: 'cell_buck', dimma: 'ddr4_8g_x8', dimmb: 'ddr4_8g_x8', x16: 'pcie3_ctrl', disp: 'gen9_display', lan: 'rtl8111h', pci: 'pci_target', sata: 'pch_ahci', usb: 'pch_xhci', m2: 'phoenix_ctl', slots: 'pcie3_ctrl', audio: 'alc887', bios: 'cell_eeprom' },
+  nct6796d: { lpc: SERDES, acpi: 'cell_pwrbtn', hwm: 'nct_hwm', temp: 'cell_lt', fanctl: 'nct_smartfan', tach: 'cell_toggle', kbc: 'kbc_8042', uart: 'uart_16550', gpio: 'REGISTER_8BIT' },
+  mypc_board: { sio: 'nct6796d', fan: 'cell_lt', vrm: 'vrm_multiphase', dimma: 'ddr4_8g_x8', dimmb: 'ddr4_8g_x8', x16: 'pcie3_ctrl', disp: 'gen9_display', lan: 'rtl8111h', pci: 'pci_target', sata: 'pch_ahci', usb: 'pch_xhci', m2: 'phoenix_ctl', slots: 'pcie3_ctrl', audio: 'alc887', bios: 'spi_flash' },
   b360_pch: { dmi: 'pcie3_ctrl', hsio: 'pch_hsio', pcie: 'pcie3_ctrl', sata: 'pch_ahci', usb3: 'pch_xhci', usb2: 'pch_xhci', hda: 'pch_hda', spi: 'pch_spi', smb: 'pch_smbus', me: 'csme12', cnvi: SERDES, clk: 'pch_icc' },
   cfl_die: { ring: 'cfl_ring', gt: 'gen9_gt2', pcu: 'cfl_pcu', sa: 'cfl_sa', imc: 'cfl_imc', peg: 'pcie3_ctrl', dmi: 'pcie3_ctrl', disp: 'gen9_display' },
   cfl_core: { fe: 'x86_frontend', ooo: 'x86_ooo', prf: 'cell_sram', p0: 'FULL_ADDER', p1: 'FULL_ADDER', p5: 'MUX', p6: 'MUX', p23: 'FULL_ADDER', p4: 'cell_sram', p7: 'FULL_ADDER', l1d: 'x86_memsub' },
-  mypc_gpu_board: { edge: 'pcie3_ctrl', vrm: 'cell_buck', mvdd: 'cell_buck', m0: 'gddr6x_chip', m1: 'gddr6x_chip', out: 'nv_display', fan: 'cell_lt' },
+  mypc_gpu_board: { edge: 'pcie3_ctrl', vrm: 'vrm_multiphase', mvdd: 'vrm_multiphase', m0: 'gddr6x_chip', m1: 'gddr6x_chip', out: 'nv_display', fan: 'cell_lt' },
   ga104_die: { host: 'pcie3_ctrl', gt: 'cell_arbiter', media: 'ampere_nvenc', disp: 'nv_display', l2: 'nv_l2', ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [`mc${i}`, 'gddr6x_ctrl'])) },
   ampere_sm: { ic: 'cell_sram', pb0: 'cell_arbiter', pb1: 'cell_arbiter', pb2: 'cell_arbiter', pb3: 'cell_arbiter', rf: 'cell_sram', fp32: 'FULL_ADDER', fpint: 'FULL_ADDER', tc: 'ampere_tensor', ldst: 'FULL_ADDER', sfu: 'cell_decoder', rt: 'rt_core2', l1: 'cell_sram', tex: 'cell_mac' },
   va249_inside: { hdmi: SERDES, vga: 'sigma_delta', edid: 'cell_eeprom', psu: 'cell_buck', scaler: 'lcd_scaler', panel: 'tcon_panel', led: 'cell_lt' },
-  pwm_fan_inside: { drv: 'cell_buck', note: 'cell_lt' },
+  pwm_fan_inside: { drv: 'bldc_driver', note: 'cell_lt' },
   mypc_keyboard: { usb: 'usb_fs_device', mcu: 'cortex_m0', mx: 'cell_decoder', led: 'cell_lt' },
   mypc_mouse: { usb: 'usb_fs_device', mcu: 'ADDER_8BIT', sensor: 'cell_aps', wheel: 'cell_quad', rgb: 'cell_lt' },
   mypc_psu: { pfc: 'cell_buck', main: 'cell_buck', r12: 'cell_buck', dcdc: 'cell_buck', sb: 'cell_buck', sup: 'cell_lt', fan: 'cell_lt' },
-  evo_plus_ssd: { pwr: 'cell_buck', dram: 'ddr4_cells', nand: 'cell_nand', tw: 'cell_nand', therm: 'cell_lt' },
+  evo_plus_ssd: { pwr: 'cell_buck', dram: 'ddr4_cells', nand: 'vnand_die', tw: 'cell_nand', therm: 'cell_lt' },
   phoenix_ctl: { host: 'nvme_host', cores: 'ADDER_8BIT', ftl: 'ssd_ftl', ecc: 'cell_parity', dramc: 'lpddr4_ctrl', ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [`ch${i}`, 'nand_channel'])) },
   fury_module: { spd: 'cell_eeprom' },
-  ddr4_8g_x8: { cmd: 'cell_decoder', mr: 'REGISTER_8BIT', ref: 'ADDER_8BIT', rmux: 'MUX', rdec: 'cell_decoder', bg: 'cell_decoder', cdec: 'cell_decoder', sa: 'NOT', iog: 'REGISTER_8BIT', io: SERDES, dll: 'D_FF' },
+  ddr4_8g_x8: { arr: 'dram_bank', cmd: 'cell_decoder', mr: 'REGISTER_8BIT', ref: 'ADDER_8BIT', rmux: 'MUX', rdec: 'cell_decoder', bg: 'cell_decoder', cdec: 'cell_decoder', sa: 'NOT', iog: 'REGISTER_8BIT', io: SERDES, dll: 'D_FF' },
   mypc_mic: { cap: 'nmos_transistor', pre: 'NOT', codec: 'sigma_delta', usb: 'usb_fs_device' },
 };
 for (const [key, map] of Object.entries(DRILLS)) {

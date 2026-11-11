@@ -208,8 +208,9 @@ test('tranzistory podle skutečného procesu: i7 → Intel 14 nm FinFET, GA104 �
   const gpu = down(['gpu', 'gpu', 'gpc0', 'ex_ff', 'm_s']);
   const p = H[gpu.at(-1).key].components.find((x) => x.type === 'PMOS');
   assert.equal(findSubcircuit(p, gpu).key, 'PMOS_samsung8n');
-  assert.deepEqual(down(['mb', 'vrm', 'hs']).slice(-2).map((e) => e.key), ['cell_buck', 'NMOS_power']);
-  assert.deepEqual(down(['mb', 'vrm', 'hs', 'm1', 'el_si', 'nucleus', 'neutrons']).slice(-4).map((e) => e.key), ['sio2_gate_lattice', 'atom_si', 'nucleus_si', 'neutron']);
+  // deska → vícefázový VRM → fáze → horní MOSFET = výkonový trench
+  assert.deepEqual(down(['mb', 'vrm', 'ph0', 'hs']).slice(-3).map((e) => e.key), ['vrm_multiphase', 'cell_buck', 'NMOS_power']);
+  assert.deepEqual(down(['mb', 'vrm', 'ph0', 'hs', 'm1', 'el_si', 'nucleus', 'neutrons']).slice(-4).map((e) => e.key), ['sio2_gate_lattice', 'atom_si', 'nucleus_si', 'neutron']);
   assert.equal(findSubcircuit({ id: 'x', type: 'NMOS' }, [{ key: 'root', level: 1 }, { key: 'NAND', level: lvl('NAND') }]).key, 'nmos_transistor', 'NV1 0,5 µm');
 });
 

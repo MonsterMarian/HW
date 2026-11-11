@@ -667,6 +667,144 @@ def('tcon_panel', {
   drills: { rx: 'cell_serdes', tcon: 'cell_decoder', src: 'cell_mac', gate: 'cell_decoder', tft: 'cell_tft', blu: 'cell_buck' },
 });
 
+// ================================================================ napájení, paměťové buňky, flash, motor, Super I/O
+// Zdroje: Intel VR13 / IMVP8 (SVID, load-line), aplikační listy vícefázových řadičů (TI, Infineon, uPI), Micron
+// „DRAM architecture“ (subarrays, sense amp), Samsung V-NAND whitepaper, JEDEC JESD216 (SFDP, příkazy SPI NOR),
+// Nuvoton NCT677x/679x (HW monitor, SmartFan, PECI), IBM PC AT 8042, National PC16550D (UART).
+def('vrm_multiphase', {
+  level: 3,
+  name: 'Vícefázový měnič VRM — CPU / GPU / paměti',
+  subtitle: 'Obecná stavba VRM: řadič generuje PWM pro N fází posunutých o 360°/N, každá fáze = budič + horní a dolní MOSFET (často v jednom pouzdře DrMOS) + tlumivka; výstupy se sečtou na velkých kondenzátorech u patice. Řadič měří proud každé fáze (vyrovnává je), drží load-line (napětí mírně klesá se zátěží), při malé zátěži vypíná fáze. Napětí si určuje CPU přes SVID (u GPU přes vlastní rozhraní). Konkrétní řadič a MOSFETy na mé desce a kartě neověřeny.',
+  components: [
+    blk('ctl', 'ŘADIČ PWM (VÍCEFÁZOVÝ)', 50, 50, [], ['PWM 1…N'], 'SVID / PMBus, LOAD-LINE', 220, 90),
+    blk('isense', 'MĚŘENÍ PROUDU FÁZÍ', 50, 180, [], [], 'DCR / IMON, VYROVNÁNÍ', 220, 70),
+    ...[0, 1, 2].map((i) => blk(`ph${i}`, `FÁZE ${i + 1}: BUDIČ + MOSFETy`, 330 + (i % 2) * 260, 50 + Math.floor(i / 2) * 110, ['PWM 1…N'], ['UZEL SW'], 'POSUN 360° / N', 230, 90)),
+    blk('ind', 'TLUMIVKY + VÝSTUPNÍ KONDENZÁTORY', 590, 160, ['UZEL SW'], [], 'VCORE / NVVDD / MVDD', 230, 90),
+    blk('prot', 'OCHRANY: OCP · OVP · TEPLOTA', 50, 290, [], [], 'VYPNUTÍ PŘI CHYBĚ', 220, 70),
+    blk('shed', 'VYPÍNÁNÍ FÁZÍ (MALÁ ZÁTĚŽ)', 330, 290, [], [], 'VYŠŠÍ ÚČINNOST', 230, 70),
+  ],
+  wires: [...[0, 1, 2].map((i) => w('ctl.PWM 1…N', `ph${i}.PWM 1…N`)), ...[0, 1, 2].map((i) => w(`ph${i}.UZEL SW`, 'ind.UZEL SW'))],
+  drills: { ctl: 'cell_lt', isense: 'cell_lt', ph0: 'cell_buck', ph1: 'cell_buck', ph2: 'cell_buck', ind: 'cu_lattice', prot: 'cell_lt', shed: 'cell_decoder' },
+});
+
+def('dram_bank', {
+  name: 'Banka DRAM — subarray, wordline, sense amp',
+  subtitle: 'Obecná stavba DRAM (Micron, Samsung): banka se skládá z mnoha subarray; řádkový dekodér zapne hlavní a lokální wordline, celý řádek buněk 1T1C se otevře na bitline nabité na VDD/2, sense amplifiery (dva zpětnovazebně zapojené invertory mezi subarrays) malý rozdíl napětí zesílí na plnou úroveň a zároveň buňky přepíšou zpět (čtení je destruktivní). Sloupcový výběr pak pustí vybrané bity na lokální I/O. Rozměry subarray u konkrétních čipů nezveřejněny.',
+  components: [
+    blk('rdec', 'ŘÁDKOVÝ DEKODÉR + HLAVNÍ WORDLINE', 50, 50, [], ['MWL'], '', 230, 80),
+    blk('lwl', 'LOKÁLNÍ BUDIČE WORDLINE', 50, 170, ['MWL'], ['WL'], 'VPP 2,5 V (NAD VDD)', 230, 70),
+    ...[0, 1].map((i) => blk(`sub${i}`, `SUBARRAY ${i}: BUŇKY 1T1C`, 340, 50 + i * 130, ['WL'], ['BL'], 'TRANZISTOR + KONDENZÁTOR', 220, 90)),
+    blk('pre', 'PŘEDNABITÍ BL NA VDD/2', 610, 50, [], [], 'PŘED KAŽDÝM ČTENÍM', 220, 70),
+    blk('sa', 'SENSE AMPLIFIERY (ŘÁDEK BITŮ)', 610, 140, ['BL'], ['DATA'], 'ZESÍLÍ + PŘEPÍŠOU ZPĚT', 220, 80),
+    blk('csl', 'VÝBĚR SLOUPCŮ (CSL) + LOKÁLNÍ I/O', 610, 250, ['DATA'], [], '', 220, 70),
+  ],
+  wires: [w('rdec.MWL', 'lwl.MWL'), w('lwl.WL', 'sub0.WL'), w('lwl.WL', 'sub1.WL'), w('sub0.BL', 'sa.BL'), w('sub1.BL', 'sa.BL'), w('sa.DATA', 'csl.DATA')],
+  drills: { rdec: 'cell_decoder', lwl: 'AND', sub0: 'ddr4_cells', sub1: 'ddr4_cells', pre: 'cell_buck', sa: 'cell_sram', csl: 'MUX' },
+});
+
+def('vnand_die', {
+  name: 'Čip V-NAND TLC (970 EVO Plus) — roviny, bloky, stránky',
+  subtitle: 'Samsung V-NAND whitepaper: buňky s nábojovou pastí (charge trap) jsou naskládané nad sebou ve svislých kanálech – 5. generace 92 vrstev, každá vrstva je jedna wordline. TLC = 3 bity na buňku (8 úrovní prahového napětí). Čte a programuje se po stránkách (~16 KB), maže po blocích. Programování po krocích ISPP (pulz, ověření, pulz…) z napětí ~20 V z nábojových pump. Počet rovin a velikost stránky u tohoto čipu neověřeny.',
+  components: [
+    blk('if', 'ROZHRANÍ TOGGLE DDR', 50, 50, [], ['PŘÍKAZ'], 'Z ŘADIČE PHOENIX', 210, 70),
+    blk('ctl', 'ŘÍDICÍ LOGIKA + ISPP', 50, 160, ['PŘÍKAZ'], ['ADRESA'], 'PULZ → OVĚŘENÍ → PULZ', 210, 80),
+    blk('pump', 'NÁBOJOVÉ PUMPY ~20 V', 50, 280, [], [], 'PROGRAMOVÁNÍ A MAZÁNÍ', 210, 70),
+    ...[0, 1].map((i) => blk(`plane${i}`, `ROVINA ${i}: BLOKY · 92 VRSTEV`, 320, 50 + i * 130, ['ADRESA'], ['BL'], 'SVISLÉ ŘETĚZCE BUNĚK', 230, 100)),
+    blk('xdec', 'DEKODÉR VRSTEV (WORDLINE)', 600, 50, [], [], 'SCHODIŠTĚ KONTAKTŮ', 220, 70),
+    blk('pb', 'PAGE BUFFER (~16 KB)', 600, 150, ['BL'], [], 'SENSE + LATCHE 3 BITŮ', 220, 80),
+  ],
+  wires: [w('if.PŘÍKAZ', 'ctl.PŘÍKAZ'), w('ctl.ADRESA', 'plane0.ADRESA'), w('ctl.ADRESA', 'plane1.ADRESA'), w('plane0.BL', 'pb.BL'), w('plane1.BL', 'pb.BL')],
+  drills: { if: 'MUX', ctl: 'cell_lt', pump: 'cell_buck', plane0: 'cell_nand', plane1: 'cell_nand', xdec: 'cell_decoder', pb: 'cell_sram' },
+});
+
+def('spi_flash', {
+  name: 'SPI flash 128 Mb s BIOSem (deska B360-PLUS)',
+  subtitle: 'JEDEC JESD216 + běžné SPI NOR čipy: 4 vodiče (CLK, CS#, MOSI, MISO), příkazy READ 0x03 / FAST READ 0x0B, PAGE PROGRAM 0x02 (stránka 256 B), SECTOR ERASE 0x20 (4 KB), stavový registr s bitem WIP. Buňky NOR s plovoucím hradlem. Na desce UEFI AMI verze 3101; výrobce a typ čipu neověřeny.',
+  components: [
+    blk('spi', 'ROZHRANÍ SPI (CLK, CS#, MOSI, MISO)', 50, 50, [], ['BAJTY'], 'Z PCH', 230, 80),
+    blk('cmd', 'DEKODÉR PŘÍKAZŮ', 340, 50, ['BAJTY'], ['ADRESA'], '0x03, 0x0B, 0x02, 0x20 …', 210, 70),
+    blk('sr', 'STAVOVÝ REGISTR (WIP, WEL, OCHRANA)', 340, 150, [], [], '', 210, 70),
+    blk('addr', 'ADRESOVÝ ČÍTAČ 24 BIT', 600, 50, ['ADRESA'], ['ŘÁDEK'], '16 MB', 210, 70),
+    blk('arr', 'POLE NOR 128 Mb', 600, 150, ['ŘÁDEK'], [], 'PLOVOUCÍ HRADLO', 210, 80),
+    blk('hv', 'VYSOKÉ NAPĚTÍ PRO ZÁPIS / MAZÁNÍ', 340, 250, [], [], 'NÁBOJOVÁ PUMPA', 210, 70),
+  ],
+  wires: [w('spi.BAJTY', 'cmd.BAJTY'), w('cmd.ADRESA', 'addr.ADRESA'), w('addr.ŘÁDEK', 'arr.ŘÁDEK')],
+  drills: { spi: 'MUX', cmd: 'cell_decoder', sr: 'cell_sram', addr: 'FULL_ADDER', arr: 'cell_eeprom', hv: 'cell_buck' },
+});
+
+def('bldc_driver', {
+  level: 3,
+  name: 'Řadič jednofázového BLDC motoru ventilátoru',
+  subtitle: 'Obecná stavba řadiče ventilátoru (typ v E97379 / Stratus neověřen): Hallova sonda snímá polohu magnetu rotoru, komparátor podle ní přepíná proud mezi cívkami A a B (komutace), střída PWM ze 4. pinu zkracuje dobu sepnutí, výstup tacho dá 2 pulzy na otáčku (otevřený kolektor). Když se rotor zablokuje, ochrana vypne proud a zkouší znovu rozběh.',
+  components: [
+    blk('hall', 'HALLOVA SONDA + KOMPARÁTOR', 50, 50, [], ['POLOHA'], 'MAGNET ROTORU', 220, 80),
+    blk('comm', 'KOMUTACE A / B', 330, 50, ['POLOHA', 'STŘÍDA'], ['SPÍNÁNÍ'], 'PODLE POLOHY ROTORU', 200, 80),
+    blk('pwm', 'VSTUP PWM 25 kHz → STŘÍDA', 50, 170, [], ['STŘÍDA'], 'PULL-UP VE VENTILÁTORU', 220, 70),
+    blk('drv', 'VÝKONOVÉ TRANZISTORY CÍVEK', 600, 50, ['SPÍNÁNÍ'], [], 'CÍVKA A / CÍVKA B', 220, 80),
+    blk('tach', 'TACHO (2 PULZY / OT.)', 330, 170, [], [], 'OTEVŘENÝ KOLEKTOR', 200, 70),
+    blk('lock', 'OCHRANA ZABLOKOVÁNÍ', 600, 170, [], [], 'VYPNE A ZKUSÍ ZNOVU', 220, 70),
+  ],
+  wires: [w('hall.POLOHA', 'comm.POLOHA'), w('pwm.STŘÍDA', 'comm.STŘÍDA'), w('comm.SPÍNÁNÍ', 'drv.SPÍNÁNÍ')],
+  drills: { hall: 'cell_lt', comm: 'XOR', pwm: 'cell_lt', drv: 'cell_buck', tach: 'cell_toggle', lock: 'cell_lt' },
+});
+
+def('nct_hwm', {
+  name: 'HW monitor NCT6796D — ADC napětí, teploty, PECI',
+  subtitle: 'Nuvoton NCT679x: multiplexer postupně připojuje vstupy (napětí přes děliče na desce, teplotní diody a termistory) na jeden ADC, výsledky ukládá do registrů a porovnává s mezemi (alarm / SMI#). Teplotu Intel CPU čte digitálně po jednovodičovém rozhraní PECI. Změřeno na mém PC: +3,3 V = 3,344 V, 3VSB = 3,376 V, VTT 1,048 V, Vcore 1,20 V. Rozlišení ADC neověřeno.',
+  components: [
+    blk('mux', 'MULTIPLEXER VSTUPŮ', 50, 50, [], ['ANALOG'], 'NAPĚTÍ, DIODY, TERMISTORY', 210, 80),
+    blk('adc', 'ADC (POSTUPNĚ VŠECHNY VSTUPY)', 320, 50, ['ANALOG'], ['HODNOTA'], 'REFERENCE NA ČIPU', 220, 80),
+    blk('regs', 'REGISTRY HODNOT', 600, 50, ['HODNOTA'], [], 'ČTE BIOS A LIBREHWMONITOR', 220, 70),
+    blk('lim', 'MEZE + ALARM (SMI#)', 600, 150, [], [], 'PŘEHŘÁTÍ, PODPĚTÍ', 220, 70),
+    blk('peci', 'PECI → TEPLOTA CPU', 320, 170, [], [], 'JEDNOVODIČOVÉ, OD INTELU', 220, 70),
+  ],
+  wires: [w('mux.ANALOG', 'adc.ANALOG'), w('adc.HODNOTA', 'regs.HODNOTA')],
+  drills: { mux: 'MUX', adc: 'cell_lt', regs: 'cell_sram', lim: 'cell_lt', peci: 'cell_parity' },
+});
+
+def('nct_smartfan', {
+  name: 'SmartFan NCT6796D — křivka otáček podle teploty',
+  subtitle: 'Nuvoton SmartFan IV (řada NCT677x/679x): pro každý výstup se vybere zdroj teploty (CPU přes PECI, deska), několik bodů křivky teplota → střída nastaví BIOS (u ASUS „Q-Fan“), změna se dělá po krocích s časem náběhu a doběhu. Výstup PWM 25 kHz pro 4pinové ventilátory nebo stejnosměrné napětí pro 3pinové.',
+  components: [
+    blk('src', 'VÝBĚR TEPLOTY', 50, 50, [], ['TEPLOTA'], 'CPU (PECI) / DESKA', 200, 70),
+    blk('curve', 'KŘIVKA: BODY TEPLOTA → STŘÍDA', 320, 50, ['TEPLOTA'], ['CÍL'], 'Q-FAN Z BIOSU', 230, 80),
+    blk('step', 'KROKOVÁNÍ (NÁBĚH / DOBĚH)', 320, 170, ['CÍL'], ['STŘÍDA'], 'BEZ SKOKŮ OTÁČEK', 230, 70),
+    blk('pwm', 'GENERÁTOR PWM 25 kHz', 610, 50, ['STŘÍDA'], [], 'CPU_FAN, CHA_FAN', 210, 70),
+    blk('dc', 'DC REŽIM (3 PIN)', 610, 150, [], [], 'NAPĚTÍ MÍSTO PWM', 210, 70),
+  ],
+  wires: [w('src.TEPLOTA', 'curve.TEPLOTA'), w('curve.CÍL', 'step.CÍL'), w('step.STŘÍDA', 'pwm.STŘÍDA')],
+  drills: { src: 'MUX', curve: 'cell_lt', step: 'FULL_ADDER', pwm: 'cell_lt', dc: 'cell_buck' },
+});
+
+def('kbc_8042', {
+  name: 'Řadič klávesnice PS/2 (kompatibilní s 8042)',
+  subtitle: 'IBM PC AT 8042: CPU čte a zapisuje porty 0x60 (data) a 0x64 (stav/příkaz), řadič komunikuje s klávesnicí a myší po sériové lince PS/2 (hodiny + data, rámec 11 bitů: start, 8 dat, lichá parita, stop) a hlásí příchod bajtu přerušením IRQ1 (klávesnice) / IRQ12 (myš). Na B360-PLUS kombinovaný port PS/2 vzadu (v mém PC nepoužitý, klávesnice je USB).',
+  components: [
+    blk('ports', 'PORTY 0x60 / 0x64', 50, 50, [], ['BAJT'], 'DATA + STAV', 200, 70),
+    blk('buf', 'VSTUPNÍ / VÝSTUPNÍ BUFFER', 320, 50, ['BAJT'], ['RÁMEC'], '', 200, 70),
+    blk('ser', 'SÉRIOVÁ LINKA PS/2 (11 BITŮ)', 580, 50, ['RÁMEC'], [], 'START, 8 DAT, PARITA, STOP', 230, 70),
+    blk('par', 'KONTROLA PARITY', 580, 150, [], [], 'LICHÁ', 230, 60),
+    blk('irq', 'IRQ1 / IRQ12', 320, 150, [], [], 'PŘIŠEL BAJT', 200, 60),
+  ],
+  wires: [w('ports.BAJT', 'buf.BAJT'), w('buf.RÁMEC', 'ser.RÁMEC')],
+  drills: { ports: 'cell_decoder', buf: 'D_FF', ser: 'MUX', par: 'XOR', irq: 'AND' },
+});
+
+def('uart_16550', {
+  name: 'UART 16550 — sériový port COM',
+  subtitle: 'National PC16550D: dělička z hodin 1,8432 MHz dává rychlost (115 200 Bd při děliteli 1), FIFO 16 B na příjem i vysílání, posuvné registry skládají rámec start + 5–8 dat + parita + 1–2 stop bity, stavový registr LSR hlásí prázdný vysílač / přijatá data / chyby. Na B360-PLUS vyvedený na hlavičku COM (převodník úrovní RS-232 na desce).',
+  components: [
+    blk('regs', 'REGISTRY RBR/THR · LCR · LSR', 50, 50, [], ['BAJT'], '', 220, 70),
+    blk('div', 'DĚLIČKA RYCHLOSTI (BAUD)', 50, 160, [], ['TAKT'], 'Z 1,8432 MHz', 220, 70),
+    blk('txf', 'FIFO VYSÍLÁNÍ 16 B', 330, 50, ['BAJT'], ['DATA'], '', 200, 70),
+    blk('rxf', 'FIFO PŘÍJMU 16 B', 330, 160, [], [], 'PŘERUŠENÍ PŘI NAPLNĚNÍ', 200, 70),
+    blk('tsr', 'POSUVNÝ REGISTR TX', 590, 50, ['DATA', 'TAKT'], [], 'START · DATA · PARITA · STOP', 230, 70),
+    blk('rsr', 'POSUVNÝ REGISTR RX + VZORKOVÁNÍ', 590, 160, [], [], '16× NADVZORKOVÁNÍ', 230, 70),
+  ],
+  wires: [w('regs.BAJT', 'txf.BAJT'), w('txf.DATA', 'tsr.DATA'), w('div.TAKT', 'tsr.TAKT')],
+  drills: { regs: 'cell_sram', div: 'FULL_ADDER', txf: 'cell_sram', rxf: 'cell_sram', tsr: 'MUX', rsr: 'D_FF' },
+});
+
 // ================================================================ podjednotky jader x86 (Skylake / Coffee Lake i Haswell), L4,5
 // Zdroj: Intel 64 and IA-32 Architectures Optimization Reference Manual 248966 (kap. 2.2 Skylake, 2.4 Haswell).
 def('x86_frontend', {

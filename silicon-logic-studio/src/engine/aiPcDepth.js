@@ -10,7 +10,7 @@ const DRILLS = {
   psu_primary: { pfcL: 'cell_buck', pfcC: 'cell_lt', fb: 'cell_buck', llcC: 'cell_lt' },
   psu_secondary: { sr: 'cell_buck', dcdc: 'cell_buck', sup: 'cell_lt', fan: 'cell_lt' },
   psu_standby: { ctl: 'cell_lt', rect: 'cell_buck' },
-  p100_board: { edge: 'pcie3_ctrl', vrm: 'cell_buck', hbm0: 'hbm2_stack', hbm1: 'hbm2_stack', hbm2: 'hbm2_stack', hbm3: 'hbm2_stack' },
+  p100_board: { edge: 'pcie3_ctrl', vrm: 'vrm_multiphase', hbm0: 'hbm2_stack', hbm1: 'hbm2_stack', hbm2: 'hbm2_stack', hbm3: 'hbm2_stack' },
   t5810_platform: { pch: 'c612_pch', s2: 'pcie3_ctrl', s4: 'pcie3_ctrl', s3: 'pcie2_ctrl', s5: 'pcie2_ctrl', s6: SER, io: SER },
   gp100_die: { host: 'pcie3_ctrl', gt: 'cell_arbiter', hub: 'nvlink_hub', l2: 'nv_l2', mc0: 'hbm2_ctrl', mc1: 'hbm2_ctrl', mc2: 'hbm2_ctrl', mc3: 'hbm2_ctrl' },
   gp100_sm: { ic: 'cell_sram', pb0: 'cell_arbiter', pb1: 'cell_arbiter', rf: 'cell_sram', fp32: 'FULL_ADDER', fp64: 'FULL_ADDER', ldst: 'FULL_ADDER', sfu: 'cell_decoder', smem: 'cell_sram', tex: 'cell_mac' },

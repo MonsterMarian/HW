@@ -144,8 +144,8 @@ def('gen9_display', {
 
 // ================================================================ čipset B360 (Intel 300 Series PCH, datasheet 337347)
 def('pch_xhci', {
-  name: 'Řadič USB xHCI (B360) — USB 3.1 i USB 2.0',
-  subtitle: 'Intel 300 Series PCH datasheet 337347: jediný řadič xHCI obsluhuje všechny porty (USB 2.0 i 3.1 Gen1/Gen2). Ovladač mu dává práci přes kruhové fronty v paměti (příkazový kruh, přenosové kruhy pro každý endpoint, kruh událostí), řadič je sám čte a zapisuje DMA. USB 2.0 část: 480/12/1,5 Mb/s, NRZI s vkládáním bitů; USB 3.1: 5/10 Gb/s, kódování 8b/10b (Gen1) a 128b/132b (Gen2) – linky Gen1/Gen2 sdílí s HSIO.',
+  name: 'Řadič USB xHCI (Intel PCH) — USB 3 i USB 2.0',
+  subtitle: 'Intel PCH datasheety (B360: 337347; C612: 330788): jediný řadič xHCI obsluhuje všechny porty USB 2.0 i USB 3 (B360: 3.1 Gen1/Gen2, C612: 3.0). Ovladač mu dává práci přes kruhové fronty v paměti (příkazový kruh, přenosové kruhy pro každý endpoint, kruh událostí), řadič je sám čte a zapisuje DMA. USB 2.0 část: 480/12/1,5 Mb/s, NRZI s vkládáním bitů; USB 3.1: 5/10 Gb/s, kódování 8b/10b (Gen1) a 128b/132b (Gen2) – linky Gen1/Gen2 sdílí s HSIO.',
   components: [
     blk('mmio', 'REGISTRY xHCI (MMIO)', 50, 50, [], ['DOORBELL'], 'CAPABILITY, OPERATIONAL, RUNTIME', 210, 80),
     blk('cmd', 'PŘÍKAZOVÝ KRUH', 50, 170, ['DOORBELL'], ['TRB'], 'ADRESACE ZAŘÍZENÍ, ENDPOINTY', 210, 70),
@@ -161,8 +161,8 @@ def('pch_xhci', {
 });
 
 def('pch_ahci', {
-  name: 'Řadič SATA AHCI (B360) — 6 portů 6 Gb/s',
-  subtitle: 'Intel 300 Series PCH datasheet 337347 + specifikace AHCI 1.3: každý port má v paměti seznam až 32 příkazů (NCQ), řadič posílá rámce FIS (Register, DMA Setup, Data) přes linkovou vrstvu SATA (primitiva, CRC32, scrambler) a fyzickou vrstvu 6 Gb/s s kódováním 8b/10b. Na desce: 6 portů + M.2_1 v režimu SATA (pak vypne SATA6G_2). V mém PC zapojené disky nejsou, 970 EVO Plus jde přes NVMe.',
+  name: 'Řadič SATA AHCI (Intel PCH) — porty 6 Gb/s',
+  subtitle: 'Intel 300 Series PCH datasheet 337347 + specifikace AHCI 1.3: každý port má v paměti seznam až 32 příkazů (NCQ), řadič posílá rámce FIS (Register, DMA Setup, Data) přes linkovou vrstvu SATA (primitiva, CRC32, scrambler) a fyzickou vrstvu 6 Gb/s s kódováním 8b/10b. B360-PLUS: 6 portů + M.2_1 v režimu SATA (pak vypne SATA6G_2), v mém PC disky nezapojené (970 EVO Plus jde přes NVMe). C612 v Dellu: až 10 portů, visí na něm 870 EVO z AI PC.',
   components: [
     blk('hba', 'REGISTRY HBA (ABAR)', 50, 50, [], ['PŘÍKAZY'], 'GLOBÁLNÍ + PRO KAŽDÝ PORT', 210, 70),
     blk('cl', 'SEZNAM PŘÍKAZŮ (32 SLOTŮ NCQ)', 50, 160, ['PŘÍKAZY'], ['FIS'], 'PRDT = TABULKA DMA', 210, 80),
@@ -190,7 +190,7 @@ def('pch_hda', {
 });
 
 def('pch_spi', {
-  name: 'SPI + eSPI/LPC (B360) — BIOS flash a Super I/O',
+  name: 'SPI + eSPI/LPC (Intel PCH) — BIOS flash a Super I/O',
   subtitle: 'Intel datasheet 337347: řadič SPI čte flash s BIOSem; flash je rozdělená deskriptorem na oblasti (Descriptor, CSME, BIOS, případně GbE) s právy čtení/zápisu. Soft straps v deskriptoru nastavují i Flex I/O. Rozhraní eSPI nebo LPC vede k Super I/O NCT6796D – které z nich ASUS použil, neověřeno.',
   components: [
     blk('desc', 'DESKRIPTOR FLASH', 50, 50, [], ['OBLASTI'], 'DESCRIPTOR · CSME · BIOS · SOFT STRAPS', 230, 80),
@@ -203,7 +203,7 @@ def('pch_spi', {
 });
 
 def('pch_smbus', {
-  name: 'SMBus řadič (B360) — čtení SPD pamětí',
+  name: 'SMBus řadič (Intel PCH) — čtení SPD pamětí',
   subtitle: 'Intel datasheet 337347 + SMBus 2.0: dvouvodičová sběrnice (SMBCLK, SMBDATA, otevřený kolektor s pull-upy), 100 kHz. BIOS přes ni čte SPD EEPROM všech 4 modulů (adresy 0x50–0x53) a podle nich nastaví časování 2666 CL16. Stejnou sběrnici čte i LibreHardwareMonitor.',
   components: [
     blk('host', 'HOST ŘADIČ (REGISTRY)', 50, 50, [], ['TRANSAKCE'], 'BYTE / WORD / BLOCK READ', 210, 70),
@@ -460,6 +460,117 @@ def('nvlink_hub', {
   ],
   wires: [0, 1, 2, 3].map((i) => w('hub.LINKY', `l${i}.LINKY`)),
   drills: { hub: 'cell_arbiter', l0: 'cell_parity', l1: 'cell_parity', l2: 'cell_parity', l3: 'cell_parity' },
+});
+
+// ================================================================ AI PC: Xeon E5-1650 v3 (Haswell-EP), RDIMM, C612, SSD 870 EVO
+// Zdroje: Intel Xeon E5-1600/2600 v3 datasheet vol. 1 + 2 (330783/330784: ring, home agent, IMC, PCU, FIVR, DMI2),
+// Intel C610/X99 PCH datasheet 330788, JEDEC DDR4 RCD (DDR4RCD01), Samsung 870 EVO datasheet + KitGuru (řadič MKX).
+def('pcie2_ctrl', {
+  name: 'Linka PCI Express 2.0 / DMI 2.0 — 5 GT/s, 8b/10b',
+  subtitle: 'PCI Express Base Spec 2.0: stejné tři vrstvy jako PCIe 3.0, ale 5 GT/s na pruh a kódování 8b/10b (každý bajt jako 10 bitů, 20 % režie, symboly K pro řízení). DMI 2.0 mezi Xeonem a C612 je takto postavená linka x4 (2 GB/s každým směrem); Quadro K620 má PCIe 2.0 x16.',
+  components: [
+    blk('tl', 'TRANSAKČNÍ VRSTVA', 50, 50, [], ['TLP'], 'TLP + KREDITY', 210, 80),
+    blk('dll', 'LINKOVÁ VRSTVA', 320, 50, ['TLP'], ['DLLP'], 'LCRC + ACK / NAK', 200, 80),
+    blk('enc', 'KÓDOVÁNÍ 8b/10b', 580, 50, ['DLLP'], ['SYMBOLY'], 'BĚŽÍCÍ DISPARITA, SYMBOLY K', 220, 80),
+    blk('ltssm', 'LTSSM', 320, 170, [], [], 'TRÉNINK, RYCHLOST 2,5 → 5 GT/s', 200, 70),
+    blk('lanes', 'PRUHY 5 GT/s', 580, 170, ['SYMBOLY'], [], '', 220, 70),
+  ],
+  wires: [w('tl.TLP', 'dll.TLP'), w('dll.DLLP', 'enc.DLLP'), w('enc.SYMBOLY', 'lanes.SYMBOLY')],
+  drills: { tl: 'cell_decoder', dll: 'cell_parity', enc: 'cell_decoder', ltssm: 'cell_decoder', lanes: 'MUX' },
+});
+
+def('hswep_ring', {
+  name: 'Kruh + LLC Haswell-EP (LCC die, 8 zastávek)',
+  subtitle: 'Datasheet Xeon E5 v3 vol. 2: na každé zastávce jádro + plátek LLC 2,5 MB s agentem CBo (u E5-1650 v3 aktivních 6 jader, 15 MB); na kruh jsou dál připojené Home Agent (koherence + paměť), R2PCIe (PCIe a DMI), R3QPI (QPI – u řady 1600 nevyužito) a Ubox (přerušení, konfigurace). Že má E5-1650 v3 die LCC s jedním kruhem, je neověřené.',
+  components: [
+    ...[0, 1, 2, 3, 4, 5].map((i) => blk(`stop${i}`, `JÁDRO ${i} + LLC 2,5 MB (CBo)`, 50 + (i % 3) * 240, 50 + Math.floor(i / 3) * 110, ['KRUH'], ['KRUH'], 'SNOOP FILTR, HASH', 220, 85)),
+    blk('ha', 'HOME AGENT', 50, 290, ['KRUH'], [], 'KOHERENCE, POŘADÍ ZÁPISŮ DO PAMĚTI', 220, 70),
+    blk('r2p', 'R2PCIe', 290, 290, ['KRUH'], [], 'PCIe 3.0 + DMI2', 220, 70),
+    blk('r3q', 'R3QPI', 530, 290, ['KRUH'], [], 'U ŘADY 1600 BEZ QPI', 220, 70),
+    blk('ubox', 'UBOX', 770, 50, [], [], 'PŘERUŠENÍ, KONFIGURACE', 150, 85),
+  ],
+  wires: [w('stop0.KRUH', 'stop1.KRUH'), w('stop1.KRUH', 'stop2.KRUH'), w('stop2.KRUH', 'stop5.KRUH'), w('stop5.KRUH', 'stop4.KRUH'), w('stop4.KRUH', 'stop3.KRUH'), w('stop0.KRUH', 'ha.KRUH'), w('stop1.KRUH', 'r2p.KRUH'), w('stop2.KRUH', 'r3q.KRUH')],
+  drills: { stop0: 'cell_match', stop1: 'cell_match', stop2: 'cell_match', stop3: 'cell_match', stop4: 'cell_match', stop5: 'cell_match', ha: 'cell_arbiter', r2p: 'cell_arbiter', r3q: 'cell_arbiter', ubox: 'cell_decoder' },
+});
+
+def('xeon_imc', {
+  name: 'Řadič paměti Haswell-EP — 4 kanály DDR4 ECC',
+  subtitle: 'Datasheet Xeon E5 v3: 4 kanály DDR4 po 72 bitech (64 dat + 8 ECC), až 3 moduly na kanál, u E5-1650 v3 DDR4-2133 (68 GB/s). Registrované moduly (RDIMM) s registrem RCD. ECC opraví 1 chybný bit, u modulů x4 i výpadek celého čipu (SDDC); průběžné čištění paměti (patrol scrub) opravuje chyby i bez čtení.',
+  components: [
+    blk('dec', 'DEKODÉR ADRES', 50, 50, [], ['KANÁL'], 'PROKLÁDÁNÍ 4 KANÁLŮ', 210, 70),
+    ...[0, 1, 2, 3].map((i) => blk(`ch${i}`, `KANÁL ${i} · 72 BIT`, 320 + (i % 2) * 240, 50 + Math.floor(i / 2) * 100, ['KANÁL'], [], 'PLÁNOVAČ + ČASOVAČE', 220, 80)),
+    blk('ecc', 'ECC + SDDC', 50, 160, [], [], '8 BITŮ KONTROLY NA 64', 210, 70),
+    blk('scrub', 'PATROL SCRUB', 50, 260, [], [], 'PRŮBĚŽNÁ OPRAVA', 210, 70),
+    blk('phy', 'DDR4 PHY 4 × 72 BIT', 320, 260, [], [], 'DDR4-2133', 460, 70),
+  ],
+  wires: [0, 1, 2, 3].map((i) => w('dec.KANÁL', `ch${i}.KANÁL`)),
+  drills: { dec: 'cell_decoder', ch0: 'cell_arbiter', ch1: 'cell_arbiter', ch2: 'cell_arbiter', ch3: 'cell_arbiter', ecc: 'cell_parity', scrub: 'cell_parity', phy: 'MUX' },
+});
+
+def('hsw_pcu', {
+  name: 'PCU + FIVR (Haswell-EP) — napájení přímo na čipu',
+  subtitle: 'Datasheet Xeon E5 v3: Haswell má integrované spínané regulátory FIVR – deska dodá jen VCCIN ~1,8 V (VID přes SVID) a FIVR na čipu z něj dělá napětí pro každé jádro zvlášť, takže P-stavy jdou nastavit po jádrech. PCU hlídá TDP 140 W (RAPL), turbo do 3,8 GHz, teplotní čidla a C-stavy.',
+  components: [
+    blk('fw', 'PCU (MIKROŘADIČ + FIRMWARE)', 50, 50, [], ['VID'], 'PŘÍKON, TEPLOTA, ZÁTĚŽ', 230, 80),
+    blk('svid', 'SVID → VR DESKY (VCCIN)', 50, 170, ['VID'], [], '~1,8 V DO PATICE', 230, 70),
+    ...[0, 1, 2].map((i) => blk(`fivr${i}`, `FIVR JÁDER ${i * 2}–${i * 2 + 1}`, 340 + i * 200, 50, [], [], 'BUCK NA ČIPU, CÍVKY V POUZDŘE', 180, 80)),
+    blk('rapl', 'RAPL 140 W', 340, 170, [], [], '', 180, 70),
+    blk('dts', 'TEPLOTNÍ ČIDLA', 540, 170, [], [], 'TjMax', 180, 70),
+    blk('pll', 'PLL + P-STAVY PO JÁDRECH', 740, 170, [], [], 'TURBO 3,8 GHz', 180, 70),
+  ],
+  wires: [w('fw.VID', 'svid.VID')],
+  drills: { fw: 'FULL_ADDER', svid: 'MUX', fivr0: 'cell_buck', fivr1: 'cell_buck', fivr2: 'cell_buck', rapl: 'cell_mac', dts: 'cell_lt', pll: 'D_FF' },
+});
+
+def('ddr4_rcd', {
+  name: 'Registr RCD (DDR4 RDIMM) — vyrovnávač adres a hodin',
+  subtitle: 'JEDEC DDR4RCD01: registr na RDIMM přijme adresy, příkazy a hodiny z procesoru a pošle je dál čipům DRAM (strana A a B), o takt později. Tím procesor zatěžuje jen 1 vstup místo 18 čipů. PLL vyrovná hodiny, kontrola parity adres hlásí chybu (ALERT_n), řídicí slova RCD nastaví BIOS. Výrobce IDT, typ neověřen.',
+  components: [
+    blk('in', 'VSTUPY CA + ŘÍZENÍ + CK', 50, 50, [], ['CA'], 'Z PROCESORU (1 ZÁTĚŽ)', 210, 80),
+    blk('par', 'KONTROLA PARITY CA', 50, 170, [], [], 'ALERT_n PŘI CHYBĚ', 210, 70),
+    blk('reg', 'REGISTR (ZPOŽDĚNÍ 1 TAKT)', 320, 50, ['CA'], ['QA', 'QB'], 'D KLOPNÉ OBVODY', 210, 80),
+    blk('pll', 'PLL HODIN', 320, 170, [], [], 'VYROVNÁNÍ FÁZE', 210, 70),
+    blk('qa', 'VÝSTUPY STRANA A → D1–D10', 590, 50, ['QA'], [], '', 230, 70),
+    blk('qb', 'VÝSTUPY STRANA B → D11–D18', 590, 150, ['QB'], [], '', 230, 70),
+    blk('cw', 'ŘÍDICÍ SLOVA RCD', 320, 280, [], [], 'NASTAVUJE BIOS', 210, 70),
+  ],
+  wires: [w('in.CA', 'reg.CA'), w('reg.QA', 'qa.QA'), w('reg.QB', 'qb.QB')],
+  drills: { in: 'cell_lt', par: 'cell_parity', reg: 'D_FF', pll: 'D_FF', qa: 'NOT', qb: 'NOT', cw: 'cell_sram' },
+});
+
+def('c612_pch', {
+  level: 3,
+  name: 'Intel C612 — čipset (PCH) Dellu T5810',
+  subtitle: 'Intel C610/X99 datasheet 330788: k procesoru DMI 2.0 x4 (5 GT/s), až 10× SATA 6 Gb/s, USB 3.0 a USB 2.0 přes xHCI, 8 linek PCIe 2.0, SPI flash s BIOSem, LPC, SMBus, MAC Gigabit Ethernet (PHY je na desce zvlášť) a Management Engine 9 (starší generace s jádrem ARC, ne x86). Přesné počty portů vyvedené Dellem neověřeny.',
+  components: [
+    blk('dmi', 'DMI 2.0 x4 → XEON', 50, 50, [], ['SBĚRNICE'], '5 GT/s, 8b/10b', 200, 70),
+    blk('sata', 'SATA AHCI (AŽ 10 PORTŮ)', 330, 50, ['SBĚRNICE'], [], '870 EVO NA HDD0', 210, 70),
+    blk('usb', 'xHCI: USB 3.0 + USB 2.0', 330, 140, ['SBĚRNICE'], [], '', 210, 70),
+    blk('pcie', 'PCIe 2.0 · 8 LINEK', 330, 230, ['SBĚRNICE'], [], 'SLOTY 3 A 5', 210, 70),
+    blk('spi', 'SPI FLASH (BIOS) + LPC', 600, 50, ['SBĚRNICE'], [], '', 210, 70),
+    blk('smb', 'SMBus', 600, 140, ['SBĚRNICE'], [], '', 210, 70),
+    blk('gbe', 'MAC GIGABIT ETHERNET', 600, 230, ['SBĚRNICE'], [], 'PHY NA DESCE', 210, 70),
+    blk('me', 'MANAGEMENT ENGINE 9 (ARC)', 50, 160, [], [], 'FIRMWARE VE SPI FLASH', 200, 80),
+    blk('clk', 'HODINY + RTC', 50, 280, [], [], 'BATERIE CR2032', 200, 70),
+  ],
+  wires: ['sata', 'usb', 'pcie', 'spi', 'smb', 'gbe'].map((k) => w('dmi.SBĚRNICE', `${k}.SBĚRNICE`)),
+  drills: { dmi: 'pcie2_ctrl', sata: 'pch_ahci', usb: 'pch_xhci', pcie: 'pcie2_ctrl', spi: 'pch_spi', smb: 'pch_smbus', gbe: 'cell_parity', me: 'FULL_ADDER', clk: 'cell_toggle' },
+});
+
+def('samsung_mkx', {
+  name: 'Řadič Samsung MKX (S4LR059) — SSD 870 EVO',
+  subtitle: 'Samsung 870 EVO datasheet + KitGuru: řadič MKX k disku přes SATA 6 Gb/s, cache LPDDR4 1 GB, V-NAND TLC; ECC, šifrování AES-256 (TCG Opal), TurboWrite (SLC cache). Počet a typ jader (uvádí se 3× ARM Cortex-R4) a počet kanálů NAND neověřeny.',
+  components: [
+    blk('sata', 'SATA 6 Gb/s (ZAŘÍZENÍ)', 50, 50, [], ['PŘÍKAZY'], 'FIS, NCQ 32 PŘÍKAZŮ', 210, 80),
+    blk('cores', 'JÁDRA ARM (NEOVĚŘENO)', 320, 50, ['PŘÍKAZY'], ['FTL'], 'FIRMWARE', 210, 80),
+    blk('ftl', 'FTL: MAPOVÁNÍ LBA → STRÁNKA', 320, 170, ['FTL'], ['NAND'], 'WEAR LEVELING, GC', 210, 80),
+    blk('dram', 'ŘADIČ LPDDR4 1 GB', 580, 50, [], [], 'TABULKA FTL', 220, 70),
+    blk('ecc', 'ECC (LDPC?) + AES-256', 580, 150, ['NAND'], ['DATA'], 'TYP ECC NEOVĚŘEN', 220, 80),
+    blk('nand', 'KANÁLY NAND (TOGGLE DDR)', 580, 270, ['DATA'], [], 'POČET NEOVĚŘEN', 220, 70),
+    blk('tw', 'TURBOWRITE (SLC CACHE)', 320, 290, [], [], 'RYCHLÝ ZÁPIS, POTOM TLC', 210, 70),
+  ],
+  wires: [w('sata.PŘÍKAZY', 'cores.PŘÍKAZY'), w('cores.FTL', 'ftl.FTL'), w('ftl.NAND', 'ecc.NAND'), w('ecc.DATA', 'nand.DATA')],
+  drills: { sata: 'cell_parity', cores: 'FULL_ADDER', ftl: 'cell_sram', dram: 'cell_arbiter', ecc: 'cell_parity', nand: 'MUX', tw: 'cell_nand' },
 });
 
 // ================================================================ podjednotky jader x86 (Skylake / Coffee Lake i Haswell), L4,5

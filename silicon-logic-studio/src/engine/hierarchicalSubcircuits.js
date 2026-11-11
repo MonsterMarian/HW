@@ -52,28 +52,28 @@ const def = (key, sub) => { H[key] = { key, ...sub }; };
 def('nv1_die', {
   level: 2,
   name: 'NVIDIA NV1 / SGS-Thomson STG2000X — die',
-  subtitle: '0,5 µm CMOS, 3 vrstvy kovu, 3,3 V, PCI 2.0 (datasheet STG2000). Model vede paměť jako jednu 64bitovou sběrnici a pixely po P[14:0]; skutečný čip má 32bitovou MD[31:0] se dvěma bankami a pixely do Palette-DAC bere přímo z MD. Rozmístění bloků = model floorplanu (die-shot neověřen). Bloky jsou popisné, simuluje se jejich RTL o úroveň níž.',
+  subtitle: '0,5 µm CMOS, 3 vrstvy kovu, 3,3 V, PCI 2.0 (datasheet STG2000). Paměť (dvě banky), BIOS ROM i registry Palette-DAC sdílejí 32bitovou sběrnici MD[31:0]; pixely jdou z paměti rovnou do Palette-DAC (LOADCLK), game port přes registry DAC. Rozmístění bloků = model floorplanu (die-shot neověřen). Bloky jsou popisné, simuluje se jejich RTL o úroveň níž.',
   components: [
     // pad ring
-    blk('pad_video', 'PADY: VIDEO → STG1764X', 60, 150, [], ['P[14:0]', 'SYNC'], 'io_pad'),
-    blk('pad_audio_game', 'PADY: AD1845 + SATURN', 60, 325, [], ['CODEC', 'TH/TR D'], 'io_pad'),
-    blk('pad_mem_addr', 'PADY: MA RAS# CAS# WE#', 640, 60, ['MA/RAS/CAS'], [], 'io_pad'),
-    blk('pad_mem_data', 'PADY: MD[63:0]', 790, 215, ['MD[63:0]'], [], 'io_pad'),
+    blk('pad_video', 'PADY: VIDEO → STG1764X', 60, 150, [], ['LOADCLK BLANK#', 'SYNC'], 'io_pad'),
+    blk('pad_audio_game', 'PADY: AD1845 (AUD AUA AUR# AUW#)', 60, 325, [], ['CODEC'], 'io_pad'),
+    blk('pad_mem_addr', 'PADY: MA02 MA13 RAS# CAS# WE# OE#', 640, 60, ['MA/RAS/CAS'], [], 'io_pad'),
+    blk('pad_mem_data', 'PADY: MD[31:0]', 790, 215, ['MD[31:0]'], [], 'io_pad'),
     blk('pad_pci', 'PADY: PCI AD[31:0]', 340, 480, [], ['AD[31:0]', 'PCI CTL'], 'io_pad'),
-    blk('pad_rom', 'PADY: BIOS EPROM', 640, 480, ['ROM A/D'], [], 'io_pad'),
+    blk('pad_rom', 'PADY: ROMCS# DACCS# EN64', 640, 480, ['CS'], [], 'io_pad'),
     // core
-    blk('crtc', 'CRTC + SCAN-OUT FIFO', 190, 150, ['VGA', 'reg', 'fetch'], ['P[14:0]', 'SYNC'], 'crtc'),
+    blk('crtc', 'CRTC + ČÍTAČ SLOV DAC', 190, 150, ['VGA', 'reg', 'fetch'], ['LOADCLK BLANK#', 'SYNC'], 'crtc'),
     blk('vga', 'VGA KOMPAT. JÁDRO', 340, 150, [], ['časování'], 'vga_serializer'),
     blk('gfx2d', '2D AKCELERÁTOR', 490, 150, ['příkaz'], ['pixely'], 'blit_engine'),
-    blk('memctl', 'ŘADIČ DRAM 64 BIT', 640, 150, ['2D', '3D', 'scan-out'], ['MA/RAS/CAS', 'MD[63:0]', 'scan'], 'mem_ctrl'),
+    blk('memctl', 'ŘADIČ SBĚRNICE MD 32 BIT', 640, 150, ['2D', '3D', 'ROM', 'DAC'], ['MA/RAS/CAS', 'MD[31:0]', 'CS', 'scan'], 'mem_ctrl'),
     blk('audio', 'AUDIO 32 HLASŮ + KODEK IF', 190, 258, ['reg'], ['CODEC'], 'audio_voice'),
     blk('cmd_fifo', 'PŘÍKAZOVÝ FIFO', 340, 258, ['vstup', 'DMA'], ['příkazy'], 'cmd_fifo'),
     blk('qtm', '3D KVADRATICKÝ RENDERER', 490, 258, ['příkaz'], ['pixely'], 'qtm_forward_diff'),
     blk('dma', 'DMA (PCI BUS MASTER)', 640, 258, [], ['master', 'data'], 'dma_engine'),
-    blk('gameport', 'GAME PORT (SATURN)', 190, 366, ['reg'], ['TH/TR D'], 'game_port_scan'),
+    blk('gameport', 'GAME PORT (PŘES REGISTRY DAC)', 190, 366, ['reg'], ['registr DAC'], 'game_port_scan'),
     blk('pci_if', 'PCI TARGET + CONFIG', 340, 366, ['AD[31:0]', 'PCI CTL', 'master'], ['zápisy', 'MMIO', 'ROM'], 'pci_target'),
     blk('regs', 'REGISTRY (MMIO)', 490, 366, ['sběrnice'], ['řízení'], 'mmio_regs'),
-    blk('rom_if', 'ROZHRANÍ BIOS ROM', 640, 366, ['požadavek'], ['ROM A/D'], 'rom_if'),
+    blk('rom_if', 'ROZHRANÍ BIOS ROM', 640, 366, ['požadavek'], ['bajt'], 'rom_if'),
   ],
   wires: [
     w('pad_pci.AD[31:0]', 'pci_if.AD[31:0]'),
@@ -83,40 +83,44 @@ def('nv1_die', {
     w('dma.data', 'cmd_fifo.DMA'),
     w('pci_if.MMIO', 'regs.sběrnice'),
     w('pci_if.ROM', 'rom_if.požadavek'),
-    w('rom_if.ROM A/D', 'pad_rom.ROM A/D'),
+    w('rom_if.bajt', 'memctl.ROM'),
+    w('memctl.CS', 'pad_rom.CS'),
     ...fan('cmd_fifo.příkazy', 'gfx2d.příkaz', 'qtm.příkaz'),
     w('gfx2d.pixely', 'memctl.2D'),
     w('qtm.pixely', 'memctl.3D'),
     w('memctl.scan', 'crtc.fetch'),
     w('memctl.MA/RAS/CAS', 'pad_mem_addr.MA/RAS/CAS'),
-    w('memctl.MD[63:0]', 'pad_mem_data.MD[63:0]'),
+    w('memctl.MD[31:0]', 'pad_mem_data.MD[31:0]'),
     w('vga.časování', 'crtc.VGA'),
-    w('crtc.P[14:0]', 'pad_video.P[14:0]'),
+    w('crtc.LOADCLK BLANK#', 'pad_video.LOADCLK BLANK#'),
     w('crtc.SYNC', 'pad_video.SYNC'),
     ...fan('regs.řízení', 'crtc.reg', 'audio.reg', 'gameport.reg'),
     w('audio.CODEC', 'pad_audio_game.CODEC'),
-    w('gameport.TH/TR D', 'pad_audio_game.TH/TR D'),
+    w('gameport.registr DAC', 'memctl.DAC'),
   ],
 });
 
 def('stg1764_inside', {
   level: 2,
   name: 'SGS-Thomson STG1764X — Palette-DAC + 3× PLL',
-  subtitle: 'PQFP-128. Vstupní latch pixelů, paleta 256×3×8, 3× 8bit DAC, PLL pro VCLK a MCLK (schéma ukazuje dvě ze tří PLL, třetí dává ACLK kodeku). Frekvence krystalu 14,31818 MHz a rozmístění = model.',
+  subtitle: 'PQFP-128, 28 × 28 mm. 64bitový pixelový port se zásobníkem na 128 bitů, paleta 256×3×8, 3× 8bit DAC, tři PLL z krystalu 12,096 MHz (schéma ukazuje dvě, třetí dává ACLK kodeku), registry po MD[15:8] a port GP[7:0], přes který jde game port. Rozmístění bloků = model.',
   components: [
-    blk('pad_pix', 'PADY: P[14:0] BLANK#', 60, 160, [], ['P[14:0]'], 'io_pad'),
+    blk('pad_pix', 'PADY: P[63:0] LOADCLK BLANK#', 60, 160, [], ['P[63:0]'], 'io_pad'),
     blk('xtal_osc', 'OSCILÁTOR KRYSTALU Y1', 60, 380, [], ['REF'], 'NOT'),
-    blk('pix_latch', 'VSTUPNÍ LATCH PIXELŮ', 210, 160, ['P[14:0]', 'VCLK'], ['index'], 'ramdac_datapath'),
+    blk('pix_latch', 'ZÁSOBNÍK PIXELŮ 2 × 64 BIT', 210, 160, ['P[63:0]', 'VCLK'], ['index'], 'ramdac_datapath'),
     blk('palette', 'PALETA 256×3×8', 370, 100, ['index'], ['RGB 3×8'], 'ramdac_datapath'),
     blk('bypass', 'PŘÍMÉ RGB555 (BYPASS)', 370, 230, ['index'], ['RGB 3×8'], 'ramdac_datapath'),
     blk('dac_r', '8BIT DAC R', 540, 60, ['kód'], ['I_out'], 'ramdac_datapath'),
     blk('dac_g', '8BIT DAC G', 540, 170, ['kód'], ['I_out'], 'ramdac_datapath'),
     blk('dac_b', '8BIT DAC B', 540, 280, ['kód'], ['I_out'], 'ramdac_datapath'),
-    blk('pll_v', 'PLL VCLK 25,17 MHz', 210, 380, ['REF'], ['VCLK'], 'pll_dividers'),
-    blk('pll_m', 'PLL MCLK 50,1 MHz', 370, 380, ['REF'], ['MCLK'], 'pll_dividers'),
+    blk('pll_v', 'PLL BODOVÝ TAKT 25,2 MHz', 210, 380, ['REF'], ['VCLK'], 'pll_dividers'),
+    blk('pll_m', 'PLL MCLKx2 100,07 MHz', 370, 380, ['REF'], ['MCLKx2'], 'pll_dividers'),
+    blk('dac_regs', 'REGISTRY (INDEX 4/5, DATA 6)', 540, 390, ['MD[15:8]'], ['GP'], 'mmio_regs'),
+    blk('pad_gp', 'PADY: GP[7:0] GAME PORT', 700, 390, ['GP'], [], 'io_pad'),
   ],
   wires: [
-    w('pad_pix.P[14:0]', 'pix_latch.P[14:0]'),
+    ...fan('pad_pix.P[63:0]', 'pix_latch.P[63:0]', 'dac_regs.MD[15:8]'),
+    w('dac_regs.GP', 'pad_gp.GP'),
     ...fan('pix_latch.index', 'palette.index', 'bypass.index'),
     ...fan('palette.RGB 3×8', 'dac_r.kód', 'dac_g.kód', 'dac_b.kód'),
     w('bypass.RGB 3×8', 'dac_r.kód'),
@@ -342,7 +346,7 @@ def('mem_ctrl', {
   name: 'ŘADIČ DRAM — multiplex adresy + sekvencer RAS#/CAS#',
   subtitle: 'Čtecí cyklus FPM: řádek na MA → RAS# ↓ → sloupec na MA → CAS# ↓ → prechrage. Čítač ze 2 D-FF (Johnson). Refresh CBR a page-mode burst zde nekresleny; časování tRCD/tASC zjednodušeno.',
   components: [
-    clock('mclk', 'MCLK 50 MHz', 0, 0, 50e6),
+    clock('mclk', 'MCLK 50,03 MHz', 0, 0, 50.03e6),
     inp('row_addr', 'ŘÁDEK RA', 0, 1, 0x12),
     inp('col_addr', 'SLOUPEC CA', 0, 2, 0x34),
     c('s0', 'D_FF', 'STAV q0', 1, 0),
@@ -371,7 +375,7 @@ def('mem_ctrl', {
 def('game_port_scan', {
   level: 3,
   name: 'GAME PORT — skenování Saturn padu (TH/TR)',
-  subtitle: '2bitový čítač (TH = bit 0, TR = bit 1) vybírá skupinu tlačítek, pad odpoví na D[3:0], NV1 ji zachytí do registru (adresa = skupina). Pad = 3 multiplexery (model). Stisk = 0.',
+  subtitle: '2bitový čítač (TH = bit 0, TR = bit 1) vybírá skupinu tlačítek, pad odpoví na D[3:0], NV1 ji zachytí do registru (adresa = skupina). Na kartě jdou TH/TR i data přes port GP Palette-DAC (registr 0x300) a čip nvSGP; schéma ukazuje jen logiku skenování. Pad = 3 multiplexery (model). Stisk = 0.',
   components: [
     clock('scan_clk', 'TAKT SKENOVÁNÍ', 0, 0),
     inp('g0', 'SK. 0: Z Y X R', 0, 1, 0xF),
@@ -413,7 +417,7 @@ const BIOS_HEAD = [0x55, 0xAA, 0x40]; // option ROM signature + size in 512 B bl
 def('rom_if', {
   level: 3,
   name: 'ROZHRANÍ BIOS ROM — čtení EPROM',
-  subtitle: 'Čítač adresy → EPROM → záchytný registr dat. Začátek obrazu 55h AAh + velikost (40h = 32 KB); zbytek obsahu je model, výřez 256 B; 1 bajt / takt (skutečně několik taktů na přístup).',
+  subtitle: 'Čítač adresy → EPROM → záchytný registr dat. Na kartě jde adresa po MD[30:16] a data po MD[7:0], ROMCS# trvá 13 taktů paměti. Začátek obrazu 55h AAh + velikost (40h = 32 KB); zbytek obsahu je model, výřez 256 B; 1 bajt / takt.',
   components: [
     clock('rom_clk', 'TAKT ČTENÍ (model)', 0, 0, 4e6),
     k('k1', '+1', 0, 1, 1),
@@ -790,7 +794,7 @@ def('ramdac_datapath', {
   name: 'RAMDAC — datová cesta kanálu R',
   subtitle: 'Latch pixelu (VCLK) → paleta (8bpp) nebo přímé RGB555 (5→8 bitů opakováním bitů) → latch DAC. Jeden kanál ze tří; analogový proudový DAC se nesimuluje, sonda ukazuje jeho vstupní kód.',
   components: [
-    clock('vclk', 'VCLK 25,17 MHz', 0, 0, 25.175e6),
+    clock('vclk', 'BODOVÝ TAKT 25,2 MHz', 0, 0, 25.2e6),
     inp('pix_in', 'PIXEL (R5 nebo index)', 0, 1, 31),
     inp('mode', 'REŽIM: 0 PALETA / 1 RGB555', 0, 2.5, 1),
     c('pix_latch', 'REGISTER_8BIT', 'VSTUPNÍ LATCH', 1, 0.5),
@@ -812,31 +816,33 @@ def('ramdac_datapath', {
   ],
 });
 
-// f_vco = f_ref * M / N, VCLK = f_vco / 2^P with M=116, N=33, P=1 (values of the simulator's STG1764 model)
-const XTAL = 14.31818e6;
+// STG1732/64: f = f_ref * N / (M * P). Dot clock: M = 12, N = 100, P = 4 -> VCO 100.8 MHz, dot clock 25.2 MHz
+// (the same values as RAMDAC_STG1764.pll.dot in devices/nv1Card.js)
+const XTAL = 12.096e6;
 def('pll_dividers', {
   level: 3,
-  name: 'PLL — děliče N, M a P (VCLK)',
-  subtitle: 'Fázový detektor porovnává f_ref/N s f_VCO/M; zamčeno = obě značky chodí stejně rychle. VCO je tu ideální zdroj na zamčené frekvenci (analogová smyčka nesimulována). M/N/P = 116/33/1 z modelu nv1Card.js.',
+  name: 'PLL — děliče M, N a P (bodový takt)',
+  subtitle: 'Fázový detektor porovnává f_ref/M s f_VCO/N; zamčeno = obě značky chodí stejně rychle (1,008 MHz). f = 12,096 MHz × N / (M × P), M/N/P = 12/100/4 pro bodový takt 25,2 MHz. VCO je tu ideální zdroj na zamčené frekvenci (analogová smyčka nesimulována).',
   components: [
-    clock('xtal', 'REFERENCE 14,31818 MHz', 0, 0, XTAL),
+    clock('xtal', 'REFERENCE 12,096 MHz', 0, 0, XTAL),
     k('k1', '+1', 0, 1, 1),
-    clock('vco', 'VCO 50,33 MHz (ideální)', 0, 2, (XTAL * 116) / 33),
+    clock('vco', 'VCO 100,8 MHz (ideální)', 0, 2, (XTAL * 100) / 12),
     k('k0', '0', 0, 3, 0),
-    c('ref_cnt', 'REGISTER_8BIT', 'DĚLIČ ÷N', 1, 0),
+    c('ref_cnt', 'REGISTER_8BIT', 'DĚLIČ ÷M', 1, 0),
     c('ref_inc', 'ADDER_8BIT', '+1', 2, 0),
-    k('k_n', 'N−1 = 32', 1, 1, 32),
-    c('ref_cmp', 'COMPARATOR_8BIT', '== N−1', 2, 1),
+    k('k_n', 'M−1 = 11', 1, 1, 11),
+    c('ref_cmp', 'COMPARATOR_8BIT', '== M−1', 2, 1),
     c('ref_mux', 'MUX', 'NULOVÁNÍ', 3, 0),
-    c('fb_cnt', 'REGISTER_8BIT', 'DĚLIČ ÷M', 1, 2),
+    c('fb_cnt', 'REGISTER_8BIT', 'DĚLIČ ÷N', 1, 2),
     c('fb_inc', 'ADDER_8BIT', '+1', 2, 2),
-    k('k_m', 'M−1 = 115', 1, 3, 115),
-    c('fb_cmp', 'COMPARATOR_8BIT', '== M−1', 2, 3),
+    k('k_m', 'N−1 = 99', 1, 3, 99),
+    c('fb_cmp', 'COMPARATOR_8BIT', '== N−1', 2, 3),
     c('fb_mux', 'MUX', 'NULOVÁNÍ', 3, 2),
-    probe('ref_tick', 'f_ref / N', 4, 1),
-    probe('fb_tick', 'f_VCO / M', 4, 1.6),
-    c('post_ff', 'D_FF', 'DĚLIČ ÷2 (P=1)', 4, 2.5),
-    probe('vclk_out', 'VCLK 25,17 MHz', 5, 2.5),
+    probe('ref_tick', 'f_ref / M', 4, 1),
+    probe('fb_tick', 'f_VCO / N', 4, 1.6),
+    c('post_ff', 'D_FF', 'DĚLIČ ÷2', 4, 2.5),
+    c('post_ff2', 'D_FF', 'DĚLIČ ÷2 (P = 4)', 5, 2.5),
+    probe('vclk_out', 'BODOVÝ TAKT 25,2 MHz', 5, 3.4),
   ],
   wires: [
     w('xtal.out', 'ref_cnt.clk'),
@@ -854,7 +860,9 @@ def('pll_dividers', {
     w('ref_mux.out', 'ref_cnt.d'),
     w('fb_mux.out', 'fb_cnt.d'),
     w('post_ff.nq', 'post_ff.d'),
-    w('post_ff.q', 'vclk_out.in'),
+    w('post_ff.nq', 'post_ff2.clk'),
+    w('post_ff2.nq', 'post_ff2.d'),
+    w('post_ff2.q', 'vclk_out.in'),
   ],
 });
 
@@ -1625,6 +1633,7 @@ H.RAMDAC_STG1764 = H.stg1764_inside;
 H.DRAM_256K16 = H.dram_inside;
 H.AD1845 = H.ad1845_inside;
 H.EPROM_27C256 = H.eprom_inside;
+H.BUS_SWITCH_32 = H.nmos_transistor; // PI5C3245: every bit is one NMOS pass transistor between the two buses
 H.REGISTER_16BIT = H.REGISTER_8BIT; // same structure, wider
 H.REGISTER_32BIT = H.REGISTER_8BIT;
 H.NMOS = H.nmos_transistor;
@@ -1667,6 +1676,7 @@ export const TERMINAL_TYPES = new Set([
   'INPUT', 'OUTPUT', 'PROBE', 'CONSTANT', 'CLOCK', 'VDD', 'GND', 'LAYER', 'ATOM', 'TUNNEL_IN', 'TUNNEL_OUT',
   'BUS_SPLITTER', 'BUS_MERGER', 'VIRTUAL_SCREEN', 'SEVEN_SEGMENT',
   'CRYSTAL', 'PCI_EDGE', 'VGA_DB15', 'GAME_PORT', 'AUDIO_JACK', 'PCI_HOST', 'VGA_MONITOR', 'AUDIO_SPEAKERS', 'SATURN_PAD',
+  'SEGA_ASIC', 'SEGA_HEADER', // nvSGP: vnitřek není zveřejněný; header = jen kolíky
   // AI PC: popisné bloky z veřejných blokových schémat, konektory a kabely (jen měď), motor ventilátoru
   'PC_BLOCK', 'BLOWER_9733', 'CONN_PCIE8', 'CONN_EPS8', 'CONN_SATA', 'CONN_ATX24', 'CONN_FAN4', 'RELAY', 'DIODE',
 ]);

@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-11 13:03
+Aktualizováno: 2026-11-11 17:19
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -9,14 +9,19 @@ až k atomům (8 úrovní) ve 2D (schéma, PCB) i 3D. Uživatel chce: vzhled jak
 vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zařízení (ne jen schéma).
 
 ## Stav a jak spustit
-- `cd silicon-logic-studio && npm install && npm test` (node --test, ~260 testů), `npm run build`.
+- `cd silicon-logic-studio && npm install && npm test` (node --test, 278 testů, ~10 s), `npm run build`.
 - Vývoj: `npx vite --port 5287 --strictPort` (port 5199 bývá obsazený portfoliem!).
 - Vizuální kontrola bez okna: `SHOT_URL=http://localhost:5287/ npx electron tools/shot.cjs <steps.json> <outdir>`
   (okno `show:false`, `SHOT_SIZE=1280x800`; helpery `__view('SCHEMATIC'|'PCB'|'DIE 3D')`, `__dbl(x,y)`, `__crumb()`,
   `__active()`, `window.__errs`; v DEV i `window.__engine`, `window.__three`, `window.__slsCanvas`).
   Uživatel NECHCE, aby se mu aplikace otevírala – nikdy `npm run desktop` ani viditelný prohlížeč.
-- Rychlost simulace karty ~3 µs na hranu hodin (≈217 hran / µs simulovaného času) → jeden snímek 640×480
-  (16,7 ms) trvá v reálném čase ~1 min. Testy proto používají malý video režim `TINY` + `monitor.modes`.
+- Rychlost simulace karty (měřeno 11. 11.): 159 kroků na µs simulovaného času, ~1,1 ms reálného času na µs → jeden snímek
+  640×480 (16,7 ms) trvá ~19 s (stejně jako starý model). Testy proto používají malý video režim `TINY` + `monitor.modes`.
+  `TINY` = htotal 64, hdisp 32, hss 44, hse 52: přední zatemnění MUSÍ být delší než zpoždění Palette-DAC (8 bodů),
+  jinak HSYNC usekne konec řádku (starý TINY s hss 36 už nejde). Stejné konstanty jsou v testu i v `Nv1DiagnosticModal.jsx`.
+- Engine `step()`: sestupná hrana hodin, na kterou nikdo nereaguje (`s.idleFall`), nemá vlastní krok, bere se s další
+  událostí (stav po kroku je stejný, kroků je polovina). `clocks()` může vrátit `silent: true` = výstup hodin, na který
+  sama součástka nereaguje (MCLKx2 z DAC). Bez toho byl nový model karty 2,4× pomalejší (100MHz takt).
 
 ## Hotovo (2026-11-10)
 - Nové jádro `src/engine/logicEngine.js`: dráty = vodivé sítě (union-find), obousměrné piny, tri-state,
@@ -24,12 +29,11 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   pasivní konektory (`joins`), NMOS/PMOS na úrovni spínačů s držením náboje, víc nezávislých hodin
   v simulovaném čase (ns), `wireValue/wireWidth/wireLabel/pinValue`, `setFrequency(Infinity)` = MAX.
 - Modely součástek `src/engine/devices/nv1Card.js` (+ registry `devices/index.js`): host PC posílá skutečné PCI
-  transakce (config 104A:0008, BAR0, ROM 55AA s kontrolním součtem), NV1 = PCI target + FIFO + řadič FPM DRAM
-  (RAS/CAS, page mode, CBR refresh každých 776 MCLK = 15,52 µs) + CRTC/scan-out + 32hlasá syntéza → AD1845 + Saturn TH/TR scan;
-  4× KM416C256, STG1764X (3 PLL z jediného krystalu → VCLK 25,165 / MCLK 50,1 / ACLK 24,576 MHz, RGB555 → 0–0,7 V), AD1845 (48 kHz
-  z ACLK, vlastní krystal nemá), EPROM, konektory, monitor skládá obraz jen z napětí a časování syncu.
+  transakce (dvě funkce 104A:0008 / 0009, BAR0, ROM 55AA s kontrolním součtem), NV1 = PCI target + FIFO + řadič sběrnice MD
+  + CRTC + 32hlasá syntéza → AD1845; 4× DRAM 256K×16, STG1764X, EPROM, spínač, nvSGP, konektory, monitor skládá obraz jen
+  z napětí a časování syncu. Zapojení a časování od 11. 11. podle datasheetu – viz sekce „Karta NV1 podle datasheetu“.
 - Preset `src/engine/presets/nv1Board.js` (x/y = PCB 3,7 px/mm, sx/sy = schéma). Rozměry pouzder a obrys karty
-  v `boardLayout.js`. 5V klíč PCI je na kontaktech 50/51 (pin 1 u bracketu).
+  v `boardLayout.js`. 5V klíč PCI je na kontaktech 50/51 (pin 1 u bracketu), jazýček 79,14 mm.
 - Hierarchie `hierarchicalSubcircuits.js` L2–L8 přepsaná: L2 DIE_BLOCK (popisné), L3+ simulované RTL → hradla →
   CMOS z tranzistorů → 1 tranzistor + LAYER průřez → ATOM mřížka. `tests/hierarchy.test.js`.
 - 2D: `src/views/canvas/*` (theme, geometry, boardDraw, pcbRoutes), `LogicCanvas.jsx`; 3D: `views/physics/*`
@@ -121,6 +125,10 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   Pouzdra flipdie: xeon (LGA2011-3), gp100 (CoWoS + 4× HBM2), gm107, ddr4_chip. Testy tests/ai_pc.test.js.
 - PAST: v PowerShellu `'a' + $x + 'b', 'c'` – čárka váže víc než + → rozbité JSON kroků pro shot.cjs (Electron pak visí).
 - PAST: PowerShell `Get-Content -Raw` čte UTF-8 bez BOM jako cp1250 → rozbije diakritiku. Používat [IO.File]::ReadAllText.
+- PAST: na stroji běží cizí procesy node (vite projektu REA_webs žere CPU, dva zaseknuté `shot.cjs` z 10. 11.) – testy pak
+  trvají minuty místo 10 s. Nezabíjet bez domluvy s uživatelem, jen s tím počítat u timeoutů.
+- PAST (znovu se stala 11. 11.): české uvozovky v řetězci v uvozovkách "…" rozbijí celý PowerShell skript. Český text
+  jen do @'…'@ nebo nástrojem Edit.
 
 ## PLAN_PROJEKTU.md – co je a není hotové (2026-11-11)
 - Plán je vize (Tauri/Rust/WebGPU), ne seznam úkolů. ROZHODNUTO: stack zůstává React + Electron + JS engine; z plánu se
@@ -135,35 +143,30 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - Past: Bash nástroj tu startuje 30–120 s → používat PowerShell. Skripty, které přepisují soubory, musí zachovat CRLF
   (Toolbar.jsx, boardLayout.js, LogicCanvas.jsx jsou CRLF).
 
-## Review přesnosti (2026-11-11) – co je opraveno a co ZBÝVÁ
-- **ZAČNI TADY: `docs/PLAN_DOKONCENI_2026-11-11.md`** – stav, hotový návrh přestavby paměťové sběrnice karty (piny, časování
-  v tikách, zásobník DAC na 2 slova, nulování 0-1-0, PLL z 12,096 MHz), co chybí ve skriptu `docs/rozpracovano/rebuild_nv1.mjs`
-  (nespouštěl se, neodpovídá ještě konečnému návrhu) a seznam navazujících úprav. Seznam níže je starší; z něj jsou HOTOVÉ
-  body 4 (PCI, dvě funkce) a 5 (kodek AUR#/AUW#, PIO). Krystal 12,096 MHz, RAMDAC 28 × 28 mm, pořadí konektorů a jazýček PCI
-  79,14 mm už jsou ověřené druhým zdrojem (datasheet STG1732/64, XFree86 3.3.6, PCI 2.1, čtyři karty) – do kódu ještě nezanesené.
-- Hotovo navíc: review MŮJ PC a L7–L11 (opravy v kódu), vnitřní schémata bloků z plánu, předvolba `dma_irq_demo`, kmitající
-  obvod → X. Rozhodnutí: bitové chyby z přehřátí, RC zpoždění, WebGPU/JIT/Monaco a skutečný AI copilot se NEDĚLAJÍ (důvody v plánu).
-- Zdroj č. 1 pro kartu: datasheet SGS-Thomson STG2000, září 1996, 81 stran:
-  https://geforcewww.vgamuseum.info/images/doc/st/stg2000_sep96.pdf (text jde vytáhnout přes pypdf). Fotka karty:
-  https://www.vgamuseum.info/images/palcal/diamond/588_diamond_edge_3d_2120_top_hq.jpg
-- OPRAVENO: kodek taktuje ACLK z RAMDACu (Y2 24,576 MHz na kartě není → odstraněn i z kusovníku a nabídek), refresh
-  776 MCLK, PCI 2.0, 2120 = 1 MB + 2 patice (model = rozšířená na 2 MB), popisy u dílů říkají, kde se model liší.
-- ZBÝVÁ PŘEDĚLAT v `nv1Card.js` + `nv1Board.js` + L2 v `hierarchicalSubcircuits.js` (velké, každé mění zapojení i testy):
-  1. Paměť: 32bit `MD[31:0]`, `MA02[8:0]`/`MA13[8:0]`, `CAS02[3:0]#`/`CAS13[3:0]#`, `WE03#`/`WE12#`, `OE0–3#`, 1× `RAS#`,
-     dvě prokládané banky (datasheet s. 6, 19–22); 64 bit má jen pixelový port DAC přes „silicon switch“ (`EN64`).
-  2. Pixely: z `MD` rovnou do Palette-DAC (`LOADCLK`, `BLANK#`, `DACCS#`); registry DAC po `MD[15:8]`. Zrušit `P[14:0]`.
-  3. BIOS ROM na `MD[7:0]`, adresa `MD[30:16]`, `ROMCS#` 13·T_MCLK − 5 ns (s. 7, 30–31). Zrušit piny `rom_*`.
-  4. PCI: header 0x80; funkce 0 VGA `104A:0008` třída 0x030000 bez BAR; funkce 1 `104A:0009` třída 0x048000, BAR0 32 MB
-     prefetch (maska 0xFE000000), bus master; ROM BAR maska 0xFFC00001; INTERRUPT_LINE po resetu 0xFF (příloha A).
-     Pozor: envytools uvádí 0008/0009 obráceně – řídit se datasheetem.
-  5. Kodek: `AUD[7:0]`, `AUA[1:0]`, `AUW#`, `AUR#`, bez DRQ/DACK (s. 37, obr. 30).
-  6. Game port: přes Palette-DAC + čip „SEGA interface ASIC“ (nVSGP), headery J5/J6 2×5, zvláštní bracket; modulární
-     zásuvka na bracketu = PC joystick/MIDI (RJ-45 vs RJ-50 se zdroje liší).
-  7. Časování DRAM podle tab. 3: tRCD 2T−5, tRAC 3T−2, tPC 2T−2, tRP 2,5T−2, tRC 6T−5 (model čte za 2 takty).
-  8. Do čipu jde `MCLKx2` (100 MHz), ne 50 MHz.
-- NEOVĚŘENO, stojí jen na fotce jednoho kusu: krystal 12,096 MHz, STG1764X 28 × 28 mm (rozteč 0,8), pořadí konektorů
-  na bracketu (zásuvka nahoře, pak DE-15, pak 3 jacky), délka jazýčku PCI 78,74 mm (model 85), potisk U19/U20/U23/U24.
-  Chybí na desce: SEGA ASIC, EEPROM 93C46, stabilizátor 3,3 V, 2× OZ, CD audio J4/J12.
+## Karta NV1 podle datasheetu (přestavba hotová 2026-11-11)
+- Zdroje: datasheet STG2000 (září 1996) https://geforcewww.vgamuseum.info/images/doc/st/stg2000_sep96.pdf (text přes pypdf),
+  datasheet STG1732/64, XFree86 3.3.6 `nv1driver.c`, envytools pdac, PCI 2.1; fotka karty
+  https://www.vgamuseum.info/images/palcal/diamond/588_diamond_edge_3d_2120_top_hq.jpg. Odkazy a ověřená fakta jsou
+  v `docs/PLAN_DOKONCENI_2026-11-11.md` (kap. 4); kap. 3 toho plánu je HOTOVÁ, skript `docs/rozpracovano` je smazaný.
+- Model (`nv1Card.js`): NV1 běží na `mclkx2` (100,07 MHz, 1 tik = 10 ns), 32bit MD jako dva 16bit řezy `md_lo`/`md_hi`,
+  banka 0 (dram0/1 = U19/U20) na MD, banka 1 (dram2/3 = U23/U24) na SDB za `BUS_SWITCH_32` (4× PI5C3245Q jako jedna součástka,
+  `en64` = 1 jen při načítání pixelů). Pozdní zápis DRAM (WE# padá při CAS# dole). Pořadí obsluhy: pixely → refresh →
+  registry DAC → ROM → čtení → zápis; ROM jen při vypnutém CRTC nebo ve vertikálním zatemnění.
+- Palette-DAC: krystal 12,096 MHz, `pll` = { dot 12/100/4, mclkx2 11/91/1, aclk 8/65/4 }, f = fref × N / (M × P), `pllHz()`;
+  VCLK = dot / 4 si dělá sám; zásobník 2 slova (8 pixelů), nuluje ho 0-1-0 na BLANK# (NV1 ho posílá na začátku vertikálního
+  zatemnění, `vid.sync` = DAC už je prázdný, smí se načítat); slovo odebírá 2 VCLK po BLANK# → monitor `hpos = -8`.
+  Registry: přímé 4/5 = index, 6 = data s autoinkrementem; 0x300 port GP (bity 6:5 výběr ven, 3:0 data), 0x301 směr (NV1 píše 0x9F).
+- Game port: `ramdac.gp_sel` → `SEGA_ASIC` (nvSGP, průchozí, terminál hierarchie) → `SEGA_HEADER` J5 → pad; J6 a zásuvka P1 nezapojené.
+- Rozmístění na desce je odměřené z fotky: model_x = 88 + foto_x × 0,4273, model_y = 32,4 + foto_y × 0,4273 (foto 1600 px,
+  horní okraj fotky je oříznutý o ~3 mm). DRAM leží vodorovně, BIOS (U12) stojí svisle, RAMDAC 31,2 × 31,2 mm.
+- Co fotka ukazuje a model NEMÁ: DRAM jsou Hyundai HY514260B (JC-70 připájené, JC-60 v paticích) – model má obecné
+  256K×16; stabilizátor LM2941CT (U18, TO-220 naležato vpravo dole), U35/U36 (dvě širší pouzdra mezi zásuvkou a RAMDACem),
+  EEPROM 93C46, 2× OZ, CD audio J4/J12; levý dolní roh desky sahá níž (jacky jsou proto v modelu o 2–3 mm výš).
+  Nesimuluje se zachycení MD[7:0] při RST#. Označení U1/U2/U7 a pořadí jacků nemají spolehlivý zdroj.
+- Kusovník: nové položky `busswitch`, `nvsgp`, `hdr2x5`, `xtal_12` (`xtal_14` zrušen).
+
+## Review ostatních projektů (2026-11-11)
+- Rozhodnutí: bitové chyby z přehřátí, RC zpoždění, WebGPU/JIT/Monaco a skutečný AI copilot se NEDĚLAJÍ (důvody v plánu).
 - AI PC: Seasonic Core GX-650 ATX 3 má JEDEN PCIe kabel (2× 6+2) + 12V-2x6; BFB1012VH 1,5 A (datasheet); PB-08248
   tab. 8 chce 6pin kabely na 120 W; Add2PSU originál = Molex (Dell má SATA → redukce). Neověřeno dál: tloušťka P100,
   štítek RDIMM (RC1 odvozeno z raw card C), DMI2 x4, počet vrstev NAND.
@@ -227,3 +230,4 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - 2026-11-11 12:25 — review (3 nezávislé kontroly se zdroji) → opravy knihovny, AI PC a karty NV1 podle datasheetu STG2000; mrtvý inspektor smazán; velké přestavby karty sepsané v sekci Review přesnosti.
 - 2026-11-11 12:32 — „vyřeš konflikt a dej to do mainu“ → rebase na 8f1587a (MŮJ PC, L1–L11), konflikty aiCopilot.js / models.js / AgentMEMORY vyřešeny, 257/257 testů.
 - 2026-11-11 13:03 — „dořeš zbytky“, pak „zastav a sepiš plán“ → review MŮJ PC + L7–L11, PCI dvě funkce, kodek PIO, schémata bloků z plánu, ukázka DMA/IRQ; přestavba paměťové sběrnice karty zastavena ve fázi návrhu → docs/PLAN_DOKONCENI_2026-11-11.md; 274/274 testů.
+- 2026-11-11 17:19 — „pokračuj s modelováním a dalšími věcmi z plánu“ → přestavba karty NV1 podle datasheetu hotová (sběrnice MD, dvě banky, spínač EN64, pixely do DAC, ROM a registry DAC na MD, game port přes DAC + nvSGP, krystal 12,096 MHz), rozmístění z fotky, 2D/3D/hierarchie/kusovník, engine bez prázdných kroků; 278/278 testů.

@@ -101,11 +101,11 @@ export const ASSEMBLIES = { p100pc: pcParts, mypc: myPcParts }; // projekty se s
 /** Karta NV1: deska podle PCB pohledu (3,7 px/mm), součástky na skutečných pozicích. */
 export function nv1Parts(circuit) {
   const mm = (px) => px / PX_PER_MM;
-  const HEIGHT = { NV1_CORE: 3.65, RAMDAC_STG1764: 2.95, DRAM_256K16: 3.6, AD1845: 4.45, EPROM_27C256: 4.4, CRYSTAL: 13.46, VGA_DB15: 12.5, GAME_PORT: 13.5, AUDIO_JACK: 6 };
-  const ID = { NV1_CORE: 'nv1', RAMDAC_STG1764: 'ramdac', DRAM_256K16: 'dram', AD1845: 'codec', EPROM_27C256: 'eprom', VGA_DB15: 'de15', GAME_PORT: 'rj45', AUDIO_JACK: 'jack' };
+  const HEIGHT = { NV1_CORE: 3.65, RAMDAC_STG1764: 3.65, DRAM_256K16: 3.6, AD1845: 4.45, EPROM_27C256: 4.4, CRYSTAL: 13.46, VGA_DB15: 12.5, GAME_PORT: 13.5, AUDIO_JACK: 6, BUS_SWITCH_32: 1.75, SEGA_ASIC: 4.45, SEGA_HEADER: 8.5 };
+  const ID = { NV1_CORE: 'nv1', RAMDAC_STG1764: 'ramdac', DRAM_256K16: 'dram', AD1845: 'codec', EPROM_27C256: 'eprom', VGA_DB15: 'de15', GAME_PORT: 'rj45', AUDIO_JACK: 'jack', BUS_SWITCH_32: 'busswitch', SEGA_ASIC: 'nvsgp', SEGA_HEADER: 'hdr2x5' };
   const P = [];
   for (const c of circuit.components) {
-    const id = c.type === 'CRYSTAL' ? 'xtal_14' : ID[c.type];
+    const id = c.type === 'CRYSTAL' ? 'xtal_12' : ID[c.type];
     if (!id) continue;
     const { w, h } = componentDims(c, 'hardware');
     const lift = 18 + (Object.keys(ID).indexOf(c.type) % 3) * 6;

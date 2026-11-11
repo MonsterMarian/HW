@@ -561,7 +561,7 @@ export class LogicEngine {
         list.push({ comp, pin: 'out', hz: comp.freqHz || uiHz, level: comp.outputs.out === 1 ? 1 : 0 });
       } else {
         const dev = DEVICES[comp.type];
-        for (const c of dev?.clocks?.(comp, this) || []) list.push({ comp, pin: c.pin || null, name: c.name || c.pin, hz: c.hz, level: 0 });
+        for (const c of dev?.clocks?.(comp, this) || []) list.push({ comp, pin: c.pin || null, name: c.name || c.pin, hz: c.hz, level: 0, silent: !!c.silent });
       }
     }
     for (const s of list) {
@@ -590,11 +590,12 @@ export class LogicEngine {
     const sources = this._clockSources();
     this.tickCount++;
     if (!sources.length) { this._settle(); return; }
+    // A falling edge nobody reacts to (s.idleFall) is not worth a step of its own: it is taken together with the next
+    // edge that somebody does react to, so the state after every step is the same, there are just fewer steps.
     let tNext = Infinity;
-    for (const s of sources) if (s.next < tNext) tNext = s.next;
+    for (const s of sources) { const due = s.level && s.idleFall ? s.next + s.half : s.next; if (due < tNext) tNext = due; }
     this.simTime = tNext;
-    for (const s of sources) {
-      if (s.next > tNext + 1e-6) continue;
+    for (const s of sources) while (s.next <= tNext + 1e-6) {
       s.level ^= 1;
       s.next += s.half;
       const comp = s.comp;
@@ -609,6 +610,7 @@ export class LogicEngine {
           const net = s.netIdx === undefined ? null : t.nets[s.netIdx];
           s.fastFall = !!net && !!DEVICES[comp.type]?.risingOnlyClocks && net.drivers.length === 1
             && net.pull === undefined && net.readers.every((r) => r.risingOnly || isPassive(r.comp));
+          s.idleFall = s.fastFall;
         }
         if (!s.level && s.fastFall) {
           // the net goes low, nobody evaluates: update values and edge memories in place
@@ -622,8 +624,9 @@ export class LogicEngine {
           continue;
         }
         if (s.netIdx !== undefined) this._dirtyNets.add(s.netIdx);
-      }
+      } else s.idleFall = !!DEVICES[comp.type]?.risingOnlyClocks; // internal clock of a part that only counts rising edges
       if (!s.level && DEVICES[comp.type]?.risingOnlyClocks) continue; // nothing to do on its own falling edge
+      if (s.silent) continue; // clock output the part itself does not react to (a PLL output for another chip)
       (comp._edges = comp._edges || []).push(s.level ? s.riseEvt : s.fallEvt);
       this._dirtyComps.add(comp);
     }

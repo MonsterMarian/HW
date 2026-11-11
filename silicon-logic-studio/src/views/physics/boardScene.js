@@ -82,10 +82,42 @@ export function buildRealPart(comp) {
     return m;
   };
   if (t === 'NV1_CORE') return ic(P.pqfp, 28, 28, { h: 3.4, standoff: 0.25, nx: 52, nz: 52, pitch: 0.5, lead: 1.3, leadW: 0.22 });
-  if (t === 'RAMDAC_STG1764') return ic(P.pqfp, 14, 20, { h: 2.7, standoff: 0.25, nx: 26, nz: 38, pitch: 0.5, lead: 1.6, leadW: 0.22 });
-  if (t === 'DRAM_256K16') return ic(P.jLeaded, 10.16, 26.03, { h: 2.75, standoff: 0.85, nz: 20, pitch: 1.27, out: 0.52 }, true);
+  if (t === 'RAMDAC_STG1764') return ic(P.pqfp, 28, 28, { h: 3.4, standoff: 0.25, nx: 32, nz: 32, pitch: 0.8, lead: 1.6, leadW: 0.35 });
+  if (t === 'DRAM_256K16') return ic(P.jLeaded, 26.03, 10.16, { h: 2.75, standoff: 0.85, nx: 20, pitch: 1.27, out: 0.52 });
+  if (t === 'SEGA_ASIC') return ic(P.jLeaded, 16.6, 16.6, { h: 3.6, standoff: 0.85, nx: 11, nz: 11, pitch: 1.27, out: 0.5, c: 0.8, c1: 1.6 });
+  if (t === 'BUS_SWITCH_32') {
+    // four QSOP-20 in a row between the DRAM banks; offsets (mm) measured on the photo of the card
+    const g = new THREE.Group();
+    for (const off of comp.single ? [0] : [-21.1, -11.5, 9.9, 20.8]) { // single = one chip for the parts list
+      const marking = textTexture([{ text: 'PI5C', font: '600 70px Arial, Helvetica, sans-serif' }, { text: '3245Q', font: '600 70px Arial, Helvetica, sans-serif' }], { w: 512, h: 230, bg: '#151618', fg: '#c9c7c1', lineGap: 1.2 });
+      const m = P.pqfp({ bw: 8.65, bd: 3.9, h: 1.5, standoff: 0.15, nx: 10, nz: 0, pitch: 0.635, lead: 1.05, leadW: 0.25, marking });
+      fitMarking(m, 8.65, 3.9, false);
+      m.position.x = off;
+      g.add(m);
+    }
+    return g;
+  }
+  if (t === 'SEGA_HEADER') {
+    // 2 x 5 pin header, 2.54 mm pitch: black base, gold square pins
+    const g = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(12.7, 2.5, 5.08), std(0x141416, { roughness: 0.6 }));
+    base.position.y = 1.25;
+    g.add(base);
+    const gold = std(0xd4af37, { metalness: 0.9, roughness: 0.3 });
+    for (let r = 0; r < 2; r++) for (let k = 0; k < 5; k++) {
+      const pin = new THREE.Mesh(new THREE.BoxGeometry(0.64, 8.5, 0.64), gold);
+      pin.position.set((k - 2) * 2.54, 4.25, (r - 0.5) * 2.54);
+      g.add(pin);
+    }
+    return g;
+  }
   if (t === 'AD1845') return ic(P.jLeaded, 24.2, 24.2, { h: 3.6, standoff: 0.85, nx: 17, nz: 17, pitch: 1.27, out: 0.5, c: 0.8, c1: 1.6 });
-  if (t === 'EPROM_27C256') return ic(P.dipMm, 36.8, 13.4, { pins: 28, h: 3.8, standoff: 0.6, row: 15.24 });
+  if (t === 'EPROM_27C256') {
+    const g = new THREE.Group(); // the DIP stands across the card
+    const m = ic(P.dipMm, 36.8, 13.4, { pins: 28, h: 3.8, standoff: 0.6, row: 15.24 });
+    m.rotation.y = Math.PI / 2;
+    return g.add(m);
+  }
   if (t === 'CRYSTAL') return P.hc49u({ lines: [crystalFrequency(comp), { text: 'MHz', font: 'bold 54px "JetBrains Mono", monospace' }] });
   return null;
 }
@@ -151,7 +183,7 @@ const PCI_JOINS = () => DEVICES.PCI_EDGE?.joins || [];
 /** Contact centres along the edge, listed from pin 1 (far end from the key) towards the key side. */
 function pciFingerXs() {
   const { tab } = NV1_CARD;
-  const p = 1.27 * PX, m = 1.2 * PX;
+  const p = 1.27 * PX, m = 0.5 * PX;
   const keyL = tab.x + tab.key.at, keyR = keyL + tab.key.w;
   const right = [], left = [];
   for (let x = keyR + p * 0.75; x < tab.x + tab.w - m; x += p) right.push(x);
@@ -306,7 +338,11 @@ function silkscreen(comps, bounds, hasCard, rectOf, offBoard) {
   if (hasCard) {
     const { x, y, w, h, tab } = NV1_CARD;
     c.font = '800 11px "Inter", "Segoe UI", sans-serif';
-    c.fillText('DIAMOND EDGE 3D 2120', x + w - 150, y + h - 74);
+    c.save(); // on the card the name runs down the right edge
+    c.translate(x + w - 17, y + 118);
+    c.rotate(Math.PI / 2);
+    c.fillText('EDGE 3D 2120  © 1995', 0, 0);
+    c.restore();
     c.font = '700 9px "JetBrains Mono", monospace';
     c.fillText('J1', tab.x + tab.w + 6, y + h - 6);
   }
@@ -395,8 +431,8 @@ function pinAnchor(comp, pin, isOut, rectOf, hasCard) {
     const x = xs[Math.min(xs.length - 1, pciPinNumber(pin) - 1)];
     return { x, y: NV1_CARD.y + NV1_CARD.h, dir: [0, -1] };
   }
-  if (comp.type === 'EPROM_27C256') {
-    // DIP lying along X: leads only on the long sides
+  if (comp.type === 'DRAM_256K16' || comp.type === 'BUS_SWITCH_32' || comp.type === 'SEGA_HEADER') {
+    // packages lying along X: leads only on the long sides
     const pins = Object.keys((isOut ? comp.outputs : comp.inputs) || {});
     const i = Math.max(0, pins.indexOf(pin)), n = Math.max(1, pins.length);
     return { x: r.x + (r.w * (i + 0.5)) / n, y: isOut ? r.y + r.h : r.y, dir: [0, isOut ? 1 : -1] };
@@ -526,6 +562,22 @@ function buildPeripherals(ctx, offParts, X, Z) {
     const [jack, dev] = isBracketPart(a) && ends[b.id] ? [a, b] : isBracketPart(b) && ends[a.id] ? [b, a] : [];
     if (jack && !pairs.has(jack.id)) pairs.set(jack.id, { jack, dev });
   }
+  // Ribbon cable from a pad header to its device (on the real card it ends on the separate "EDGE 3D SEGA" bracket)
+  for (const wire of engine.wires) {
+    const a = byId(wire.from.id), b = byId(wire.to.id);
+    const [hdr, dev] = a?.type === 'SEGA_HEADER' && ends[b?.id] ? [a, b] : b?.type === 'SEGA_HEADER' && ends[a?.id] ? [b, a] : [];
+    if (!hdr || pairs.has(hdr.id)) continue;
+    pairs.set(hdr.id, null);
+    const { w, h } = footprint(hdr);
+    const start = new THREE.Vector3(X(hdr.x + w / 2), PCB_T + 9 * MM, Z(hdr.y + h / 2));
+    const end = ends[dev.id];
+    const edgeZ = Z(card.y) - 8 * MM;
+    const pts = [start, new THREE.Vector3(start.x, start.y + 6 * MM, start.z - 6 * MM), new THREE.Vector3(start.x, PCB_T + 6 * MM, edgeZ), new THREE.Vector3((start.x + end.x) / 2, deskTop + 1.5 * MM, (edgeZ + end.z) / 2), end];
+    const ribbon = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'centripetal'), 120, 1.3 * MM, 8, false), std(0x9a9c9f, { roughness: 0.7 }));
+    ribbon.castShadow = true;
+    group.add(ribbon);
+  }
+  for (const k of [...pairs.keys()]) if (!pairs.get(k)) pairs.delete(k);
   const topZ = Z(card.y) - 22 * MM; // cables run along the desk behind the card
   const gapX = X(card.x + card.w) + 14 * MM;
   for (const { jack, dev } of pairs.values()) {

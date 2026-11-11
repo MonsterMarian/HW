@@ -279,13 +279,30 @@ export const OFFERS = {
       o('Utsource', 'W27C256-45 (Winbond, CDIP-28)', 'https://www.utsource.net/itm/p/8663181.html', 7.08, 'USD', 154, 'použité', 'fetched'),
     ],
   },
-  xtal_14: {
-    note: 'Vysoké pouzdro HC-49/U má jen GME (131-016); ostatní jsou nízké HC-49/S, které se vejdou do stejných děr.',
+  // rešerše 11. 11. 2026
+  busswitch: {
+    note: 'Pořád se vyrábí (dnes Diodes Inc.). TME a Utsource ho nevedou; Mouser a eBay se nepodařilo ověřit. Ceny DigiKey jsou bez DPH.',
     offers: [
-      o('GME.cz', 'Q 14,318MHz HC49/U krystal (131-016)', 'https://www.gme.cz/v/1493751/q-14318mhz-hc49-u-krystal', 0.66, 'CZK', 1, 'nové', 'snippet', 'podezřele nízká cena, asi doprodej'),
-      o('GME.cz', 'QM 14,318MHz HC49U/S krystal (131-086)', 'https://www.gme.cz/v/1493720/qm-14318mhz-hc49u-s-krystal', 6.5, 'CZK', 7, 'nové', 'snippet', 'nízké pouzdro HC-49/S'),
-      o('eBay.com', '(20 PCS) HC-49US 14.31818MHz Criterion', 'https://www.ebay.com/itm/224161898855', 0.5975, 'USD', 13, 'nové', 'snippet', 'balení 20 ks'),
-      o('TME', '14.31M-HC49-S YIC 14.31818 MHz', 'https://www.tme.eu/en/details/14.31m-hc49-s/tht-quartz-crystals/yic/', 0.6, 'USD', 13, 'nové', 'fetched', 'nyní 0 ks skladem'),
+      o('DigiKey', 'Diodes PI5C3245QEX – IC BUS SWITCH 8 X 1:1 20-QSOP', 'https://www.digikey.cz/en/products/detail/diodes-incorporated/PI5C3245QEX/4739119', 13.61, 'CZK', 14, 'nové', 'fetched', 'skladem 1 325 ks'),
+      o('LCSC', 'DIODES PI5C3245QE (C145110), QSOP-20', 'https://www.lcsc.com/product-detail/C145110.html', 1.1999, 'USD', 26, 'nové', 'snippet', 'cena jen z výpisu vyhledávače'),
+    ],
+  },
+  nvsgp: {
+    note: 'Čip nvSGP se samostatně neprodává (Utsource 0 výsledků, žádný inzerát); zdroj = dárcovská karta.',
+    offers: [],
+  },
+  hdr2x5: {
+    note: 'Běžný díl. GME.cz se nepodařilo ověřit. Ceny jsou bez DPH.',
+    offers: [
+      o('TME', 'CONNFLY DS1021-2*5SF11-B (ZL202-10G), lišta 2×5, 2,54 mm, THT', 'https://www.tme.eu/cz/details/zl202-10g/kolikove-listy/connfly/ds1021-2-5sf11/', 1.86, 'CZK', 2, 'nové', 'fetched', 'minimální odběr 10 ks'),
+      o('DigiKey', 'Sullins PEC05DAEN – CONN HEADER VERT 10POS 2.54MM', 'https://www.digikey.cz/en/products/detail/sullins-connector-solutions/PEC05DAEN/860738', 27.01, 'CZK', 27, 'nové', 'fetched'),
+    ],
+  },
+  xtal_12: {
+    note: 'Neobvyklá frekvence. Vysoké pouzdro HC-49/U jako na kartě má jen americký obchod s díly pro automaty (doprava do ČR neověřena); DigiKey má nízké HC-49/US. TME a Utsource ho nevedou.',
+    offers: [
+      o('DigiKey', 'ECS ECS-121-S-4 – 12.096 MHz ±30ppm, HC-49/US', 'https://www.digikey.cz/en/products/detail/ecs-inc/ECS-121-S-4/79335', 16.2, 'CZK', 16, 'nové', 'fetched', 'nízké pouzdro, sériová rezonance, skladem 531 ks'),
+      o('Arcade Parts and Repair', '12.096Mhz Crystal (QC1005), HC-49U', 'https://www.arcadepartsandrepair.com/store/components/crystals/12-096mhz-crystal-qc1005/', 2.7, 'USD', 59, 'nové', 'fetched', 'stav stránka výslovně neuvádí (prodává se jako náhradní díl); 792 ks skladem'),
     ],
   },
   de15: {

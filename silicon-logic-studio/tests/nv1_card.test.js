@@ -8,10 +8,11 @@ import { NV1_BOARD } from '../src/engine/presets/nv1Board.js';
 import { PRESET_CIRCUITS } from '../src/engine/aiCopilot.js';
 import { testPixel, PCI_IDS } from '../src/engine/devices/nv1Card.js';
 
-// Small video mode so a whole frame takes ~46 us of simulated time (htotal 48, vtotal 24 at 25.17 MHz)
-const TINY = { htotal: 48, hdisp: 32, hss: 36, hse: 40, vtotal: 24, vdisp: 16, vss: 18, vse: 20 };
-const VCLK = (14.31818e6 * 116) / 66;
-const TINY_MONITOR_MODE = { name: 'TEST 32×16', hHz: VCLK / 48, vHz: VCLK / 48 / 24, w: 32, h: 16, pclk: VCLK, hBack: 48 - 36, vBack: 24 - 18 };
+// Small video mode so a whole frame takes ~61 us of simulated time (htotal 64, vtotal 24 at 25.2 MHz). The front porch
+// (12 pixels) has to be longer than the pipeline of the Palette-DAC (8 pixels), as it is in real modes (640x480: 16).
+const TINY = { htotal: 64, hdisp: 32, hss: 44, hse: 52, vtotal: 24, vdisp: 16, vss: 18, vse: 20 };
+const VCLK = (12.096e6 * 100) / 48; // dot clock of the Palette-DAC: 12.096 MHz x 100 / (12 x 4) = 25.2 MHz
+const TINY_MONITOR_MODE = { name: 'TEST 32×16', hHz: VCLK / 64, vHz: VCLK / 64 / 24, w: 32, h: 16, pclk: VCLK, hBack: 64 - 44, vBack: 24 - 18 };
 
 function board({ tiny = true, edit } = {}) {
   const def = JSON.parse(JSON.stringify(NV1_BOARD));
@@ -41,7 +42,9 @@ describe('NV1 board netlist', () => {
 
   it('contains the real parts of a Diamond Edge 3D 2120', () => {
     const types = NV1_BOARD.components.map((c) => c.type);
-    for (const t of ['NV1_CORE', 'RAMDAC_STG1764', 'AD1845', 'EPROM_27C256', 'PCI_EDGE', 'VGA_DB15', 'GAME_PORT']) assert.ok(types.includes(t), t);
+    for (const t of ['NV1_CORE', 'RAMDAC_STG1764', 'AD1845', 'EPROM_27C256', 'PCI_EDGE', 'VGA_DB15', 'GAME_PORT', 'BUS_SWITCH_32', 'SEGA_ASIC']) assert.ok(types.includes(t), t);
+    assert.equal(types.filter((t) => t === 'SEGA_HEADER').length, 2, 'J5 PORT A, J6 PORT B');
+    assert.equal(NV1_BOARD.components.find((c) => c.type === 'CRYSTAL').freqHz, 12.096e6, 'Y1 is marked 12.096 MHz');
     assert.equal(types.filter((t) => t === 'DRAM_256K16').length, 4, '2 MB = 4x 256Kx16 (2 soldered + 2 socketed)');
     assert.equal(types.filter((t) => t === 'AUDIO_JACK').length, 3, 'line in, line out, mic');
     assert.equal(types.filter((t) => t === 'CRYSTAL').length, 1, 'one crystal: the codec is clocked by ACLK from the RAMDAC');
@@ -115,6 +118,9 @@ describe('NV1 board in operation', () => {
     runUntil(e, () => false, 100_000);
     const perUs = (drams[0]._d.refreshes - r0) / 100;
     assert.ok(perUs >= 1 / 15.6 - 0.01, `refresh rate ${perUs.toFixed(3)} per us`);
+    // ...and no faster than every 776 periods of the memory clock: NV1 counts every MCLKx2 edge exactly once,
+    // although the engine does not spend a step on clock edges nobody reacts to
+    assert.ok(perUs <= 1 / 15.5 + 0.011, `refresh rate ${perUs.toFixed(3)} per us`);
     assert.ok(drams.every((d) => d._d.refreshes === drams[0]._d.refreshes), 'all chips refreshed together');
   });
 
@@ -136,7 +142,10 @@ describe('NV1 board in operation', () => {
       }
     }
     assert.equal(bad, 0, 'monitor picture differs from the frame buffer');
-    assert.equal(e.components.get('nv1_core')._s.vid.underflows, 0, 'scan-out FIFO must never run dry');
+    assert.equal(e.components.get('nv1_core')._s.vid.underflows, 0, 'the pixel store of the DAC must never run dry');
+    const dac = e.components.get('ramdac')._c;
+    assert.deepEqual([dac.underflows, dac.overflows], [0, 0], 'the 128-bit pixel store holds at most two loads');
+    assert.ok(dac.resets >= 3, 'BLANK# 0-1-0 empties the pixel store once per frame');
   });
 
   it('codec interface: 8-bit data, 2 address bits, AUR#/AUW# strobes, no DRQ/DACK (STG2000 datasheet ch. 6)', () => {
@@ -171,10 +180,48 @@ describe('NV1 board in operation', () => {
     assert.equal(host.status.pad & (1 << 6), 0);
     assert.equal(host.status.pad | (1 << 6), 0xFFFF, 'no other button pressed');
   });
+  it('memory bus: EN64 splits the banks only for pixel loads, DRAM timing keeps table 3 of the STG2000 datasheet', () => {
+    const e = board();
+    const host = e.components.get('host');
+    const pin = (p) => e.pinValue('nv1_core', p);
+    const sdb = () => e.pinValue('bus_switch', 'b_lo');
+    let split = 0; let joinedDiffers = 0; let loads = 0; let loadsJoined = 0;
+    let prevLoad = 0; let prevRas = 1; let tRas = 0; let minHigh = Infinity; let minLow = Infinity;
+    runUntil(e, () => {
+      const [en64, md, load, ras] = [pin('en64'), pin('md_lo'), pin('loadclk'), pin('ras_n')];
+      if (en64 === 1 && typeof md === 'number' && typeof sdb() === 'number' && md !== sdb()) split++;
+      if (en64 === 0 && md !== sdb()) joinedDiffers++;
+      if (load === 1 && prevLoad === 0) { loads++; if (en64 !== 1) loadsJoined++; }
+      prevLoad = load;
+      if (ras !== prevRas) {
+        if (tRas) { if (ras === 0) minHigh = Math.min(minHigh, e.simTime - tRas); else minLow = Math.min(minLow, e.simTime - tRas); }
+        tRas = e.simTime; prevRas = ras;
+      }
+      return host.status.phase === 'running' && loads > 400;
+    }, 3_000_000);
+    assert.ok(loads > 400, `pixel loads ${loads}`);
+    assert.equal(loadsJoined, 0, 'every LOADCLK edge comes with EN64 = 1');
+    assert.ok(split > 100, 'during a load the two banks drive different halves of the 64-bit pixel port');
+    assert.equal(joinedDiffers, 0, 'with EN64 = 0 the switch makes MD and SDB one bus');
+    // T = 2 periods of MCLKx2 (100.07 MHz): tRP = 2.5T - 2 ns, RAS# low at least 3.5T - 2 ns
+    const T = 2e9 / ((12.096e6 * 91) / 11);
+    assert.ok(minHigh >= 2.5 * T - 2 - 0.01, `RAS# precharge ${minHigh.toFixed(1)} ns`);
+    assert.ok(minLow >= 3.5 * T - 2 - 0.01, `RAS# low ${minLow.toFixed(1)} ns`);
+  });
+
+  it('game port: the pad is read through port A of the Palette-DAC (indexed register 0x300) and the nvSGP chip', () => {
+    const e = board();
+    const host = e.components.get('host');
+    e.components.get('saturn_pad').buttons.start = true;
+    assert.ok(runUntil(e, () => host.status.phase === 'running' && host.status.pad !== 0xFFFF, 3_000_000));
+    assert.equal(host.status.pad, 0xFFFF & ~(1 << 7), 'START is D3 of the second group');
+    const dac = e.components.get('ramdac')._c;
+    assert.equal(dac.dir, 0x9F, 'GP[6:5] programmed as outputs (select), GP[3:0] as inputs');
+    assert.equal(e.pinValue('sega_asic', 'A TH/TR'), e.pinValue('ramdac', 'gp_sel'));
+  });
 });
 
-describe('NV1 board faults behave like real hardware', () => {
-  it('card not in the slot: config read ends in a master abort (FFFFFFFF)', () => {
+describe('NV1 board faults behave like real hardware', () => {  it('card not in the slot: config read ends in a master abort (FFFFFFFF)', () => {
     const e = board({ edit: (d) => { d.wires = d.wires.filter((w) => !(w.from.id === 'host' || w.to.id === 'host')); } });
     const host = e.components.get('host');
     runUntil(e, () => host.status.phase === 'no card', 100_000);
@@ -191,11 +238,29 @@ describe('NV1 board faults behave like real hardware', () => {
   });
 
   it('two DRAM chips wired to the same data slice: reads produce a bus conflict', () => {
-    const e = board({ edit: (d) => { d.wires.push({ from: { id: 'nv1_core', pin: 'md0' }, to: { id: 'dram1', pin: 'dq' } }); } });
+    const e = board({ edit: (d) => { d.wires.push({ from: { id: 'nv1_core', pin: 'md_lo' }, to: { id: 'dram1', pin: 'dq' } }); } });
     const t = e._ensureTopology();
-    const md0 = t.nets[e.netIndexOf('nv1_core', 'md0')];
+    const md0 = t.nets[e.netIndexOf('nv1_core', 'md_lo')];
     let conflict = false;
     runUntil(e, () => (conflict = conflict || md0.value === WireState.CONFLICT), 300_000);
     assert.ok(conflict);
+  });
+
+  it('bus switch missing: NV1 cannot reach the socketed bank, half of the frame buffer never arrives', () => {
+    const e = board({ edit: (d) => { d.wires = d.wires.filter((w) => !(w.from.id === 'nv1_core' && w.to.id === 'bus_switch')); } });
+    const host = e.components.get('host');
+    runUntil(e, () => host.status.readBack !== undefined, 2_000_000);
+    assert.ok(e.components.get('dram0')._d.writes > 0);
+    assert.equal(e.components.get('dram2')._d.writes, 0);
+    assert.equal(e.components.get('dram3')._d.writes, 0);
+  });
+
+  it('nvSGP missing: the game port of the DAC reads only its pull-ups, no button is seen', () => {
+    const e = board({ edit: (d) => { d.wires = d.wires.filter((w) => w.from.id !== 'sega_asic' && w.to.id !== 'sega_asic'); } });
+    const host = e.components.get('host');
+    e.components.get('saturn_pad').buttons.a = true;
+    runUntil(e, () => false, 600_000);
+    assert.equal(host.status.phase, 'running');
+    assert.equal(host.status.pad, 0xFFFF);
   });
 });

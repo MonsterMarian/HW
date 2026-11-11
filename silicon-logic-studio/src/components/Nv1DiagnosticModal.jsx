@@ -9,10 +9,11 @@ import { fmtTime } from '../views/canvas/theme';
 
 // Diagnostika spustí skutečnou kartu v samostatném enginu (stejně jako tests/nv1_card.test.js):
 // hostitel posílá PCI transakce, výsledky se čtou jen z konektorů a pamětí, ne z ručně nastavených hodnot.
-// Malý video režim (32×16), aby celý snímek trval ~46 µs simulovaného času.
-const TINY = { htotal: 48, hdisp: 32, hss: 36, hse: 40, vtotal: 24, vdisp: 16, vss: 18, vse: 20 };
-const VCLK = (14.31818e6 * 116) / 66;
-const TINY_MONITOR_MODE = { name: 'TEST 32×16', hHz: VCLK / 48, vHz: VCLK / 48 / 24, w: 32, h: 16, pclk: VCLK, hBack: 48 - 36, vBack: 24 - 18 };
+// Malý video režim (32×16), aby celý snímek trval ~61 µs simulovaného času. Přední zatemnění (12 bodů) musí být
+// delší než zpoždění Palette-DAC (8 bodů), stejně jako ve skutečných režimech (640×480: 16).
+const TINY = { htotal: 64, hdisp: 32, hss: 44, hse: 52, vtotal: 24, vdisp: 16, vss: 18, vse: 20 };
+const VCLK = (12.096e6 * 100) / 48; // bodový takt Palette-DAC: 12,096 MHz × 100 / (12 × 4) = 25,2 MHz
+const TINY_MONITOR_MODE = { name: 'TEST 32×16', hHz: VCLK / 64, vHz: VCLK / 64 / 24, w: 32, h: 16, pclk: VCLK, hBack: 64 - 44, vBack: 24 - 18 };
 
 const hex = (v, n = 4) => (v >>> 0).toString(16).toUpperCase().padStart(n, '0');
 
@@ -104,10 +105,11 @@ const STAGES = [
           for (let k = 0; k < 3; k++) if (Math.abs(mon.image[o + k] - exp[k]) > 1) bad++;
         }
       }
-      const under = part(e, 'nv1_core')._s?.vid?.underflows ?? 0;
+      const dac = part(e, 'ramdac')._c || {};
+      const under = (part(e, 'nv1_core')._s?.vid?.underflows ?? 0) + (dac.underflows ?? 0) + (dac.overflows ?? 0);
       return {
         passed: /TEST/.test(mon.status) && bad === 0 && under === 0,
-        detail: `${mon.status} · ${mon.frames} snímků · ${bad} chybných složek RGB · podtečení FIFO ${under}`,
+        detail: `${mon.status} · ${mon.frames} snímků · ${bad} chybných složek RGB · podtečení / přetečení zásobníku DAC ${under} · nulování BLANK# ${dac.resets ?? 0}×`,
       };
     },
   },

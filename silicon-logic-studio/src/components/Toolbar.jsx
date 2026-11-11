@@ -129,7 +129,7 @@ export function Toolbar({
   const addComponent = (type, label, props) => {
     audioEngine.playRelayClick(1.0);
     const comp = { ...newPlacement(type), type, label: label || type, inputs: {}, outputs: {}, ...props };
-    if (type === 'CRYSTAL') comp.freqHz = 14.31818e6;
+    if (type === 'CRYSTAL') comp.freqHz = 12.096e6;
     engine.addComponent(comp);
     setActiveCategory(null);
   };

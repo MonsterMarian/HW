@@ -16,8 +16,9 @@ const SCHEMATIC_DIMS = {
   IRQ_CONTROLLER: [150, 150], DMA_CONTROLLER: [170, 150],
   VDD: [60, 40], GND: [60, 40], NMOS: [70, 70], PMOS: [70, 70],
   // board parts: tall enough for one pin row every 18 px
-  NV1_CORE: [220, 520], PCI_HOST: [200, 230], PCI_EDGE: [200, 210], RAMDAC_STG1764: [190, 140],
+  NV1_CORE: [220, 520], PCI_HOST: [200, 230], PCI_EDGE: [200, 210], RAMDAC_STG1764: [190, 190],
   DRAM_256K16: [150, 130], EPROM_27C256: [150, 90], AD1845: [170, 200], CRYSTAL: [110, 50],
+  BUS_SWITCH_32: [170, 110], SEGA_ASIC: [170, 80], SEGA_HEADER: [150, 70],
   VGA_DB15: [180, 130], GAME_PORT: [160, 70], AUDIO_JACK: [150, 70], SATURN_PAD: [150, 70],
   VGA_MONITOR: [280, 250], AUDIO_SPEAKERS: [180, 110],
   // AI PC (schéma napájení)
@@ -33,14 +34,17 @@ const SCHEMATIC_DIMS = {
 // Real package outlines (incl. leads) on the PCB, in world px
 const HARDWARE_DIMS = {
   NV1_CORE: [mm(30.6), mm(30.6)], // PQFP-208: 28 x 28 mm body, 30.6 mm over the gull-wing leads
-  RAMDAC_STG1764: [mm(17.2), mm(23.2)], // PQFP-128: 14 x 20 mm body
-  DRAM_256K16: [mm(11.2), mm(26.0)], // SOJ-40 400 mil: 10.16 x 26.03 mm
-  EPROM_27C256: [mm(37.0), mm(15.2)], // DIP-28 600 mil, lying horizontally
+  RAMDAC_STG1764: [mm(31.2), mm(31.2)], // PQFP-128: 28 x 28 mm body, 0.8 mm pitch, 31.2 mm over the leads (STG1732/64 datasheet)
+  DRAM_256K16: [mm(26.0), mm(11.2)], // SOJ-40 400 mil: 26.03 x 10.16 mm, lying along the card as on the photo
+  EPROM_27C256: [mm(15.2), mm(37.0)], // DIP-28 600 mil, standing across the card as on the photo
   AD1845: [mm(25.2), mm(25.2)], // PLCC-68: 24.2 mm body + J-leads
   CRYSTAL: [mm(11.0), mm(4.7)], // HC-49/U
-  PCI_EDGE: [mm(85.0), mm(7.9)], // 32-bit 5 V card edge, 120 contacts on 1.27 mm pitch (both sides)
+  BUS_SWITCH_32: [mm(50.5), mm(6.0)], // row of four QSOP-20 (8.65 x 3.9 mm body, 6.0 mm over the leads) between the two banks
+  SEGA_ASIC: [mm(17.5), mm(17.5)], // PLCC-44: 16.6 mm body + J-leads
+  SEGA_HEADER: [mm(12.7), mm(5.1)], // 2 x 5 pin header, 2.54 mm pitch
+  PCI_EDGE: [mm(79.14), mm(7.9)], // 32-bit 5 V card edge (PCI 2.1: 79.14 mm long), 120 contacts on 1.27 mm pitch (both sides)
   VGA_DB15: [mm(17.0), mm(33.0)], // DE-15 shell on the bracket
-  GAME_PORT: [mm(17.0), mm(16.0)], // RJ-45 jack
+  GAME_PORT: [mm(17.0), mm(16.0)], // 10P10C modular jack
   AUDIO_JACK: [mm(12.0), mm(9.0)], // 3.5 mm jack
   // off-board equipment (not to scale)
   PCI_HOST: [300, 110], VGA_MONITOR: [300, 270], AUDIO_SPEAKERS: [220, 120], SATURN_PAD: [170, 110],
@@ -75,11 +79,12 @@ export function hardwarePinPos(comp, pinName, isOutput) {
 }
 
 // Diamond Edge 3D PCI card outline (2D world px). PCI cards are 106.68 mm tall including the edge fingers.
-// The 32-bit 5 V edge (85 mm) sits under the J1 part; its key notch is ~11 contacts from the free end.
+// The 32-bit 5 V edge (PCI 2.1: 79.14 mm) sits under the J1 part; its key notch is 11 contacts from the free end.
 export const NV1_CARD = {
   x: 120, y: 20, w: mm(175), h: mm(106.68) - mm(7.9), chamfer: mm(9),
-  // pin 1 is at the bracket end; the 5 V key notch replaces contacts 50/51 (1.27 mm pitch)
-  tab: { x: 275, w: mm(85), h: mm(7.9), key: { at: mm(1.5 + 49 * 1.27), w: mm(2.5) } },
+  // pin 1 is at the bracket end; the 5 V key notch (1.85 mm) replaces contacts 50/51 (1.27 mm pitch). Its centre is
+  // 62.87 mm from contact 1 (PCI 2.1); the 0.8 mm from the end of the tab to contact 1 follows from the two lengths.
+  tab: { x: 275, w: mm(79.14), h: mm(7.9), key: { at: mm(0.8 + 62.87 - 1.85 / 2), w: mm(1.85) } },
 };
 
 // Outline polygon of the card, clockwise, in 2D world px.
@@ -107,5 +112,5 @@ export const isBracketPart = (comp) => BRACKET_TYPES.has(comp.type);
 export function crystalFrequency(comp) {
   if (comp.freqHz) return (comp.freqHz / 1e6).toFixed(comp.freqHz % 1e3 ? 5 : 3).replace(/0+$/, '');
   const m = /([\d.]+)\s*MHz/i.exec(comp.label || '');
-  return m ? m[1] : '14.31818';
+  return m ? m[1] : '12.096';
 }

@@ -830,8 +830,8 @@ function atxBoard([L, W], { layout: Lo, marking = 'PRIME B360-PLUS' }) {
 }
 
 // ---------------------------------------------------------------- díly karty NV1 a periferie
-function chip(dims, { type, freqHz }) {
-  return buildRealPart({ type, id: type, label: type, freqHz }) || new THREE.Group();
+function chip(dims, { type, freqHz, single }) {
+  return buildRealPart({ type, id: type, label: type, freqHz, single }) || new THREE.Group();
 }
 function connector(dims, { build }) {
   return P[build]();

@@ -502,7 +502,7 @@ describe('level 3: block RTL does what the block does', () => {
     assert.equal(pv(e, 'dac_probe'), 245);
   });
 
-  it('PLL dividers: f_ref/N and f_VCO/M tick at the same rate (locked), VCLK = VCO/2', () => {
+  it('PLL dividers: f_ref/M and f_VCO/N tick at the same rate (locked), dot clock = VCO/4', () => {
     const e = load('pll_dividers');
     const count = { ref: 0, fb: 0, vco: 0, vclk: 0 };
     const last = { ref: 0, fb: 0, vco: 0, vclk: 0 };
@@ -517,7 +517,7 @@ describe('level 3: block RTL does what the block does', () => {
     }
     assert.ok(count.ref > 30, `ref ticks ${count.ref}`);
     assert.ok(Math.abs(count.ref - count.fb) <= 1, `ref ${count.ref} vs fb ${count.fb}`);
-    assert.ok(Math.abs(count.vco / 2 - count.vclk) <= 1, `vco ${count.vco} vs vclk ${count.vclk}`);
+    assert.ok(Math.abs(count.vco / 4 - count.vclk) <= 1, `vco ${count.vco} vs vclk ${count.vclk}`);
   });
 
   it('sigma-delta: density of ones equals sample / 256', () => {

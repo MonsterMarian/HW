@@ -9,20 +9,28 @@ až k atomům křemíku, ve 2D (schéma, plošný spoj) i ve 3D.
   dva budiče s různou hodnotou dají zkrat (`X`), nebuzená síť plave (`Z`) nebo ji drží pull-up.
 - **Tranzistory jsou spínače.** NMOS/PMOS spojují sítě, VDD/GND je budí, izolovaný uzel drží náboj
   (buňka DRAM opravdu drží bit).
-- **Víc hodin v simulovaném čase.** PCI 33 MHz z počítače; VCLK 25,17 MHz, MCLK 50,1 MHz a ACLK 24,576 MHz
-  (takt kodeku, z něj 48 kHz) ze tří PLL v RAMDACu. Karta má jediný krystal, kodek vlastní nemá.
+- **Víc hodin v simulovaném čase.** PCI 33 MHz z počítače; ze tří PLL v Palette-DAC bodový takt 25,2 MHz
+  (VCLK = čtvrtina), MCLKx2 100,07 MHz pro paměť a ACLK 24,57 MHz (takt kodeku, z něj 48 kHz).
+  Karta má jediný krystal 12,096 MHz, kodek vlastní nemá.
 
 ## Karta (úroveň 1)
 | Ref | Součástka | Pouzdro |
 |---|---|---|
 | U1 | NVIDIA NV1 / SGS-Thomson STG2000X | PQFP-208 |
 | U2 | SGS-Thomson STG1764X-13 Palette-DAC 135 MHz + 3× PLL | PQFP-128 |
-| U3–U6 | 4× 256K×16 FPM DRAM 50 ns (2 MB; 2120 se prodávala s 1 MB, další 2 čipy jdou do patic) | SOJ-40 |
+| U19, U20 | 2× 256K×16 FPM DRAM, připájené: banka 0 na sběrnici MD (1 MB, tak se 2120 prodávala) | SOJ-40 |
+| U23, U24 | 2× 256K×16 FPM DRAM v paticích: banka 1 na sběrnici SDB (rozšíření na 2 MB) | SOJ-40 |
+| U25–U28 | 4× Pericom PI5C3245Q, sběrnicový spínač mezi MD a SDB (řídí ho `EN64`) | QSOP-20 |
+| U34 | NVIDIA nvSGP, rozhraní pro ovladače Sega Saturn | PLCC-44 |
 | U7 | Analog Devices AD1845 kodek | PLCC-68 |
-| U8 | video BIOS EPROM 32 KB | DIP-28 |
-| Y1 | jediný krystal, reference pro 3 PLL (v modelu 14,31818 MHz) | HC-49/U |
-| J1 | PCI 2.0, 32 bit, 5 V (klíč na kontaktech 50/51) | hrana karty |
-| J2–J6 | VGA DE-15, modulární zásuvka game/MIDI portu, line in, line out, mic | bracket |
+| U12 | video BIOS EPROM 32 KB | DIP-28 |
+| Y1 | jediný krystal 12,096 MHz, reference pro 3 PLL | HC-49/U |
+| J5, J6 | headery 2×5 PORT A / PORT B pro ovladače Saturn | lišta 2,54 mm |
+| J1 | PCI 2.0, 32 bit, 5 V (klíč na kontaktech 50/51, jazýček 79,14 mm) | hrana karty |
+| P1, P2 + 3 jacky | modulární zásuvka 10P10C (PC joystick), VGA DE-15, mic, line in, line out | bracket |
+
+Označení U1, U2 a U7 nemá zdroj (na fotografii není čitelné). Rozmístění součástek je odměřené z fotografie
+karty (vgamuseum.info), s přesností asi 1,5 mm.
 
 Mimo kartu: hostitelské PC, VGA monitor, reproduktory a Sega Saturn pad.
 
@@ -30,12 +38,16 @@ Co se děje po spuštění (RUN, rychlost MAX):
 1. Počítač posílá skutečné PCI transakce: projde obě funkce čipu (funkce 0 VGA `104A:0008`, funkce 1 NV `104A:0009`,
    funkce 2–7 neodpoví), změří a nastaví 32MB BAR funkce NV, přečte BIOS ROM
    (`55 AA`), naprogramuje CRTC na 640×480 @ 60 Hz a zapíše obraz do framebufferu.
-2. NV1 zapisuje do DRAM cykly RAS#/CAS# ve fast page mode a každých 776 taktů MCLK (15,52 µs) dělá refresh.
-3. NV1 čte obraz zpátky do scan-out FIFO a posílá pixely RGB555 do RAMDACu. RAMDAC z nich dělá analogové
-   napětí 0–0,7 V a monitor skládá obraz jen z napětí a časování synchronizace.
+2. NV1 zapisuje do DRAM po 32bitové sběrnici MD cykly RAS#/CAS# ve fast page mode (pozdní zápis, časy podle
+   tabulky 3 datasheetu); sudá slova jdou do banky 0, lichá přes sběrnicový spínač do banky 1. Každých 776 taktů
+   MCLK (15,52 µs) žádá o refresh. Po stejné sběrnici čte i BIOS ROM (`ROMCS#`) a registry Palette-DAC (`DACCS#`).
+3. Pro obraz NV1 rozpojí spínač (`EN64`), obě banky najednou vystaví 64 bitů (4 pixely RGB555) a hrana `LOADCLK`
+   je uloží rovnou do Palette-DAC. Jeho zásobník má jen 128 bitů, proto má načítání pixelů přednost před vším
+   ostatním. DAC z pixelů dělá analogové napětí 0–0,7 V a monitor skládá obraz jen z napětí a časování synchronizace.
 4. 32hlasá syntéza v NV1 naprogramuje AD1845 přes indexové registry, čte jeho stav a posílá vzorky strobe `AUW#`
    (režim PIO, bez DRQ/DACK jako na skutečné kartě); na line-out je analogový signál.
-5. Saturn pad se čte přes výběr TH/TR.
+5. Saturn pad se čte přes port GP Palette-DAC (indexový registr 0x300), čip nvSGP a header J5: výběr TH/TR ven,
+   čtyři datové linky dovnitř.
 
 Simulace je přesná na takty, a proto pomalá: celý snímek 640×480 trvá v reálném čase zhruba minutu.
 
@@ -51,7 +63,7 @@ Po spuštění jsou nahoře v liště dva projekty a otevře se první:
 zda je rozměr ověřený ze zdroje, nebo odhad). Na stole je pravítko 30 cm a mřížka 10 cm. Dovnitř dílů se nevstupuje.
 Klik na díl nebo řádek kusovníku ukáže skutečné nabídky z e-shopů: přímé odkazy na produkt nebo inzerát, cenu
 v původní měně i v Kč (kurz ČNB), stav (nové / repas / použité) a zda byla cena přečtená přímo ze stránky, nebo
-jen z výpisu vyhledávače. Ceny jsou dohledané 10. 11. 2026 v `src/engine/economic/offers.js` a časem zastarají.
+jen z výpisu vyhledávače. Ceny jsou dohledané 10. 11. 2026 (spínač, lišty a krystal karty 11. 11.) v `src/engine/economic/offers.js` a časem zastarají.
 Kusovníky jsou v `src/engine/economic/catalog.js`, modely v `src/views/economic/models.js`.
 
 **ANATOMY (test)** má dva režimy: **3D MODEL** (přesné modely dílů z ECONOMIC natočené do skutečné polohy
@@ -91,24 +103,28 @@ L1 deska → L2 bloky uvnitř čipu → L3 RTL (CRTC, kvadratické dopředné di
 Úrovně L3–L6 se opravdu simulují. L2 (bloky), L7 (vrstvy) a L8 (atomy) jsou popisné.
 
 ## Co je model, ne kopie skutečného čipu
-Mapa registrů NV1 je vlastní a 3D engine NV1 se nesimuluje (obraz kreslí CPU). Odhadem zůstává frekvence krystalu
-(na fotografii karty čteme 12,096 MHz), dělicí poměry PLL, pouzdro RAMDACu (na fotografii je čtvercové, asi 28 × 28 mm),
-floorplan čipu a počet tranzistorů (datasheet ho neuvádí).
+Mapa registrů NV1 je vlastní a 3D engine NV1 se nesimuluje (obraz kreslí CPU). Odhadem zůstává floorplan čipu
+a počet tranzistorů (datasheet ho neuvádí).
 
 Ověřeno datasheetem SGS-Thomson STG2000 (září 1996): 0,5 µm, 3 vrstvy kovu, 3,3 V, PQFP-208, PCI 2.0, 4× 256K×16
-s dvojitým CAS, FPM, refresh CAS-before-RAS každých 776 taktů MCLK, ROM 32K×8, takt kodeku z RAMDACu.
+s dvojitým CAS, FPM, refresh CAS-before-RAS každých 776 taktů MCLK, ROM 32K×8, takt kodeku z Palette-DAC,
+32bitová sběrnice `MD[31:0]` se dvěma prokládanými bankami (`MA02`/`MA13`, `CAS02#`/`CAS13#`, `WE03#`/`WE12#`,
+`OE0#`/`OE1#`), pixely do DAC přímo z paměti, ROM a registry DAC na téže sběrnici. Datasheetem STG1732/64 a ovladačem
+XFree86: krystal 12,096 MHz, vzorec PLL, pouzdro 28 × 28 mm, zásobník pixelů 128 bitů a jeho nulování sekvencí
+0-1-0 na `BLANK#`.
 
-Kde se model od datasheetu **vědomě liší** (zatím nepředěláno, v aplikaci je to u dílů napsané):
-- **Paměť:** model má jednu 64bitovou sběrnici. Čip má 32bitovou `MD[31:0]`, dvě adresní sběrnice `MA02`/`MA13`
-  a dvě prokládané banky po 1 MB; 64 bitů má až pixelový port Palette-DAC.
-- **Pixely:** model je posílá po `P[14:0]`. Čip je do Palette-DAC nahrává přímo z `MD` (signály `LOADCLK`, `BLANK#`).
-- **BIOS ROM:** model má vlastní piny. Čip čte ROM přes `MD[7:0]` (adresa na `MD[30:16]`, výběr `ROMCS#`).
-
-
-- **Game port:** model má jednu cestu k Saturn padu. Na kartě jsou dva headery 2×5 (J5/J6) na zvláštní Sega bracket
-  přes čip SEGA rozhraní za Palette-DAC; modulární zásuvka na bracketu je PC joystick/MIDI port.
-- **Časování DRAM:** model čte za 2 takty od RAS#, čip za 3 (tRAC = 3T − 2 ns).
-- Na kartě jsou navíc sériová EEPROM 93C46, stabilizátor 3,3 V, operační zesilovače a vstupy CD audio.
+Kde se model od skutečné karty **vědomě liší** (v aplikaci je to u dílů napsané):
+- **Zpoždění Palette-DAC:** model má 2 VCLK (8 bodů), skutečný DAC 3 VCLK + 15 bodů. Paleta se nesimuluje (jen RGB555).
+- **Registry DAC:** že číslo přímého registru (4/5/6) odpovídá kódu na `MD[11:8]`, je domněnka z offsetů MMIO.
+  Jak často čip čte game port, zdroj neuvádí.
+- **Sběrnicový spínač:** čtyři čipy PI5C3245Q jsou v simulaci jedna součástka bez zpoždění a odporu.
+- **nvSGP:** vnitřek čipu není zveřejněný, model ho bere jako průchozí budič. Pad je v modelu připojený rovnou
+  na header J5; na kartě vede plochý kabel na zvláštní záslepku „EDGE 3D SEGA“. Modulární zásuvka P1 (PC joystick)
+  není zapojená, její pinout se nenašel.
+- **Záslepka:** pořadí jacků (mic, line in, line out) má jediný zdroj; jacky jsou v modelu o 2–3 mm výš, protože
+  roh desky u záslepky sahá níž než obrys modelu.
+- **Konfigurace po resetu** (zachycení `MD[7:0]` na hraně `RST#`) se nesimuluje.
+- Na kartě jsou navíc sériová EEPROM 93C46, stabilizátor napětí, operační zesilovače a vstupy CD audio.
 
 ## Bloky z PLAN_PROJEKTU.md
 V paletě **GPU**: násobička 8×8, barrel shifter, FPU half-precision (IEEE 754 binary16), MMIO dekodér

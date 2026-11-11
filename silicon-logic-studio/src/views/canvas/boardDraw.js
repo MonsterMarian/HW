@@ -14,7 +14,9 @@ const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 const MARKING = {
   NV1_CORE: ['SGS-THOMSON', 'STG2000X', 'NVIDIA NV1'],
   RAMDAC_STG1764: ['SGS-THOMSON', 'STG1764X'],
-  DRAM_256K16: ['SEC', 'KM416C256'],
+  DRAM_256K16: ['256K×16', 'FPM DRAM'],
+  BUS_SWITCH_32: ['PI5C', '3245Q'],
+  SEGA_ASIC: ['NVIDIA', 'nvSGP'],
   EPROM_27C256: ['27C256', 'VIDEO BIOS'],
   AD1845: ['ANALOG DEVICES', 'AD1845JP'],
 };
@@ -33,8 +35,8 @@ export function liveInfo(comp) {
     case 'RAMDAC_STG1764': {
       const f = comp.inputs.xtal;
       if (!isNum(f)) return ['PLL BEZ REFERENCE'];
-      const { vclk, mclk } = DEVICES.RAMDAC_STG1764.pll;
-      return [`VCLK ${fmtHz((f * vclk.m) / (vclk.n * 2 ** vclk.p))}`, `MCLK ${fmtHz((f * mclk.m) / (mclk.n * 2 ** mclk.p))}`];
+      const { pll, pllHz } = DEVICES.RAMDAC_STG1764;
+      return [`DOT ${fmtHz(pllHz(f, pll.dot))}`, `MCLKx2 ${fmtHz(pllHz(f, pll.mclkx2))}`];
     }
     case 'DRAM_256K16':
       return [`REFRESH ${comp._d?.refreshes ?? 0}`];
@@ -77,12 +79,14 @@ export function drawCard(ctx) {
   ctx.stroke();
 
   // sítotisk karty
+  // na kartě běží nápis svisle podél pravé hrany
   ctx.fillStyle = THEME.silk;
   ctx.font = `800 13px ${THEME.sans}`;
-  ctx.fillText('DIAMOND EDGE 3D 2120', x + w - 172, y + h - 54);
-  ctx.font = `700 8px ${THEME.mono}`;
-  ctx.fillStyle = 'rgba(232, 230, 223, 0.7)';
-  ctx.fillText('NVIDIA NV1 · PCI 2.0 · 2 MB DRAM', x + w - 172, y + h - 40);
+  ctx.translate(x + w - 17, y + 118);
+  ctx.rotate(Math.PI / 2);
+  ctx.fillText('EDGE 3D 2120  © 1995', 0, 0);
+  ctx.rotate(-Math.PI / 2);
+  ctx.translate(-(x + w - 17), -(y + 118));
 
   // klíč 5 V konektoru (výřez ve zlatých kontaktech)
   ctx.fillStyle = THEME.bg;
@@ -257,17 +261,18 @@ export function drawPcbPart(ctx, comp, g, engine, { selected = false } = {}) {
   switch (pkg) {
     case 'PQFP-208':
     case 'PQFP-128':
+    case 'PLCC-44':
     case 'PLCC-68': {
       const total = parseInt(pkg.split('-')[1], 10);
-      const plcc = pkg === 'PLCC-68';
-      const lead = mm(plcc ? 0.6 : 1.3);
+      const plcc = pkg.startsWith('PLCC');
+      const wide = pkg === 'PQFP-128'; // 28 × 28 mm, rozteč 0,8 mm
+      const lead = mm(plcc ? 0.6 : wide ? 1.6 : 1.3);
       const bx = x + lead;
       const by = y + lead;
       const bw = w - 2 * lead;
       const bh = h - 2 * lead;
-      // PQFP-128: 14×20 mm -> 32 + 32 vývodů na krátkých, 32 na dlouhých stranách (zjednodušeně rovnoměrně)
       const perSide = Math.round(total / 4);
-      const pitch = mm(plcc ? 1.27 : 0.5);
+      const pitch = mm(plcc ? 1.27 : wide ? 0.8 : 0.5);
       const pitchX = Math.min(pitch, (bw - 4) / perSide);
       const pitchY = Math.min(pitch, (bh - 4) / perSide);
       leads(ctx, x + w / 2, y, lead + 1, perSide, pitchX, true);
@@ -292,34 +297,36 @@ export function drawPcbPart(ctx, comp, g, engine, { selected = false } = {}) {
       silkRef(ctx, refOf(comp), x, y - 4);
       break;
     }
-    case 'SOJ-40': {
+    case 'SOJ-40': { // leží podél karty: vývody na horní a dolní straně
       const lead = mm(0.6);
-      const bx = x + lead;
-      const bw = w - 2 * lead;
-      leads(ctx, x, y + h / 2, lead + 1, 20, mm(1.27), false);
-      leads(ctx, x + w - lead - 1, y + h / 2, lead + 1, 20, mm(1.27), false);
-      body(ctx, bx, y, bw, h, selected);
-      markingInBody(ctx, comp, bx + 2, y + 6, bw - 4, h - 10);
+      const by = y + lead;
+      const bh = h - 2 * lead;
+      leads(ctx, x + w / 2, y, lead + 1, 20, mm(1.27), true);
+      leads(ctx, x + w / 2, y + h - lead - 1, lead + 1, 20, mm(1.27), true);
+      body(ctx, x, by, w, bh, selected);
+      markingInBody(ctx, comp, x + 6, by + 2, w - 12, bh - 4);
       silkRef(ctx, refOf(comp), x + 2, y - 4);
       break;
     }
-    case 'DIP-28': {
+    case 'DIP-28': { // stojí napříč kartou: vývody vlevo a vpravo, klíč nahoře
       const lead = mm(1.6);
-      const by = y + lead;
-      const bh = h - 2 * lead;
-      leads(ctx, x + w / 2, y, lead + 1, 14, mm(2.54), true);
-      leads(ctx, x + w / 2, y + h - lead - 1, lead + 1, 14, mm(2.54), true);
-      body(ctx, x, by, w, bh, selected);
+      const bx = x + lead;
+      const bw = w - 2 * lead;
+      leads(ctx, x, y + h / 2, lead + 1, 14, mm(2.54), false);
+      leads(ctx, x + w - lead - 1, y + h / 2, lead + 1, 14, mm(2.54), false);
+      body(ctx, bx, y, bw, h, selected);
       ctx.fillStyle = '#26282D';
       ctx.beginPath();
-      ctx.arc(x, by + bh / 2, 4, -Math.PI / 2, Math.PI / 2);
+      ctx.arc(bx + bw / 2, y, 4, 0, Math.PI);
       ctx.fill();
-      // okénko EPROM (pod nálepkou)
+      // nálepka přes okénko EPROM
       ctx.fillStyle = '#D9D4C3';
-      ctx.fillRect(x + w * 0.3, by + 3, w * 0.4, bh - 6);
-      ctx.fillStyle = '#26282D';
-      ctx.font = `700 7px ${THEME.mono}`;
-      textFit(ctx, marking(comp), x + w / 2, by + 3, w * 0.4 - 4, bh - 6, 7, '#26282D');
+      ctx.fillRect(bx + 3, y + h * 0.3, bw - 6, h * 0.4);
+      ctx.save();
+      ctx.translate(bx + bw / 2, y + h / 2);
+      ctx.rotate(-Math.PI / 2);
+      textFit(ctx, marking(comp), 0, -bw / 2 + 4, h * 0.4 - 4, bw - 8, 7, '#26282D');
+      ctx.restore();
       silkRef(ctx, refOf(comp), x, y - 4);
       break;
     }
@@ -374,6 +381,27 @@ export function drawPcbPart(ctx, comp, g, engine, { selected = false } = {}) {
       bracketCaption(ctx, comp, x, y + h - 12, w);
       break;
     }
+    case 'QSOP-20': { // čtyři pouzdra v řadě mezi bankami pamětí (polohy podle fotografie karty)
+      const cw = mm(8.65);
+      const lead = mm(1.05);
+      for (const off of [-21.1, -11.5, 9.9, 20.8]) {
+        const cxm = x + w / 2 + mm(off);
+        leads(ctx, cxm, y, lead + 1, 10, mm(0.635), true);
+        leads(ctx, cxm, y + h - lead - 1, lead + 1, 10, mm(0.635), true);
+        body(ctx, cxm - cw / 2, y + lead, cw, h - 2 * lead, selected);
+        textFit(ctx, ['PI5C3245Q'], cxm, y + lead + 1, cw - 2, h - 2 * lead - 1, 6, THEME.label);
+      }
+      silkRef(ctx, refOf(comp), x, y - 4);
+      break;
+    }
+    case 'HDR-2x5': {
+      body(ctx, x, y, w, h, selected, '#16171A');
+      ctx.fillStyle = THEME.gold;
+      for (let r = 0; r < 2; r++) for (let k = 0; k < 5; k++) ctx.fillRect(x + mm(1.27 + k * 2.54) - 1.5, y + mm(1.27 + r * 2.54) - 1.5, 3, 3);
+      silkRef(ctx, (comp.label || refOf(comp)), x, y + h + 9);
+      break;
+    }
+    case 'RJ50':
     case 'RJ45': {
       ctx.fillStyle = '#B9BCC0';
       ctx.fillRect(x, y, w, h);

@@ -1,5 +1,13 @@
 # Plán dokončení a kontext práce z 11. 11. 2026
 
+> **Stav 11. 11. 2026 17:20 – kapitola 3 je HOTOVÁ.** Přestavba paměťové sběrnice karty je v kódu podle návrhu 3.1,
+> všechny body 3.3 jsou udělané (deska, rozměry, záslepka, 3D, hierarchie, kusovník a nabídky, ANATOMY, testy,
+> diagnostika, README, změřená rychlost). Skript `docs/rozpracovano/rebuild_nv1.mjs` byl použit a smazán.
+> Proti návrhu se změnilo: testovací video režim má htotal 64 a hss 44 (přední zatemnění musí být delší než zpoždění
+> DAC), rozmístění součástek je nově odměřené z fotografie karty (ne polohy navržené v 3.3 bod 1) a engine nedělá
+> samostatný krok pro sestupné hrany hodin, na které nikdo nereaguje. Kapitoly 4 (fakta a zdroje) a 5 (zbytky) platí dál;
+> co na kartě ještě chybí, je v `AgentMEMORY.md` v sekci „Karta NV1 podle datasheetu“.
+
 Stav k 11. 11. 2026 13:03. Větev `main`, poslední commit s kódem `09f3319`, 274/274 testů, lint čistý, build prošel.
 Práce byla zastavena uprostřed přestavby paměťové sběrnice karty NV1 (kapitola 3). V repu není nic rozbitého:
 rozpracovaná přestavba existuje jen jako skript v `docs/rozpracovano/rebuild_nv1.mjs`, do kódu se nepustila.

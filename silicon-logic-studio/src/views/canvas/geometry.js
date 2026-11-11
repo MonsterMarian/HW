@@ -74,8 +74,8 @@ const SCH_MIN = { VGA_MONITOR: [300, 250], AUDIO_SPEAKERS: [230, 130], PCI_HOST:
 
 // Které strany pouzdra mají vývody (DPS)
 const PKG_SIDES = {
-  'SOJ-40': 'LR', 'HC-49/U': 'LR', 'DSUB-15HD': 'LR', RJ45: 'LR', JACK35: 'LR',
-  'DIP-28': 'TB', 'EDGE-120': 'TB',
+  'SOJ-40': 'TB', 'HC-49/U': 'LR', 'DSUB-15HD': 'LR', RJ45: 'LR', RJ50: 'LR', JACK35: 'LR',
+  'DIP-28': 'LR', 'EDGE-120': 'TB', 'QSOP-20': 'TB', 'HDR-2x5': 'TB',
 };
 
 // ------------------------------------------------------------------ peers (kam vede každý pin)

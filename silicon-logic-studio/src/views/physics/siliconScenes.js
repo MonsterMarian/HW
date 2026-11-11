@@ -130,7 +130,7 @@ const SIDES = [
 // body [w, d, h] and die [w, d] in mm, pins per side (top, right, bottom, left), lead pitch in mm
 const PACKAGES = {
   nv1_die: { pkg: 'PQFP-208', mark: 'STG2000X · DIE 9,5 × 9,5 mm', body: [28, 28, 3.4], die: [9.5, 9.5], pins: [52, 52, 52, 52], pitch: 0.5, lead: 'gull' },
-  stg1764_inside: { pkg: 'PQFP-128', mark: 'STG1764X · DIE ≈ 4,6 × 5,2 mm (odhad)', body: [14, 20, 2.7], die: [4.6, 5.2], pins: [26, 38, 26, 38], pitch: 0.5, lead: 'gull' },
+  stg1764_inside: { pkg: 'PQFP-128', mark: 'STG1764X · DIE ≈ 4,6 × 5,2 mm (odhad)', body: [28, 28, 3.4], die: [4.6, 5.2], pins: [32, 32, 32, 32], pitch: 0.8, lead: 'gull' },
   dram_inside: { pkg: 'SOJ-40', mark: 'KM416C256 · DIE ≈ 4,8 × 11,6 mm (odhad)', body: [10.16, 26.03, 3.5], die: [4.8, 11.6], pins: [0, 20, 0, 20], pitch: 1.27, lead: 'j' },
   ad1845_inside: { pkg: 'PLCC-68', mark: 'AD1845 · DIE ≈ 5,4 × 5,4 mm (odhad)', body: [24.2, 24.2, 4.4], die: [5.4, 5.4], pins: [17, 17, 17, 17], pitch: 1.27, lead: 'j' },
   eprom_inside: { pkg: 'CERDIP-28 s okénkem', mark: '27C256 · DIE ≈ 4,4 × 5,2 mm (odhad)', body: [37, 15.2, 4.2], die: [4.4, 5.2], pins: [14, 0, 14, 0], pitch: 2.54, lead: 'dip', ceramic: true },

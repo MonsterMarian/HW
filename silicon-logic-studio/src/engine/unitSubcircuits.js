@@ -304,8 +304,8 @@ def('usb_fs_device', {
 });
 
 def('cortex_m0', {
-  name: 'ARM Cortex-M0 — jádro MCU klávesnice (NXP LPC11U37F)',
-  subtitle: 'ARM Cortex-M0 Technical Reference Manual: architektura ARMv6-M, instrukce Thumb, 3stupňová pipeline (fetch, decode, execute), 16 registrů r0–r15 po 32 bitech, NVIC až 32 přerušení, sběrnice AHB-Lite. LPC11U37F: 128 KB flash, USB device na čipu. Že je v klávesnici právě tento MCU, je jen z výpisu vyhledávače (TechPowerUp).',
+  name: 'ARM Cortex-M0 — jádro mikrořadiče',
+  subtitle: 'ARM Cortex-M0 Technical Reference Manual: architektura ARMv6-M, instrukce Thumb, 3stupňová pipeline (fetch, decode, execute), 16 registrů r0–r15 po 32 bitech, NVIC až 32 přerušení, sběrnice AHB-Lite. Kde je: MCU klávesnice NXP LPC11U37F (128 KB flash, USB device; jen z výpisu vyhledávače – TechPowerUp) a MCU ventilátoru zdroje GX-650 Nuvoton M031 (podle sourozence GX-750).',
   components: [
     blk('fetch', 'FETCH (32 BIT, 2 INSTRUKCE)', 50, 50, [], ['INSTR'], 'Z FLASH PŘES AHB-LITE', 210, 70),
     blk('dec', 'DECODE THUMB', 320, 50, ['INSTR'], ['ŘÍZENÍ'], '16bitové instrukce', 190, 70),
@@ -803,6 +803,65 @@ def('uart_16550', {
   ],
   wires: [w('regs.BAJT', 'txf.BAJT'), w('txf.DATA', 'tsr.DATA'), w('div.TAKT', 'tsr.TAKT')],
   drills: { regs: 'cell_sram', div: 'FULL_ADDER', txf: 'cell_sram', rxf: 'cell_sram', tsr: 'MUX', rsr: 'D_FF' },
+});
+
+// ================================================================ zdroj AI PC (Seasonic Core GX-650): řadiče PFC, LLC, supervizor, 5VSB
+// Zdroje: obecná stavba podle aplikačních listů (Champion CM6500 – CCM PFC, CU6901 – LLC, Weltrend WT7527 – supervizor,
+// Power Integrations / Excelliance – flyback); konkrétní díly zdroje z Cybenetics / noticias3d (viz psu_primary).
+def('pfc_controller', {
+  name: 'Řadič APFC (CCM) — sinusový odběr ze sítě',
+  subtitle: 'Obecná stavba řadiče PFC v režimu spojitého proudu (CCM, např. Champion CM6500): napěťová smyčka drží bulk na ~380 V, násobička z ní a z okamžitého tvaru síťového napětí udělá požadovaný proud, proudová smyčka PWM pak tlumivkou táhne proud stejného tvaru jako napětí – účiník blízko 1. Ochrany: přepětí bulku, podpětí sítě (brown-out). Detail CM6500UNX neověřen.',
+  components: [
+    blk('vea', 'NAPĚŤOVÁ SMYČKA (BULK 380 V)', 50, 50, [], ['CHYBA'], 'POMALÁ, ŘÁDOVĚ 10 Hz', 230, 80),
+    blk('mul', 'NÁSOBIČKA: CHYBA × TVAR SÍTĚ', 330, 50, ['CHYBA'], ['REF PROUDU'], 'SINUSOVÁ REFERENCE', 230, 80),
+    blk('cea', 'PROUDOVÁ SMYČKA', 330, 170, ['REF PROUDU'], ['STŘÍDA'], 'PROUD TLUMIVKY', 230, 70),
+    blk('pwm', 'PWM KOMPARÁTOR + BUDIČ', 610, 50, ['STŘÍDA'], [], 'NA 2 MOSFETY PFC', 220, 80),
+    blk('prot', 'OVP BULKU + BROWN-OUT', 610, 170, [], [], '', 220, 70),
+  ],
+  wires: [w('vea.CHYBA', 'mul.CHYBA'), w('mul.REF PROUDU', 'cea.REF PROUDU'), w('cea.STŘÍDA', 'pwm.STŘÍDA')],
+  drills: { vea: 'cell_lt', mul: 'cell_mac', cea: 'cell_lt', pwm: 'cell_lt', prot: 'cell_lt' },
+});
+
+def('llc_controller', {
+  name: 'Řadič rezonančního LLC — kmitočtem řízený měnič',
+  subtitle: 'Obecná stavba řadiče LLC (např. Champion CU6901): střída je pevně 50 %, výkon se reguluje kmitočtem – VCO ho podle zpětné vazby z výstupu (přes optočlen) posouvá kolem rezonance Lr–Cr. Mrtvá doba mezi spínači mostu dovolí spínat při nulovém napětí (ZVS), proto vysoká účinnost. Měkký start, burst režim při malé zátěži, nadproudová ochrana a ochrana proti kapacitnímu režimu. Detail CU6901VPA neověřen.',
+  components: [
+    blk('fb', 'ZPĚTNÁ VAZBA (OPTOČLEN)', 50, 50, [], ['CHYBA'], 'Z VÝSTUPU 12 V', 220, 80),
+    blk('vco', 'VCO: KMITOČET PODLE CHYBY', 330, 50, ['CHYBA'], ['TAKT'], 'KOLEM REZONANCE Lr–Cr', 230, 80),
+    blk('dt', 'MRTVÁ DOBA + 2 VÝSTUPY 50 %', 610, 50, ['TAKT'], [], 'ZVS SPÍNAČŮ MOSTU', 220, 80),
+    blk('ss', 'MĚKKÝ START + BURST', 330, 170, [], [], '', 230, 70),
+    blk('prot', 'OCP + KAPACITNÍ REŽIM', 610, 170, [], [], '', 220, 70),
+  ],
+  wires: [w('fb.CHYBA', 'vco.CHYBA'), w('vco.TAKT', 'dt.TAKT')],
+  drills: { fb: 'cell_lt', vco: 'D_FF', dt: 'D_FF', ss: 'FULL_ADDER', prot: 'cell_lt' },
+});
+
+def('psu_supervisor', {
+  name: 'Supervizor zdroje — ochrany, PS_ON#, PWR_OK',
+  subtitle: 'Obecná stavba supervizoru ATX (např. Weltrend WT7527): hlídá výstupy +12/+5/+3,3 V proti přepětí a podpětí (GX-650: OVP 13,4 / 5,74 / 3,76 V), nadproud a teplotu; PS_ON# z desky po odrušení zapne hlavní měnič a PWR_OK pustí až s prodlevou 100–500 ms po ustálení (Intel ATX DG). Při chybě zdroj vypne a zablokuje.',
+  components: [
+    blk('pson', 'VSTUP PS_ON# + ODRUŠENÍ', 50, 50, [], ['ZAPNI'], 'Z DESKY', 210, 70),
+    blk('cmp', 'KOMPARÁTORY OVP / UVP', 50, 160, [], ['CHYBA'], '12 / 5 / 3,3 V', 210, 70),
+    blk('ocp', 'OCP + TEPLOTA', 50, 260, [], ['CHYBA'], '', 210, 70),
+    blk('logic', 'ŘÍZENÍ + ZÁMEK CHYBY', 330, 50, ['ZAPNI', 'CHYBA'], ['BĚŽ'], 'VYPNE A DRŽÍ', 210, 90),
+    blk('pg', 'PWR_OK S PRODLEVOU', 600, 50, ['BĚŽ'], [], '100–500 ms', 210, 70),
+  ],
+  wires: [w('pson.ZAPNI', 'logic.ZAPNI'), w('cmp.CHYBA', 'logic.CHYBA'), w('ocp.CHYBA', 'logic.CHYBA'), w('logic.BĚŽ', 'pg.BĚŽ')],
+  drills: { pson: 'D_FF', cmp: 'cell_lt', ocp: 'cell_lt', logic: 'D_FF', pg: 'FULL_ADDER' },
+});
+
+def('flyback_ctl', {
+  name: 'Pohotovostní měnič 5VSB — flyback',
+  subtitle: 'Obecná stavba malého flyback měniče (topologie u GX-650 neověřena): řadič s integrovaným vysokonapěťovým MOSFETem spíná primár transformátoru z ~380 V, v době sepnutí se energie ukládá do jádra a po vypnutí přejde na sekundár; zpětná vazba přes optočlen drží 5 V. Běží pořád, i když je PC vypnuté.',
+  components: [
+    blk('start', 'ROZBĚH Z VYSOKÉHO NAPĚTÍ', 50, 50, [], [], 'PRVNÍ NAPÁJENÍ ŘADIČE', 220, 70),
+    blk('osc', 'OSCILÁTOR + PWM', 330, 50, [], ['SPÍNÁNÍ'], 'PEVNÝ KMITOČET', 210, 70),
+    blk('fet', 'VYSOKONAPĚŤOVÝ MOSFET', 600, 50, ['SPÍNÁNÍ'], [], 'NA ČIPU ŘADIČE', 210, 70),
+    blk('fb', 'ZPĚTNÁ VAZBA 5 V (OPTOČLEN)', 330, 160, [], [], '', 210, 70),
+    blk('prot', 'OCHRANY (PROUD, PŘEPĚTÍ)', 600, 160, [], [], '', 210, 70),
+  ],
+  wires: [w('osc.SPÍNÁNÍ', 'fet.SPÍNÁNÍ')],
+  drills: { start: 'cell_buck', osc: 'D_FF', fet: 'cell_buck', fb: 'cell_lt', prot: 'cell_lt' },
 });
 
 // ================================================================ podjednotky jader x86 (Skylake / Coffee Lake i Haswell), L4,5

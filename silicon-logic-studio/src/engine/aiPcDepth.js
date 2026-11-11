@@ -7,9 +7,9 @@ const SER = 'cell_serdes';
 const DRILLS = {
   pwm_hub_inside: { u2: 'cell_lt', u1: 'cell_lt' }, // lineární regulátor (zesilovač odchylky) a 555 (komparátory) – typy neověřeny
   atx_psu_inside: { pfc: 'cell_buck', main: 'cell_buck', sr: 'cell_buck', dcdc: 'cell_buck', sb: 'cell_buck', sup: 'cell_lt' },
-  psu_primary: { pfcL: 'cell_buck', pfcC: 'cell_lt', fb: 'cell_buck', llcC: 'cell_lt' },
-  psu_secondary: { sr: 'cell_buck', dcdc: 'cell_buck', sup: 'cell_lt', fan: 'cell_lt' },
-  psu_standby: { ctl: 'cell_lt', rect: 'cell_buck' },
+  psu_primary: { pfcL: 'cell_buck', pfcC: 'pfc_controller', fb: 'cell_buck', llcC: 'llc_controller' },
+  psu_secondary: { sr: 'cell_buck', dcdc: 'cell_buck', sup: 'psu_supervisor', fan: 'cortex_m0' },
+  psu_standby: { ctl: 'flyback_ctl', rect: 'cell_buck' },
   p100_board: { edge: 'pcie3_ctrl', vrm: 'vrm_multiphase', hbm0: 'hbm2_stack', hbm1: 'hbm2_stack', hbm2: 'hbm2_stack', hbm3: 'hbm2_stack' },
   t5810_platform: { pch: 'c612_pch', s2: 'pcie3_ctrl', s4: 'pcie3_ctrl', s3: 'pcie2_ctrl', s5: 'pcie2_ctrl', s6: SER, io: SER },
   gp100_die: { host: 'pcie3_ctrl', gt: 'cell_arbiter', hub: 'nvlink_hub', l2: 'nv_l2', mc0: 'hbm2_ctrl', mc1: 'hbm2_ctrl', mc2: 'hbm2_ctrl', mc3: 'hbm2_ctrl' },

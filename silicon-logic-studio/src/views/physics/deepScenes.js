@@ -263,7 +263,7 @@ export function buildVnandScene(ctx) {
 // ================================================================ L8 vrstvy atomů (Å)
 const EL = {
   Cu: [0xc77a3a, 0.55], Si: [0x9aa0a8, 0.5], O: [0xe9e6df, 0.34], Hf: [0x6a8cb0, 0.62], Ti: [0xb0b4ba, 0.55], N: [0x5b7fd6, 0.32], H: [0xf6f6f6, 0.2],
-  W: [0x7d8590, 0.58], Ge: [0x8f9a6b, 0.54], C: [0x3a3d42, 0.36],
+  W: [0x7d8590, 0.58], Ge: [0x8f9a6b, 0.54], C: [0x3a3d42, 0.36], Al: [0xc9b9a8, 0.5], Zr: [0x8aa58f, 0.62],
 };
 // mřížky krystalů: [prvek, mřížková konstanta Å, nejbližší soused Å, báze v jednotkové buňce]
 const FCC = [[0, 0, 0], [0, 0.5, 0.5], [0.5, 0, 0.5], [0.5, 0.5, 0]];
@@ -316,7 +316,7 @@ export function buildLatticeScene(ctx) {
       }
     } else { // amorfní vrstva: náhodná síť kationtů, aniont (O, N) jako můstek mezi blízkými kationty, délka vazby z literatury
       // [kation, aniont, vzdálenost kation–kation, vazba kation–aniont, max. sousedů kationtu]
-      const [cat, an, dcc, bond, cn] = { sio2: ['Si', 'O', 3.06, 1.61, 4], sicoh: ['Si', 'O', 3.06, 1.61, 3], hfo2: ['Hf', 'O', 3.5, 2.1, 7], sinx: ['Si', 'N', 3.0, 1.74, 4], asi: ['Si', 'H', 2.35, 1.48, 4] }[layer.kind];
+      const [cat, an, dcc, bond, cn] = { sio2: ['Si', 'O', 3.06, 1.61, 4], sicoh: ['Si', 'O', 3.06, 1.61, 3], hfo2: ['Hf', 'O', 3.5, 2.1, 7], zro2: ['Zr', 'O', 3.5, 2.15, 7], al2o3: ['Al', 'O', 3.2, 1.85, 5], sinx: ['Si', 'N', 3.0, 1.74, 4], asi: ['Si', 'H', 2.35, 1.48, 4] }[layer.kind];
       const cats = [];
       for (let t = 0; t < 4000; t++) {
         const p = new THREE.Vector3((r() - 0.5) * W * 2, y0 + 0.6 + r() * Math.max(0.1, layer.thick - 1.2), (r() - 0.5) * D * 2);

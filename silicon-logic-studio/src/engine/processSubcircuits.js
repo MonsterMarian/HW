@@ -125,9 +125,9 @@ fet('NMOS_dram', {
   name: 'Přístupový tranzistor DRAM – BCAT (zapuštěná wordline)',
   subtitle: 'Moderní DRAM (DDR4, GDDR6X, HBM2, LPDDR4) má v každé buňce jeden tranzistor a jeden kondenzátor. Tranzistor je BCAT (buried channel array transistor): wordline je zapuštěná do drážky v křemíku, kanál obtéká dno drážky, takže je delší a méně uniká. Nad ním stojí kondenzátor (válec, u generací 1x nm a menších i sloupek) vysoký ~1,5–2 µm s poměrem stran aspoň 40:1 (Applied Materials; starší údaj 20–30: obecný patent). TechInsights to potvrzuje pro Samsung 1y/1a a Winbond 20 nm; pro konkrétní čipy v tvém PC neověřeno.',
   layers: [
-    ['WORDLINE ZAPUŠTĚNÁ V DRÁŽCE'],
+    ['WORDLINE ZAPUŠTĚNÁ V DRÁŽCE', 'w_lattice'],
     ['OXID HRADLA SiO₂', 'sio2_gate_lattice'],
-    ['KONDENZÁTOR: VÁLEC / SLOUPEK, POMĚR STRAN ≥ 40:1'],
+    ['KONDENZÁTOR: VÁLEC / SLOUPEK, POMĚR STRAN ≥ 40:1', 'dram_cap_lattice'],
     ['BITLINE KONTAKT'],
     ['20 nm 8 Gb: BUŇKA ≈ 0,0033 µm² (DOPOČET)'],
   ],
@@ -142,7 +142,7 @@ fet('NMOS_vnand', {
     ['KANÁL poly-Si (TRUBKA, OXIDOVÉ JÁDRO)', 'ono_lattice'],
     ['TUNELOVÝ OXID SiO₂', 'ono_lattice'],
     ['ZACHYCOVACÍ VRSTVA SiN', 'ono_lattice'],
-    ['BLOKOVACÍ OXID SiO₂ + Al₂O₃ (HIGH-k), BARIÉRA TiN'],
+    ['BLOKOVACÍ OXID SiO₂ + Al₂O₃ (HIGH-k), BARIÉRA TiN', 'vnand_block_lattice'],
     ['WORDLINE W – VRSTVY STOHU', 'w_lattice'],
     ['V5 92 / V6 128 AKTIVNÍCH VRSTEV'],
   ],
@@ -241,6 +241,33 @@ def('asi_sinx_lattice', 8, {
   scene: 'lattice',
   stack: [{ name: 'SiNₓ izolant (výřez)', kind: 'sinx', thick: 12 }, { name: 'a-Si:H kanál (výřez)', kind: 'asi', thick: 12 }],
   components: [atom('el_si', 'Si – a-Si:H A SiNₓ', 60, 60, 'atom_si'), atom('el_n', 'N – SiNₓ', 60, 200, 'atom_n'), atom('el_h', 'H – PASIVACE VAZEB', 60, 340, 'atom_h'), atom('i_asi', 'a-Si:H: BEZ KRYSTALU, Eg ≈ 1,7 eV', 400, 200)],
+  wires: [],
+});
+
+// ---------------------------------------------------------------- L8: dielektrika paměťových buněk (kondenzátor DRAM, blokovací vrstva V-NAND)
+// Zdroje: Kim et al. (Samsung), „ZrO₂/Al₂O₃/ZrO₂ dielectric for DRAM capacitors“ (IEDM 2007 a navazující); Samsung V-NAND
+// (TCAT, blokovací Al₂O₃ + bariéra TiN kolem W wordline – Jang et al., VLSI 2009). Pro konkrétní čipy v PC neověřeno.
+def('dram_cap_lattice', 8, {
+  name: 'Atomy kondenzátoru DRAM: TiN / ZrO₂ / Al₂O₃ / ZrO₂ / TiN',
+  subtitle: 'Kondenzátor buňky DRAM je válec vysoký ~1,5–2 µm. Aby se do malé plochy vešla kapacita (~10 fF), používá se dielektrikum s vysokou permitivitou: od 2007 typicky sendvič ZrO₂/Al₂O₃/ZrO₂ („ZAZ“, ε ZrO₂ ≈ 30–40; tenká vrstva Al₂O₃ omezuje svod) mezi elektrodami TiN. Tloušťky v jednotkách nm; u čipů v mém PC výrobci složení nezveřejňují – kresleno typické.',
+  scene: 'lattice',
+  stack: [{ name: 'TiN elektroda', kind: 'tin', thick: 8.5 }, { name: 'ZrO₂', kind: 'zro2', thick: 8 }, { name: 'Al₂O₃ (tenká)', kind: 'al2o3', thick: 5 }, { name: 'ZrO₂', kind: 'zro2', thick: 8 }, { name: 'TiN elektroda', kind: 'tin', thick: 8.5 }],
+  components: [
+    atom('el_ti', 'Ti – ELEKTRODY TiN', 60, 60, 'atom_ti'), atom('el_n', 'N – ELEKTRODY TiN', 60, 200, 'atom_n'), atom('el_zr', 'Zr – DIELEKTRIKUM ZrO₂', 60, 340, 'atom_zr'),
+    atom('el_al', 'Al – MEZIVRSTVA Al₂O₃', 360, 60, 'atom_al'), atom('el_o', 'O – OXIDY', 360, 200, 'atom_o'),
+    atom('i_c', 'C ≈ ε·S/d: VYSOKÉ ε MÍSTO VELKÉ PLOCHY', 660, 120), atom('i_zaz', 'ZAZ: TYPICKÉ, U MÝCH ČIPŮ NEOVĚŘENO', 660, 300),
+  ],
+  wires: [],
+});
+def('vnand_block_lattice', 8, {
+  name: 'Atomy kolem wordline V-NAND: SiO₂ / Al₂O₃ / TiN / W',
+  subtitle: 'Mezi zachycovací vrstvou SiN a wolframovou wordline je blokovací oxid (SiO₂ + Al₂O₃ s vyšší permitivitou – brání elektronům utéct do hradla) a bariéra TiN, na kterou se nanese wolfram (TCAT, Samsung). Tloušťky pro V5/V6 nejsou veřejné.',
+  scene: 'lattice',
+  stack: [{ name: 'blokovací SiO₂', kind: 'sio2', thick: 7 }, { name: 'Al₂O₃', kind: 'al2o3', thick: 7 }, { name: 'bariéra TiN', kind: 'tin', thick: 4.2 }, { name: 'wordline W', kind: 'w', thick: 9.5 }],
+  components: [
+    atom('el_si', 'Si – SiO₂', 60, 60, 'atom_si'), atom('el_o', 'O – OXIDY', 60, 200, 'atom_o'), atom('el_al', 'Al – Al₂O₃', 60, 340, 'atom_al'),
+    atom('el_ti', 'Ti – BARIÉRA TiN', 360, 60, 'atom_ti'), atom('el_n', 'N – BARIÉRA TiN', 360, 200, 'atom_n'), atom('el_w', 'W – WORDLINE', 360, 340, 'atom_w'),
+  ],
   wires: [],
 });
 

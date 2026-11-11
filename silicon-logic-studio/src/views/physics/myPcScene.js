@@ -4,7 +4,7 @@
 // Souřadnice: osa X = v (od horní hrany desky), osa Z = 110,5 − u (zadní I/O na +Z), Y nahoru; stejné měřítko jako karta NV1.
 import * as THREE from 'three';
 import { buildModel } from '../economic/models.js';
-import { MY_PC_BOM } from '../../engine/economic/catalog.js';
+import { MY_PC_BOM, P100_PC_BOM } from '../../engine/economic/catalog.js';
 import { PX_PER_MM } from '../../engine/boardLayout.js';
 import { BOARD_SCALE } from './boardScene.js';
 import { std, ribbonGeometry } from './common.js';
@@ -15,7 +15,15 @@ const X = (v) => (v - MB_H / 2) * MM;
 const Z = (u) => (MB_W / 2 - u) * MM;
 const PCB = 1.6; // mm
 
-const ITEM = { mb: 'my_mobo', cpu: 'my_cpu', fan_cpu: 'my_cooler', gpu: 'my_gpu', ssd: 'my_ssd', psu: 'my_psu', mon: 'my_monitor', kb: 'my_keyboard', mouse: 'my_mouse', mic: 'my_mic' };
+const ITEM = {
+  mb: 'my_mobo', cpu: 'my_cpu', fan_cpu: 'my_cooler', gpu: 'my_gpu', ssd: 'my_ssd', psu: 'my_psu', mon: 'my_monitor', kb: 'my_keyboard', mouse: 'my_mouse', mic: 'my_mic',
+  // MŮJ PC + 2× P100: díly z AI PC
+  p100a: 'p100', p100b: 'p100', psu2: 'psu2', add2psu: 'add2psu', eps1: 'eps_cable', eps2: 'eps_cable', hub: 'pwm_ctrl', bl1: 'blower', bl2: 'blower',
+};
+const SLOT_V = { gpu: 182.8, p100a: 182.8, p100b: 243.6 }; // karty ve slotech PCIEX16_1 / PCIEX16_2 (v od horní hrany desky)
+const CARD_FAN = { bl1: 'p100a', bl2: 'p100b' }; // radiální 9733 na krytu (shroud) za koncem pasivní P100
+// karta ve slotu: kontakty dolů, záslepka u zadního plechu (+Z), chladič k dolní hraně desky (+X)
+const cardRot = (g) => g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, -1, 0)));
 const FAN_CASE = { id: 'fan_case', dims: [120, 120, 25], model: { kind: 'fan120', marking: ['ENDORFY', 'STRATUS 120'], blades: 7 } };
 
 /** 3D model položky kusovníku v jednotkách scény (zabalený, ať jde otáčet kolem středu). */
@@ -42,13 +50,16 @@ function align(obj, { cx, cz, x0, z1, y0 }) {
 
 // zařízení mimo desku: střed na stole (mm ve světě: x podél X, z podél Z), otočení kolem svislé osy
 const DESK = {
-  mon: [0, 380, Math.PI], kb: [0, -340, Math.PI], mouse: [300, -340, Math.PI], mic: [-330, -300, 0],
+  // periferie dál od desky: karta P100 + kryt + 9733 sahá ~460 mm od zadního plechu (projekt MŮJ PC + 2× P100)
+  mon: [0, 380, Math.PI], kb: [0, -450, Math.PI], mouse: [300, -450, Math.PI], mic: [-330, -420, 0],
   psu: [-330, -20, 0], fan_case: [340, 0, 0],
+  // MŮJ PC + 2× P100: druhý zdroj a kabeláž vedle prvního (ventilátory 9733 sedí na krytech karet, viz CARD_FAN)
+  psu2: [-330, 190, 0], add2psu: [-210, 110, 0], eps1: [-210, -150, 0], eps2: [-210, 260, 0], hub: [200, -240, 0],
 };
 
 export function buildMyPcScene(ctx) {
   const { engine, group } = ctx;
-  const bom = new Map([...MY_PC_BOM.map((it) => [it.id, it]), ['fan_case', FAN_CASE]]);
+  const bom = new Map([...P100_PC_BOM, ...MY_PC_BOM].map((it) => [it.id, it]).concat([['fan_case', FAN_CASE]]));
   const objs = new Map();
   const add = (comp, obj) => {
     const b = new THREE.Box3().setFromObject(obj);
@@ -66,16 +77,21 @@ export function buildMyPcScene(ctx) {
     else if (comp.type === 'MYPC_DIMM') {
       const [u0, , du] = ON_BOARD[id];
       obj = align(model(item, (g) => { g.rotation.x = Math.PI / 2; }), { cx: X(82.7), cz: Z(u0 + du / 2), y0: (PCB + 2) * MM }); // kontakty dolů do slotu
-    } else if (id === 'gpu') {
-      // karta stojí ve slotu PCIEX16_1: kontakty dolů, záslepka u zadního plechu (+Z), chladič k dolní hraně desky (+X)
-      obj = align(model(item, (g) => g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, -1, 0)))),
-        { x0: X(182.8 - 3), z1: Z(-6), y0: (PCB + 3) * MM });
+    } else if (SLOT_V[id]) {
+      obj = align(model(item, cardRot), { x0: X(SLOT_V[id] - 3), z1: Z(-6), y0: (PCB + 3) * MM });
+    } else if (CARD_FAN[id] && objs.get(CARD_FAN[id])) {
+      // za konec karty kryt (shroud, není součástka schématu) a na něj ventilátor 9733 – stejná osa jako karta
+      const card = new THREE.Box3().setFromObject(objs.get(CARD_FAN[id]));
+      const shroud = align(model(bom.get('shroud'), cardRot), { x0: card.min.x, z1: card.min.z, y0: card.min.y });
+      group.add(shroud);
+      const sb = new THREE.Box3().setFromObject(shroud);
+      obj = align(model(item, cardRot), { x0: card.min.x, z1: sb.min.z, y0: card.min.y });
     } else if (id === 'ssd') obj = align(model(item, (g) => { g.rotation.y = Math.PI / 2; }), { cx: X(225), cz: Z(84), y0: (PCB + 2.5) * MM });
     else if (DESK[id] && item) {
       const [x, z, ry] = DESK[id];
       obj = align(model(item, (g) => { g.rotation.y = ry; }), { cx: x * MM, cz: z * MM, y0: 0 });
-    } else if (comp.type === 'INPUT') obj = button(ctx, comp);
-    else if (comp.type === 'PROBE') obj = indicator(ctx, comp, [...engine.components.values()].filter((c) => c.type === 'PROBE').indexOf(comp));
+    } else if (comp.type === 'INPUT') obj = button(ctx, comp, MM, [380, -580]);
+    else if (comp.type === 'PROBE') obj = indicator(ctx, comp, [...engine.components.values()].filter((c) => c.type === 'PROBE').indexOf(comp), MM, [-330, -580]);
     if (obj) add(comp, obj);
   }
 

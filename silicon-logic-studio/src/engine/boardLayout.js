@@ -54,6 +54,8 @@ const HARDWARE_DIMS = {
   MYPC_BOARD: [mm(221), mm(305)], MYPC_CPU: [mm(37.5), mm(37.5)], MYPC_DIMM: [mm(7), mm(133.35)], MYPC_GPU: [mm(230), mm(42)],
   MYPC_SSD: [mm(80.15), mm(22.15)],
   MYPC_PSU: [240, 150], MYPC_FAN: [220, 90], MYPC_MONITOR: [300, 170], MYPC_USB_DEV: [230, 80],
+  // MŮJ PC + 2× P100: karta 1 : 1 shora (délka 267 mm × tloušťka 37 mm), druhý zdroj mimo desku
+  TESLA_P100: [mm(267), mm(37)], ATX_PSU: [240, 150],
 };
 
 export function componentDims(comp, mode = 'hardware') {

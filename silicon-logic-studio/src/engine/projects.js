@@ -2,7 +2,8 @@
 import { NV1_BOARD } from './presets/nv1Board.js';
 import { PC_POWER } from './presets/pcPower.js';
 import { MY_PC_SYSTEM } from './presets/myPcSystem.js';
-import { NV1_BOM, P100_PC_BOM, MY_PC_BOM } from './economic/catalog.js';
+import { MY_PC_P100_SYSTEM } from './presets/myPcP100System.js';
+import { NV1_BOM, P100_PC_BOM, MY_PC_BOM, MY_PC_P100_BOM } from './economic/catalog.js';
 
 export const PROJECTS = [
   {
@@ -35,6 +36,16 @@ export const PROJECTS = [
     bom: MY_PC_BOM,
     views: ['schematic', 'hardware', 'physics', 'economic', 'anatomy'],
     defaultView: 'economic',
+  },
+  {
+    id: 'mypc_p100',
+    tab: 'MŮJ PC + 2× P100',
+    title: 'Můj PC + 2× Tesla P100 (návrh)',
+    subtitle: 'B360-PLUS: P100 v PCIEX16_1 (x16) + PCIEX16_2 (x4), obraz z iGPU, druhý zdroj přes Add2PSU – 32 GB HBM2',
+    circuit: MY_PC_P100_SYSTEM, // simulované schéma, dvojklik = vnitřek dílů z mého PC i z AI PC
+    bom: MY_PC_P100_BOM,
+    views: ['schematic', 'hardware', 'physics', 'economic', 'anatomy'],
+    defaultView: 'schematic',
   },
 ];
 

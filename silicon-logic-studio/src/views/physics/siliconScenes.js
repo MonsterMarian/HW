@@ -6,6 +6,19 @@ import * as THREE from 'three';
 import { componentDims } from '../../engine/boardLayout';
 import { MAT, std, textTexture, instanced, mat4, mergeGeos, cylinderMatrix } from './common.js';
 import * as P from './packages.js';
+import cflShot from '../../assets/dieshots/coffeelake8c_cc0.jpg';
+import b360Shot from '../../assets/dieshots/b360_cannonpoint_ccbysa.jpg';
+import gp100Shot from '../../assets/dieshots/gp100_cc0_rot90.jpg';
+import hbm2Shot from '../../assets/dieshots/hbm2_dram_cc0.jpg';
+import hbmLogicShot from '../../assets/dieshots/hbm2_logic_cc0.jpg';
+import interposerShot from '../../assets/dieshots/gp100_interposer_cc0.jpg';
+
+function photoTexture(url) {
+  const tex = new THREE.TextureLoader().load(url);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
 
 const AMBER = 0xffa909;
 const OFF_WHITE = '#E9E6DF';
@@ -135,13 +148,45 @@ const PACKAGES = {
   ad1845_inside: { pkg: 'PLCC-68', mark: 'AD1845 · DIE ≈ 5,4 × 5,4 mm (odhad)', body: [24.2, 24.2, 4.4], die: [5.4, 5.4], pins: [17, 17, 17, 17], pitch: 1.27, lead: 'j' },
   eprom_inside: { pkg: 'CERDIP-28 s okénkem', mark: '27C256 · DIE ≈ 4,4 × 5,2 mm (odhad)', body: [37, 15.2, 4.2], die: [4.4, 5.2], pins: [14, 0, 14, 0], pitch: 2.54, lead: 'dip', ceramic: true },
   // MŮJ PC: flip-chip (die obráceně na substrátu, bez drátků) – BGA kuličky nebo LGA plošky
-  cfl_die: { pkg: 'FCLGA1151 37,5 × 37,5 mm', mark: 'i7-9700 · DIE ≈ 180 mm² (strany odhad) · IHS SUNDANÝ', body: [37.5, 37.5, 1.1], die: [19.6, 9.2], flip: 'lga', pitch: 0.9 },
-  b360_pch: { pkg: 'FCBGA 23 × 24 mm', mark: 'B360 · VELIKOST DIE NEZVEŘEJNĚNA (ODHAD)', body: [23, 24, 1.2], die: [6.5, 6.5], flip: 'bga', pitch: 0.8 },
+  cfl_die: {
+    pkg: 'FCLGA1151 37,5 × 37,5 mm', mark: 'i7-9700 · DIE ≈ 180 mm² (strany odhad) · IHS SUNDANÝ', body: [37.5, 37.5, 1.1], die: [19.6, 9.2], flip: 'lga', pitch: 0.9,
+    photo: cflShot, // Coffee Lake 8C, poměr fotky 2400:1122 = poměr die
+    layout: {
+      ...Object.fromEntries([[0.128, 0.272], [0.272, 0.42], [0.42, 0.567], [0.567, 0.715]].flatMap(([x0, x1], i) => [[`core${i}`, [x0, 0.07, x1, 0.47]], [`core${i + 4}`, [x0, 0.58, x1, 0.96]]])),
+      ring: [0.128, 0.47, 0.715, 0.58], gt: [0.715, 0.07, 1.0, 0.98], peg: [0.01, 0.0, 0.5, 0.07],
+      imc: [0.0, 0.07, 0.05, 0.63], sa: [0.05, 0.07, 0.125, 0.63], disp: [0.05, 0.63, 0.125, 0.9], pcu: [0.0, 0.63, 0.05, 0.98], dmi: [0.05, 0.9, 0.125, 0.98],
+    },
+  },
+  b360_pch: {
+    pkg: 'FCBGA 23 × 24 mm', mark: 'B360 · VELIKOST DIE NEZVEŘEJNĚNA (ODHAD)', body: [23, 24, 1.2], die: [7.2, 5.88], flip: 'bga', pitch: 0.8, // ~42 mm² v poměru fotky 2048:1673
+    photo: b360Shot, // názvy bloků podle polohy na fotce jsou odhad
+    layout: {
+      pcie: [0.0, 0.0, 0.28, 0.19], sata: [0.28, 0.0, 0.41, 0.19], usb3: [0.41, 0.0, 0.57, 0.19], dmi: [0.57, 0.0, 0.77, 0.12],
+      usb2: [0.0, 0.3, 0.05, 0.7], hsio: [0.2, 0.3, 0.55, 0.62], me: [0.8, 0.25, 0.93, 0.66], cnvi: [0.73, 0.7, 1.0, 1.0],
+      hda: [0.22, 0.92, 0.35, 1.0], spi: [0.35, 0.92, 0.48, 1.0], smb: [0.48, 0.92, 0.6, 1.0], clk: [0.0, 0.75, 0.1, 0.95],
+    },
+  },
+  nct6796d: { pkg: 'LQFP-128 14 × 14 mm (neověřeno)', mark: 'NUVOTON NCT6796D · DIE NEZVEŘEJNĚN (ODHAD)', body: [14, 14, 1.4], die: [4.2, 4.2], pins: [32, 32, 32, 32], pitch: 0.4, lead: 'gull' },
   ga104_die: { pkg: 'FCBGA (rozměry pouzdra odhad)', mark: 'GA104 · DIE 392,5 mm² (strany odhad)', body: [37.5, 37.5, 1.4], die: [19.8, 19.8], flip: 'bga', pitch: 1.0 },
   phoenix_ctl: { pkg: 'FCBGA (rozměry odhad)', mark: 'SAMSUNG S4LR020 PHOENIX · DIE ODHAD', body: [12, 12, 1.0], die: [5, 5], flip: 'bga', pitch: 0.65 },
   // AI PC
-  xeon_die: { pkg: 'FCLGA2011-3 52,5 × 45 mm', mark: 'XEON E5-1650 v3 · HASWELL-EP LCC 354 mm² (strany odhad) · IHS SUNDANÝ', body: [52.5, 45, 1.2], die: [18.8, 18.8], flip: 'lga', pitch: 1.0 },
-  gp100_die: { pkg: 'CoWoS: křemíkový interposer + 4× HBM2, BGA 55 × 55 mm (Yole)', mark: 'GP100 610 mm² · INTERPOSER ~1200 mm² · HBM2 7,75 × 11,87 mm (rozměr SK hynix)', body: [55, 55, 1.4], die: [23.3, 26.2], flip: 'bga', pitch: 1.0, cowos: { iw: 40, id: 30, hbm: [7.75, 11.87, 0.72] } }, // 40 × 30 = 1200 mm² interposer, strany die odhad
+  xeon_die: {
+    pkg: 'FCLGA2011-3 52,5 × 45 mm', mark: 'XEON E5-1650 v3 · HASWELL-EP LCC 354 mm² (strany odhad) · IHS SUNDANÝ', body: [52.5, 45, 1.2], die: [18.8, 18.8], flip: 'lga', pitch: 1.0,
+    layout: { // bez fotky: rozložení LCC die (8 jader, z toho 6 aktivních)
+      ...Object.fromEntries([0, 1, 2, 3, 4, 5].map((i) => [`core${i}`, [i < 3 ? 0.02 : 0.63, 0.23 + (i % 3) * 0.145, i < 3 ? 0.28 : 0.9, 0.375 + (i % 3) * 0.145]])),
+      ring: [0.29, 0.23, 0.62, 0.82], pcie: [0.04, 0.0, 0.7, 0.06], dmi: [0.7, 0.0, 0.98, 0.06],
+      qpi: [0.02, 0.06, 0.5, 0.21], pcu: [0.5, 0.06, 0.98, 0.21], imc: [0.35, 0.86, 0.64, 1.0],
+    },
+  },
+  gp100_die: {
+    pkg: 'CoWoS: křemíkový interposer + 4× HBM2, BGA 55 × 55 mm (Yole)', mark: 'GP100 610 mm² · INTERPOSER ~1200 mm² · HBM2 7,75 × 11,87 mm (rozměr SK hynix)', body: [55, 55, 1.4], die: [22.4, 27.3], flip: 'bga', pitch: 1.0, cowos: { iw: 40.8, id: 29.45, hbm: [7.75, 11.87, 0.72] }, // ~1200 mm² interposer v poměru fotky 12765:9223; strany die = 610 mm² v poměru fotky
+    photo: gp100Shot, hbmPhoto: hbm2Shot, hbmLogicPhoto: hbmLogicShot, interposerPhoto: interposerShot, // fotka otočená o 90°: HBM2 PHY vlevo/vpravo, k HBM2 stackům na ±x
+    layout: {
+      ...Object.fromEntries([0, 1, 2, 3, 4, 5].map((i) => [`gpc${i}`, [[0.075, 0.35, 0.635][i % 3], i < 3 ? 0.115 : 0.635, [0.35, 0.635, 0.925][i % 3], i < 3 ? 0.365 : 0.93]])),
+      host: [0.02, 0.0, 0.5, 0.11], hub: [0.52, 0.0, 0.98, 0.11], l2: [0.08, 0.37, 0.44, 0.63], gt: [0.445, 0.37, 0.555, 0.63],
+      mc0: [0.0, 0.12, 0.07, 0.35], mc1: [0.0, 0.65, 0.07, 0.93], mc2: [0.93, 0.12, 1.0, 0.35], mc3: [0.93, 0.65, 1.0, 0.93],
+    },
+  },
   gm107_die: { pkg: 'FCBGA-908 (rozměry odhad)', mark: 'GM107 · 148 mm² (strany odhad)', body: [27, 27, 1.2], die: [12.2, 12.2], flip: 'bga', pitch: 0.8 },
   ddr4_chip: { pkg: 'FBGA-78 (9 × 13, střed bez kuliček)', mark: 'K4A4G045WE 4 Gb x4 · DIE ODHAD (polovina 8Gb die 5,8 × 9,7 mm)', body: [7.5, 11, 1.0], die: [5.8, 4.9], flip: 'bga', pitch: 0.8, grid: [9, 13], gapCols: [3, 4, 5] },
   ddr4_8g_x8: { pkg: 'FBGA-78 (9 × 13, střed bez kuliček)', mark: 'DDR4 8 Gb x8 · ROZMĚRY TYPICKÉ, NE TVÉHO ČIPU', body: [7.5, 11, 1.0], die: [6, 9.5], flip: 'bga', pitch: 0.8, grid: [9, 13], gapCols: [3, 4, 5] },
@@ -168,14 +213,20 @@ function buildFlipPackage(group, pk) {
   let top = 0.45 + BH;
   if (pk.cowos) { // CoWoS: křemíkový interposer na substrátu, na něm GPU a 4 stacky HBM2 (bázový die + 4 paměťové vrstvy)
     const { iw, id, hbm: [hw, hd, hh] } = pk.cowos;
-    group.add(new THREE.Mesh(boxGeo(-iw / 2, iw / 2, top + 0.1, top + 0.2, -id / 2, id / 2), std(0x5d6470, { metalness: 0.5, roughness: 0.3 })));
+    const ipSide = std(0x5d6470, { metalness: 0.5, roughness: 0.3 });
+    const ipTop = pk.interposerPhoto ? std(0xffffff, { map: photoTexture(pk.interposerPhoto), metalness: 0.2, roughness: 0.5 }) : ipSide; // horní kov interposeru: GPU uprostřed, HBM2 po stranách
+    group.add(new THREE.Mesh(boxGeo(-iw / 2, iw / 2, top + 0.1, top + 0.2, -id / 2, id / 2), [ipSide, ipSide, ipTop, ipSide, ipSide, ipSide]));
     top += 0.2;
     const layerMat = [std(0x3a3f47, { metalness: 0.4, roughness: 0.4 }), std(0x8c8c8c, { metalness: 0.2, roughness: 0.5 })];
+    const photoTop = (url, side) => (url ? [side, side, std(0xffffff, { map: photoTexture(url), metalness: 0.1, roughness: 0.6 }), side, side, side] : side);
+    const dramMat = photoTop(pk.hbmPhoto, layerMat[1]); // fotka DRAM die (671 × 1024 ≈ poměr stacku)
+    const logicMat = photoTop(pk.hbmLogicPhoto, layerMat[0]); // bázový logický die (fotka otočená na výšku)
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
       const x = sx * (DW / 2 + 0.6 + hw / 2), z = sz * (hd / 2 + 0.3);
       for (let L = 0; L < 5; L++) { // bázový logický die + 4× 8 Gb DRAM, propojené TSV
         const h = hh / 5;
-        group.add(new THREE.Mesh(boxGeo(x - hw / 2, x + hw / 2, top + 0.03 + L * h, top + 0.03 + (L + 0.9) * h, z - hd / 2, z + hd / 2), layerMat[L ? 1 : 0]));
+        const m = L === 0 ? logicMat : L === 4 ? dramMat : layerMat[1];
+        group.add(new THREE.Mesh(boxGeo(x - hw / 2, x + hw / 2, top + 0.03 + L * h, top + 0.03 + (L + 0.9) * h, z - hd / 2, z + hd / 2), m));
       }
     }
   }
@@ -642,11 +693,13 @@ function buildFlipDie(ctx, pk) {
   const { dieTop, dieY } = buildFlipPackage(group, pk);
   const RING = Math.min(DW, DD) * 0.04;
   const sideMat = std(0x2f3338, { metalness: 0.4, roughness: 0.42 });
-  const topMat = std(0x8c8c8c, { map: dieBaseTexture(DW, DD, RING, hashStr(entry?.key || 'die')), metalness: 0.1, roughness: 0.72 });
+  const topMat = pk.photo
+    ? std(0xffffff, { map: photoTexture(pk.photo), metalness: 0.1, roughness: 0.6 })
+    : std(0x8c8c8c, { map: dieBaseTexture(DW, DD, RING, hashStr(entry?.key || 'die')), metalness: 0.1, roughness: 0.72 });
   const die = new THREE.Mesh(new THREE.BoxGeometry(DW, dieTop - dieY, DD), [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]);
   die.position.y = (dieTop + dieY) / 2;
   group.add(die);
-  placeBlocks(ctx, [...engine.components.values()], DW, DD, RING, dieTop, new Map());
+  placeBlocks(ctx, [...engine.components.values()], DW, DD, RING, dieTop, new Map(), pk);
   const mark = textPlane(`${pk.pkg} · ${pk.mark}`, BW * 0.95, { flat: true, color: '#c9c4b8' });
   mark.position.set(0, 0.45 + pk.body[2] + 0.02, BD / 2 - Math.min(2.2, (BD - DD) / 4));
   group.add(mark);
@@ -660,15 +713,22 @@ function buildFlipDie(ctx, pk) {
 }
 
 /** Bloky podobvodu jako floorplan na povrchu die + horní kov mezi nimi (svítí podle sítě). */
-function placeBlocks(ctx, blocks, DW, DD, RING, dieTop, padAnchor) {
+function placeBlocks(ctx, blocks, DW, DD, RING, dieTop, padAnchor, pk = {}) {
   const { engine, group } = ctx;
-  const rects = floorplan(blocks, -DW / 2 + RING, DW / 2 - RING, -DD / 2 + RING, DD / 2 - RING, Math.min(DW, DD) * 0.012);
+  const rects = floorplan(blocks.filter((c) => !pk.layout?.[c.id]), -DW / 2 + RING, DW / 2 - RING, -DD / 2 + RING, DD / 2 - RING, Math.min(DW, DD) * 0.012);
+  const g = Math.min(DW, DD) * 0.004; // mezera mezi bloky z rozložení
+  for (const [id, [u0, v0, u1, v1]] of Object.entries(pk.layout || {})) {
+    rects.set(id, { x0: -DW / 2 + u0 * DW + g, x1: -DW / 2 + u1 * DW - g, z0: -DD / 2 + v0 * DD + g, z1: -DD / 2 + v1 * DD - g });
+  }
   for (const c of blocks) {
     const r = rects.get(c.id);
     const w = r.x1 - r.x0, d = r.z1 - r.z0;
     const kind = blockKind(c);
     const tint = { memory: 0x84888f, array: 0x84888f, sense: 0x888a8d, decoder: 0x888a8d, analog: 0x948a7f, dac: 0x948a7f, sigma: 0x948a7f, io: 0x8d8981 }[kind] || 0x8c8c8c;
-    const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.004, d), std(tint, { map: blockTexture(kind, hashStr(c.id), w / d), metalness: 0.1, roughness: 0.72 }));
+    const mat = pk.photo // na fotce je blok vidět, deska jen slabě zvýrazní a drží klikání
+      ? std(0xe9e6df, { transparent: true, opacity: 0.08, depthWrite: false, metalness: 0, roughness: 1 })
+      : std(tint, { map: blockTexture(kind, hashStr(c.id), w / d), metalness: 0.1, roughness: 0.72 });
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.004, d), mat);
     plate.position.set((r.x0 + r.x1) / 2, dieTop + 0.003, (r.z0 + r.z1) / 2);
     ctx.addComp(c, plate, { label: new THREE.Vector3(plate.position.x, dieTop + 0.3, plate.position.z) });
   }

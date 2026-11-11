@@ -17,7 +17,7 @@ U skříně/zdroje/chladiče pak odstraň „(ODHAD)“ z názvu a `dimsSrc` př
 | Grafika | ASUS Dual RTX 3060 Ti OC 8 GB GDDR6X (DUAL-RTX3060TI-O8GD6X), v PCIEX16_1, linka x16 | PCI 10DE:24C9, subsystém 1043:88AE + VBIOS 94.04.94.00.85 (TechPowerUp) |
 | SSD | Samsung 970 EVO Plus 500 GB, ve slotu **M.2_2** (běží x4, M.2_1 umí jen x2) | Get-PhysicalDisk, šířka PCIe linky |
 | Síť / zvuk | Realtek RTL8111H, Realtek ALC887 (na desce) | PnP ID |
-| Monitor | ASUS VA249 (EDID AUS24C1, vyroben 2020) | EDID |
+| Monitor | ASUS **VA249HE** (EDID AUS24C1, vyroben 2020) – připojený přes HDMI, takže ne VA249NA (ten má DVI + VGA) | EDID + WmiMonitorConnectionParams (11. 11. 2026) |
 | Klávesnice | ASUS ROG Strix Flare (původní, Cherry MX) | USB 0B05:1875 |
 | USB audio | **mikrofon** (Windows ho vidí jen jako záznamové zařízení), čip C-Media 0D8C:0134 | USB ID, audio endpointy |
 
@@ -31,7 +31,6 @@ U skříně/zdroje/chladiče pak odstraň „(ODHAD)“ z názvu a `dimsSrc` př
 | Skříňové ventilátory | 3 vpředu + 1 vzadu (součást odhadnuté skříně) | počet nejde zjistit | spočítat |
 | Grafika: OC / ne-OC | OC (DUAL-RTX3060TI-**O**8GD6X) | ne-OC verze vypadá stejně, VBIOS ukazuje na OC | štítek na kartě |
 | Grafika: pořadí výstupů a poloha 2× 8 pin | HDMI + 3× DP, napájení na horní hraně u konce | nenašel jsem foto/výkres | podívat se na kartu |
-| Monitor: HE / NA | VA249HE (HDMI + VGA) | EDID je pro VA249HE i VA249NA (DVI) stejné; vypadají stejně | štítek vzadu / jaký kabel vede do PC |
 | Monitor: rámeček a podstavec | podstavec Ø ~205 mm, kulatý | výrobce neuvádí | změřit |
 | RAM: barva chladiče | černá HyperX Fury (HX426C16FB2/8) | SPD kód je stejný pro černou/bílou/červenou | podívat se na moduly |
 | Klávesnice: spínače, opěrka | Cherry MX (barva neznámá), opěrka ~75 mm | USB ID je stejné pro všechny varianty | sundat klávesu / změřit opěrku |
@@ -47,9 +46,9 @@ vnitřky dílů v `engine/myPcSubcircuits.js`. V popiscích bloků je u nejistý
 
 | Kde | Neověřeno | Jak ověřit |
 | --- | --- | --- |
-| Deska | rozdělení 6 fází VRM, řadič a MOSFETy; Super I/O (nejspíš Nuvoton NCT6796D); na které HSIO linky jsou M.2/sloty/LAN | HWiNFO (Super I/O), foto desky bez chladičů |
+| Deska | rozdělení 6 fází VRM, řadič a MOSFETy; na které HSIO linky jsou M.2/sloty/LAN (Super I/O **ověřeno**: Nuvoton NCT6796D, chip ID 0xD423 – LibreHardwareMonitor 11. 11. 2026) | foto desky bez chladičů |
 | Grafika | VRM (~8–10 fází, uP9512R?), paměti 8× Micron MT61K256M32JE-19?, pořadí výstupů | GPU-Z (výrobce pamětí), foto PCB |
-| i7-9700 | 1,5 MB L3 na jádro (12 MB / 8), VID ~1,2 V | HWiNFO (VID) |
+| i7-9700 | 1,5 MB L3 na jádro (12 MB / 8). Napětí jader **změřeno** 1,19–1,21 V (LibreHardwareMonitor 11. 11. 2026) | – |
 | Zdroj | výrobce platformy, topologie, IC – pro Endorfy Vero L5 neexistuje teardown (a model je odhad) | štítek zdroje |
 | SSD | počet pouzder NAND, typ DRAM, PMIC | – |
 | RAM | výrobce čipů (SK hynix / Micron) | Thaiphoon Burner nebo HWiNFO (SPD) |

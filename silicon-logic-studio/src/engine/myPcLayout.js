@@ -43,6 +43,7 @@ const MB_PIN_UV = {
   'CPU_FAN +12V': [100, 3, 'T'], 'CPU_FAN GND': [104, 3, 'T'], 'CPU_FAN PWM': [108, 3, 'T'],
   'CHA_FAN +12V': [219, 48, 'R'], 'CHA_FAN GND': [219, 52, 'R'], 'CHA_FAN PWM': [219, 56, 'R'],
   'USB +5V': [2, 8, 'L'], 'USB DATA': [2, 14, 'L'], // KBMS_USB910 na zadním panelu
+  'PCIEX16_2 PCIe x4': [60, 241, 'T'], 'HDMI (iGPU)': [2, 91, 'L'], // slot PCIEX16_2 (v 243,6), HDMI na zadním panelu
 };
 const frac = (uv) => Object.fromEntries(Object.entries(uv).map(([pin, [u, v, side]]) => [pin, [u / MB_W, v / MB_H, side]]));
 
@@ -61,6 +62,8 @@ export const HW_PINS = {
     'HDMI': [0, 0.5, 'L'], 'STAV': [0.6, 1, 'B'],
   },
   MYPC_SSD: { 'PCIe x4': [1, 0.7, 'R'], '+3,3V': [1, 0.9, 'R'], 'STAV': [0.5, 1, 'B'] },
+  // P100 shora: kontakty slotu u horní hrany, EPS 8 pin na čele karty (konec daleko od záslepky)
+  TESLA_P100: { 'SLOT GND': [0.28, 0, 'T'], 'PCIe x16': [0.4, 0, 'T'], 'EPS5-8 +12V': [1, 0.3, 'R'], 'EPS1-4 GND': [1, 0.7, 'R'], 'STAV': [0.6, 1, 'B'] },
 };
 
 /** Deska pro router měděných cest (pcbRoutes): obdélník desky, deska sama není překážka. */

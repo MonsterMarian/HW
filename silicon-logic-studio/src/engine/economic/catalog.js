@@ -43,7 +43,7 @@ const P100_PC_ITEMS = [
   },
   {
     id: 'ssd', name: 'Samsung 870 EVO 1 TB (2,5" SATA)', part: 'MZ-77E1T0B: SATA 6 Gb/s, řadič Samsung MKX, 1 GB LPDDR4, V-NAND TLC, 560/530 MB/s',
-    qty: 1, dims: [100, 69.85, 6.8], dimsSrc: 'ověřeno: Samsung 870 EVO datasheet Rev 1.1', model: { kind: 'ssd25' },
+    qty: 1, dims: [100, 69.85, 6.8], dimsSrc: 'ověřeno: Samsung 870 EVO datasheet Rev 1.1; 3D = 2,5" 7 mm disk z FreeCAD Parts Library', model: { kind: 'ssd25', real: 'ssd25_7mm' },
     note: 'Místo NVMe s redukcí: v T5810 pro redukci nezbývá slot (jediný volný slot 1 má K620) a ve videu NVMe není. Do 3,5" rámečku Dellu se 2,5" disk šroubuje přímo (manuál Dell), na desce je 6× SATA 6 Gb/s. Model 22 GB se načte asi za 40 s.',
   },
   {
@@ -143,7 +143,7 @@ const MY_PC_ITEMS = [
   {
     id: 'my_monitor', name: 'ASUS VA249HE 23,8"', part: 'VA panel 1920 × 1080 @ 60 Hz, HDMI + VGA, stojan s náklonem (EDID AUS24C1, vyroben 2020)',
     qty: 1, dims: [552.4, 396.9, 205], dimsSrc: 'ověřeno: asus.com techspec (se stojanem), hlava 552,4 × 334,2 × 56,6 mm (lcd-compare); rámeček a podstavec odhad', model: { kind: 'monitor', t: 56.6, panelH: 334.2, base: [205, 175], round: true, screen: [527, 296.5] },
-    note: 'EDID říká jen „VA249“ – stejný kód má i VA249NA (DVI místo HDMI), který vypadá stejně.',
+    note: 'Ověřeno 11. 11. 2026: Windows hlásí připojení přes HDMI (WmiMonitorConnectionParams = 5); VA249NA HDMI nemá (DVI + VGA), takže jde o VA249HE.',
   },
   {
     id: 'my_keyboard', name: 'ASUS ROG Strix Flare', part: 'Mechanická klávesnice Cherry MX RGB (barva spínačů neznámá), full size, mediální klávesy, váleček hlasitosti, odznak ROG',
@@ -195,6 +195,21 @@ export function withOffers(items, offers = OFFERS) {
 export const P100_PC_BOM = withOffers(P100_PC_ITEMS);
 export const NV1_BOM = withOffers(NV1_ITEMS);
 export const MY_PC_BOM = withOffers(MY_PC_ITEMS);
+
+// ---------------------------------------------------------------- projekt 4: můj PC + 2× P100 z AI PC (návrh)
+const fromAiPc = (id, extra = {}) => ({ ...P100_PC_ITEMS.find((it) => it.id === id), ...extra });
+const MY_PC_P100_ITEMS = [
+  ...MY_PC_ITEMS.filter((it) => it.id !== 'my_gpu').map((it) => (
+    it.id === 'my_mobo' ? { ...it, note: 'P100 #1 v PCIEX16_1 (x16 z CPU), P100 #2 v PCIEX16_2 (x4 z PCH, sdílí DMI s M.2_2). Obraz z HDMI desky (iGPU). V BIOSu: Above 4G Decoding = Enabled, Primary Display = iGPU. Zda BIOS 3101 zvládne 2× 16 GB okno (BAR1) P100, je neověřené.' }
+      : it.id === 'my_psu' ? { ...it, note: 'Napájí systém + P100 #1 (oba PCIe 6+2 do redukce W1) a přes SATA spíná Add2PSU. Odhad zátěže ~375 W z 600 W; model zdroje je ODHAD, ověř štítek.' }
+        : it.id === 'my_case' ? { ...it, note: 'ODHAD skříně. Karta s krytem a 9733 sahá ~459 mm od zadního plechu, skříň má hloubku 413 mm (karta max. 325 mm) → v čele výřez ~121 × 109 mm ve výšce slotů (136–245 mm nad dnem) a v té výšce sundaný přední ventilátor; karty přečnívají ~46 mm.' }
+          : it.id === 'my_cpu' ? { ...it, note: 'UHD 630 teď dává obraz (P100 video výstup nemá). 16 linek CPU jde celé do P100 #1.' } : it)),
+  fromAiPc('p100', { note: 'Přesazené z AI PC. Napájení EPS 8 pin přes redukci, NE přímo PCIe kabelem (zkrat). Limit 150 W (nvidia-smi -pl 150) jako v AI PC.' }),
+  fromAiPc('shroud'), fromAiPc('blower'),
+  fromAiPc('psu2', { note: 'Napájí jen P100 #2 a regulátor TD404 (2× 9733). Spíná ho Add2PSU ze SATA prvního zdroje.' }),
+  fromAiPc('add2psu'), fromAiPc('eps_cable'), fromAiPc('pwm_ctrl'), fromAiPc('paste'),
+];
+export const MY_PC_P100_BOM = withOffers(MY_PC_P100_ITEMS);
 
 /** Součet kusovníku v Kč: nejlevnější varianta, medián nabídek, maximum; missing = položky bez nabídky. */
 export function bomTotal(bom) {

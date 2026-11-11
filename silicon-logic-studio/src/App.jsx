@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { LogicEngine } from './engine/logicEngine';
 import { PROJECTS, projectById } from './engine/projects';
 import { audioEngine } from './engine/audioEngine';
@@ -6,9 +6,10 @@ import { findSubcircuit } from './engine/hierarchicalSubcircuits';
 import { Titlebar } from './components/Titlebar';
 import { Toolbar } from './components/Toolbar';
 import { LogicCanvas } from './views/LogicCanvas';
-import { PhysicsView } from './views/PhysicsView';
-import { EconomicView } from './views/EconomicView';
-import { AnatomyView } from './views/AnatomyView';
+// 3D pohledy (three.js) se načtou až při prvním otevření – menší hlavní balík a rychlejší start
+const PhysicsView = lazy(() => import('./views/PhysicsView').then((m) => ({ default: m.PhysicsView })));
+const EconomicView = lazy(() => import('./views/EconomicView').then((m) => ({ default: m.EconomicView })));
+const AnatomyView = lazy(() => import('./views/AnatomyView').then((m) => ({ default: m.AnatomyView })));
 import { WaveformViewer } from './components/WaveformViewer';
 import { MemoryEditor } from './components/MemoryEditor';
 import { AsmEditor } from './components/AsmEditor';
@@ -184,6 +185,7 @@ export default function App() {
 
         {/* Central Viewport: Schematic vs Hardware PCB vs Physics 3D Die */}
         <div className="flex-1 h-full relative">
+          <Suspense fallback={<div className="p-4 font-mono text-[11px] text-gray-500">NAČÍTÁM 3D…</div>}>
           {viewMode === 'anatomy' ? (
             <AnatomyView key={project.id} project={project} />
           ) : viewMode === 'economic' ? (
@@ -206,6 +208,7 @@ export default function App() {
               onDrillDown={handleDrillDown}
             />
           )}
+          </Suspense>
           {selectedComponentId && (viewMode === 'schematic' || viewMode === 'hardware') && (
             <MemoryEditor key={selectedComponentId} engine={engine} compId={selectedComponentId} />
           )}

@@ -17,8 +17,8 @@ test('můj PC: díly z diagnostiky, odhady označené, 4× 8 GB RAM', () => {
   assert.ok(bom.every((i) => i.price), 'každý díl má aspoň jednu nabídku');
 });
 
-test('po spuštění: 1. projekt karta NV1, 2. AI PC s P100, 3. můj PC', () => {
-  assert.deepEqual(PROJECTS.map((p) => p.id), ['nv1', 'p100pc', 'mypc']);
+test('po spuštění: 1. projekt karta NV1, 2. AI PC s P100, 3. můj PC, 4. můj PC + 2× P100', () => {
+  assert.deepEqual(PROJECTS.map((p) => p.id), ['nv1', 'p100pc', 'mypc', 'mypc_p100']);
   assert.ok(PROJECTS[0].circuit.components.some((c) => c.type === 'NV1_CORE'));
   assert.ok(PROJECTS.every((p) => p.views.includes('economic') && p.views.includes(p.defaultView)));
 });

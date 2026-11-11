@@ -239,13 +239,13 @@ const regExample = (label, x, y) => ({
 // ================================================================ deska ASUS PRIME B360-PLUS
 def('mypc_board', 2, {
   name: 'ASUS PRIME B360-PLUS — bloky desky',
-  subtitle: 'ASUS manuál E13832: PCIEX16_1 x16 z CPU (B360 dovolí jen 1×16), PCIEX16_2 (x2/x4, sdílí s PCIEX1_1/2) a PCIEX1 z PCH, M.2_1 (PCIe x2 / SATA – pak vypne SATA6G_2), M.2_2 (PCIe x4, Optane; je v něm 970 EVO Plus), RTL8111H, ALC887-VD2, ASM1083 → 2× PCI, 6× SATA, USB 2× 3.1 Gen2 + 4× Gen1 + 6× 2.0, iGPU výstupy HDMI 1.4b / DVI-D / D-Sub. VRM „DIGI+ 6 Phase“ – rozdělení a součástky neověřeny; Super I/O nejspíš Nuvoton NCT6796D (lm-sensors, neověřeno).',
+  subtitle: 'ASUS manuál E13832: PCIEX16_1 x16 z CPU (B360 dovolí jen 1×16), PCIEX16_2 (x2/x4, sdílí s PCIEX1_1/2) a PCIEX1 z PCH, M.2_1 (PCIe x2 / SATA – pak vypne SATA6G_2), M.2_2 (PCIe x4, Optane; je v něm 970 EVO Plus), RTL8111H, ALC887-VD2, ASM1083 → 2× PCI, 6× SATA, USB 2× 3.1 Gen2 + 4× Gen1 + 6× 2.0, iGPU výstupy HDMI 1.4b / DVI-D / D-Sub. VRM „DIGI+ 6 Phase“ – rozdělení a součástky neověřeny; Super I/O Nuvoton NCT6796D (ověřeno 11. 11. 2026 LibreHardwareMonitorem: chip ID 0xD423, rev. 0x23).',
   components: [
     blk('atx', 'ATX 24 PIN + EPS 8 PIN', 50, 50, [], ['+5VSB', '+12V/+5V/+3,3V', 'EPS +12V'], 'ZE ZDROJE', 170, 90),
     blk('panel', 'PANEL: POWER, RESET, LED', 50, 160, [], ['PWRBTN'], 'HLAVIČKA F_PANEL', 170, 70),
-    blk('sio', 'SUPER I/O NCT6796D?', 50, 250, ['+5VSB', 'PWRBTN', 'TEPLOTA'], ['PS_ON#', 'FAN PWM'], 'TLAČÍTKO, VENTILÁTORY, PS/2, COM', 170, 100),
+    blk('sio', 'SUPER I/O NCT6796D', 50, 250, ['+5VSB', 'PWRBTN', 'TEPLOTA'], ['PS_ON#', 'FAN PWM'], 'DVOJKLIK → ČIP (OVĚŘENO)', 170, 100),
     blk('fan', 'CPU_FAN · CHA_FAN1 · CHA_FAN2', 50, 370, ['FAN PWM'], [], 'CPU_FAN 1 A · CHA PWM/DC', 170, 80),
-    blk('vrm', 'DIGI+ VRM · 6 FÁZÍ', 270, 50, ['EPS +12V'], ['VCORE', 'VCCGT'], 'ROZDĚLENÍ A ŘADIČ NEOVĚŘENY', 190, 100),
+    blk('vrm', 'DIGI+ VRM · 6 FÁZÍ', 270, 50, ['EPS +12V'], ['VCORE', 'VCCGT'], 'VCORE 1,20 V · VCCIO 1,048 V (ZMĚŘENO) · FÁZE NEOVĚŘENY', 190, 100),
     blk('cpu', 'LGA1151 · i7-9700', 510, 50, ['VCORE', 'VCCGT', 'DDR4 A', 'DDR4 B'], ['PEG x16', 'DMI 3.0 x4', 'DISPLEJ'], 'DVOJKLIK → ČIP', 200, 150, { drill: 'cfl_die' }),
     blk('dimma', 'DIMM_A1 + A2 · 2× 8 GB', 760, 50, [], ['DDR4 A'], 'KANÁL A', 190, 70),
     blk('dimmb', 'DIMM_B1 + B2 · 2× 8 GB', 760, 135, [], ['DDR4 B'], 'KANÁL B', 190, 70),
@@ -267,6 +267,28 @@ def('mypc_board', 2, {
     w('cpu.PEG x16', 'x16.PEG x16'), w('cpu.DISPLEJ', 'disp.DISPLEJ'), w('cpu.DMI 3.0 x4', 'pch.DMI 3.0 x4'),
     w('pch.M.2_2 x4', 'm2.M.2_2 x4'), w('pch.SLOTY', 'slots.SLOTY'), w('pch.LAN', 'lan.LAN'), w('pch.PCI', 'pci.PCI'),
     w('pch.SATA', 'sata.SATA'), w('pch.USB', 'usb.USB'), w('pch.HDA', 'audio.HDA'), w('pch.SPI', 'bios.SPI'),
+  ],
+});
+
+// ================================================================ Super I/O Nuvoton NCT6796D (ověřeno: chip ID 0xD423, rev. 0x23)
+def('nct6796d', 3, {
+  name: 'Nuvoton NCT6796D — Super I/O desky',
+  subtitle: 'Ověřeno 11. 11. 2026 (chip ID 0xD423, rev. 0x23). Řada NCT679x: LPC k PCH, ACPI zapnutí (PSIN# → PSOUT#, podle SLP_S3# PS_ON#), HW monitor, SmartFan, PS/2, UART, GPIO. Změřeno: +3,3 V 3,344 · 3VSB 3,376 · VTT 1,048 · Vcore 1,20 V. Pouzdro neověřeno.',
+  components: [
+    blk('lpc', 'LPC / eSPI ROZHRANÍ', 50, 50, [], ['REGISTRY'], 'K PCH B360 · KTERÉ, NEOVĚŘENO', 190, 70),
+    blk('acpi', 'ACPI: PSIN# → PSOUT#, PS_ON#', 50, 160, ['+5VSB', 'TLAČÍTKO', 'SLP_S3#'], ['PS_ON#', 'PWRBTN#'], 'BĚŽÍ Z POHOTOVOSTNÍHO NAPÁJENÍ', 230, 110),
+    blk('hwm', 'HW MONITOR · ADC NAPĚTÍ', 340, 50, ['REGISTRY', 'NAPĚTÍ'], ['ALARM'], '3,344 / 3,376 / 1,048 / 1,20 V (ZMĚŘENO)', 250, 90),
+    blk('temp', 'TEPLOTNÍ VSTUPY (DIODY)', 340, 170, ['REGISTRY'], ['TEPLOTA'], 'CPUTIN, SYSTIN', 250, 70),
+    blk('fanctl', 'SMARTFAN · PWM / DC VÝSTUPY', 640, 50, ['REGISTRY', 'TEPLOTA'], ['CPU_FAN PWM', 'CHA_FAN PWM'], 'KŘIVKA Q-FAN Z BIOSU', 250, 90),
+    blk('tach', 'TACHO VSTUPY VENTILÁTORŮ', 640, 170, [], ['OT/MIN'], '2 PULZY NA OTÁČKU', 250, 70),
+    blk('kbc', 'PS/2 KLÁVESNICE + MYŠ (KBC)', 340, 280, ['REGISTRY'], [], 'KOMBINOVANÝ PORT VZADU', 250, 70),
+    blk('uart', 'UART → HLAVIČKA COM', 640, 280, ['REGISTRY'], [], 'RS-232 PŘES PŘEVODNÍK NA DESCE', 250, 70),
+    blk('gpio', 'GPIO + WATCHDOG', 50, 310, ['REGISTRY'], [], 'ŘÍZENÍ LED, STRAPY', 230, 70),
+  ],
+  wires: [
+    w('lpc.REGISTRY', 'hwm.REGISTRY'), w('lpc.REGISTRY', 'temp.REGISTRY'), w('lpc.REGISTRY', 'fanctl.REGISTRY'),
+    w('lpc.REGISTRY', 'kbc.REGISTRY'), w('lpc.REGISTRY', 'uart.REGISTRY'), w('lpc.REGISTRY', 'gpio.REGISTRY'),
+    w('temp.TEPLOTA', 'fanctl.TEPLOTA'),
   ],
 });
 
@@ -345,7 +367,7 @@ def('cfl_core', 4, {
 // ================================================================ grafika ASUS Dual RTX 3060 Ti GDDR6X
 def('mypc_gpu_board', 2, {
   name: 'ASUS Dual RTX 3060 Ti OC GDDR6X — bloky karty',
-  subtitle: 'ASUS techspec + TechPowerUp: GA104-202, 8 GB GDDR6X 19 Gb/s na 256 bit = 608 GB/s, 2× 8 pin + slot, HDMI 2.1 + 3× DP 1.4a. Paměti 8× Micron MT61K256M32JE-19 (jako 3070 Ti) a VRM (~8–10 fází, uP9512R) jsou neověřené – teardown této karty neexistuje.',
+  subtitle: 'ASUS techspec + TechPowerUp: GA104-202, 8 GB GDDR6X 19 Gb/s na 256 bit = 608 GB/s, 2× 8 pin + slot, HDMI 2.1 + 3× DP 1.4a. GDDR6X ověřena 11. 11. 2026 (karta hlásí teplotu Memory Junction, kterou mají jen GDDR6X; nvidia-smi: 8192 MiB, limit 225 W, VBIOS 94.04.94.00.85). Výrobce čipů (Micron MT61K256M32JE-19?) a VRM (~8–10 fází, uP9512R) neověřeny – teardown této karty neexistuje.',
   components: [
     blk('p8a', '8 PIN #1 · 150 W', 50, 50, [], ['+12V'], 'ZE ZDROJE (PCIe1)', 170, 70),
     blk('p8b', '8 PIN #2 · 150 W', 50, 130, [], ['+12V'], 'ZE ZDROJE (PCIe2)', 170, 70),
@@ -353,7 +375,7 @@ def('mypc_gpu_board', 2, {
     blk('vrm', 'GPU VRM ~8–10 FÁZÍ', 290, 50, ['+12V A', '+12V B', '+12V SLOT'], ['NVVDD'], 'uP9512R + DrMOS – NEOVĚŘENO', 200, 100),
     blk('mvdd', 'MVDD 2 FÁZE', 290, 175, ['+12V'], ['MVDD'], 'NAPÁJENÍ GDDR6X – NEOVĚŘENO', 200, 80),
     blk('gpu', 'GA104-202 · 38 z 48 SM', 540, 50, ['NVVDD', 'PCIe x16'], ['MC0–3', 'MC4–7', 'DISPLEJ'], 'DVOJKLIK → ČIP', 200, 140, { drill: 'ga104_die' }),
-    blk('m0', '4× GDDR6X 8 Gb x32', 790, 50, ['4 × 32 BIT', 'MVDD'], [], 'MT61K256M32JE-19 (NEOVĚŘENO)', 160, 100),
+    blk('m0', '4× GDDR6X 8 Gb x32', 790, 50, ['4 × 32 BIT', 'MVDD'], [], 'GDDR6X OVĚŘENO · VÝROBCE NE', 160, 100),
     blk('m1', '4× GDDR6X 8 Gb x32', 790, 170, ['4 × 32 BIT', 'MVDD'], [], 'PAM4, 19 Gb/s NA PIN', 160, 100),
     blk('out', 'HDMI 2.1 + 3× DP 1.4a', 540, 260, ['DISPLEJ'], [], 'HDMI → MONITOR VA249HE', 200, 80),
     blk('fan', 'CHLADIČ: 2× AXIAL-TECH', 290, 300, [], [], '0 dB REŽIM POD 50 °C', 200, 80),
@@ -415,7 +437,7 @@ def('ampere_sm', 4, {
 // ================================================================ monitor ASUS VA249HE
 def('va249_inside', 2, {
   name: 'ASUS VA249HE — bloky monitoru',
-  subtitle: 'ASUS techspec: VA 23,8" 1920 × 1080, rozteč 0,2745 mm, 3000 : 1, HDMI + VGA, WLED bez blikání, vestavěný zdroj. Typ scaleru, LED driveru a desky zdroje je NEZJIŠTĚNÝ (teardown neexistuje); panel AUO M238HVN01.0 s LVDS je jen odhad pcmonitors.info.',
+  subtitle: 'Varianta HE ověřena 11. 11. 2026: Windows hlásí připojení přes HDMI a VA249NA HDMI nemá. ASUS techspec: VA 23,8" 1920 × 1080, rozteč 0,2745 mm, 3000 : 1, HDMI + VGA, WLED bez blikání, vestavěný zdroj. Typ scaleru, LED driveru a desky zdroje je NEZJIŠTĚNÝ (teardown neexistuje); panel AUO M238HVN01.0 s LVDS je jen odhad pcmonitors.info.',
   components: [
     blk('hdmi', 'HDMI VSTUP (TMDS)', 50, 50, [], ['TMDS'], 'Z RTX 3060 Ti', 200, 70),
     blk('vga', 'VGA VSTUP (ANALOG RGB)', 50, 140, [], ['RGB'], 'NEPOUŽITÝ', 200, 70),
@@ -618,7 +640,8 @@ def('mypc_mic', 2, {
 // (konektory, kabely, cívky, kondenzátory, mechanické spínače) – ty jsou už jen měď a plast.
 const SERDES = 'cell_serdes';
 const DRILLS = {
-  mypc_board: { sio: 'cell_pwrbtn', fan: 'cell_lt', vrm: 'cell_buck', dimma: 'ddr4_8g_x8', dimmb: 'ddr4_8g_x8', x16: SERDES, disp: 'ramdac_datapath', lan: SERDES, pci: 'pci_target', sata: SERDES, usb: SERDES, m2: 'phoenix_ctl', slots: SERDES, audio: 'sigma_delta', bios: 'cell_eeprom' },
+  nct6796d: { lpc: SERDES, acpi: 'cell_pwrbtn', hwm: 'cell_lt', temp: 'cell_lt', fanctl: 'cell_lt', tach: 'cell_toggle', kbc: SERDES, uart: SERDES, gpio: 'REGISTER_8BIT' },
+  mypc_board: { sio: 'nct6796d', fan: 'cell_lt', vrm: 'cell_buck', dimma: 'ddr4_8g_x8', dimmb: 'ddr4_8g_x8', x16: SERDES, disp: 'ramdac_datapath', lan: SERDES, pci: 'pci_target', sata: SERDES, usb: SERDES, m2: 'phoenix_ctl', slots: SERDES, audio: 'sigma_delta', bios: 'cell_eeprom' },
   b360_pch: { dmi: SERDES, hsio: 'MUX', pcie: SERDES, sata: SERDES, usb3: SERDES, usb2: SERDES, hda: SERDES, spi: SERDES, smb: SERDES, me: 'ADDER_8BIT', cnvi: SERDES, clk: 'cell_toggle' },
   cfl_die: { ring: 'REGISTER_8BIT', gt: 'ADDER_8BIT', pcu: 'COMPARATOR_8BIT', sa: 'cell_arbiter', imc: 'COMPARATOR_8BIT', peg: SERDES, dmi: SERDES, disp: SERDES },
   cfl_core: { fe: 'cell_decoder', ooo: 'cell_match', prf: 'cell_sram', p0: 'FULL_ADDER', p1: 'FULL_ADDER', p5: 'MUX', p6: 'MUX', p23: 'FULL_ADDER', p4: 'cell_sram', p7: 'FULL_ADDER', l1d: 'cell_sram' },
@@ -643,6 +666,7 @@ for (const [key, map] of Object.entries(DRILLS)) {
 // DIE 3D: vnitřek zařízení (L2) je deska plošných spojů s bloky, čipy (L3) jsou otevřené pouzdro s die
 for (const sub of Object.values(MY_PC_SUBCIRCUITS)) if (sub.level === 2) sub.scene = 'board';
 for (const key of ['b360_pch', 'cfl_die', 'ga104_die', 'phoenix_ctl', 'ddr4_8g_x8']) MY_PC_SUBCIRCUITS[key].scene = 'flipdie'; // moderní pouzdra BGA/LGA
+MY_PC_SUBCIRCUITS.nct6796d.scene = 'die'; // Super I/O: plastové QFP s drátky (pouzdro v siliconScenes PACKAGES)
 
 // výrobní proces (vybírá tranzistor L7 a atomy L8): známé čipy podle výrobce, jinde proces neuveden
 for (const sub of Object.values(MY_PC_SUBCIRCUITS)) if (sub.level === 2) sub.process = 'unknown';

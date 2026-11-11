@@ -1560,6 +1560,15 @@ export function LogicCanvas({
             <div className="flex items-center gap-1 px-2 overflow-x-auto max-w-[650px] scrollbar-none">
               {hierarchyStack.map((lvl, idx) => {
                 const isCurrent = idx === hierarchyStack.length - 1;
+                // hluboko zanořeno: první a poslední dvě úrovně, zbytek za „…“ (jinak aktuální úroveň přeteče z lišty)
+                if (hierarchyStack.length > 4 && idx > 0 && idx < hierarchyStack.length - 2) {
+                  return idx === 1 ? (
+                    <React.Fragment key="ellipsis">
+                      <span className="text-gray-600 select-none">/</span>
+                      <button onClick={() => onNavigateUp(hierarchyStack.length - 3)} className="px-1.5 py-1 text-gray-500 hover:text-(--accent-amber)" title={hierarchyStack.slice(1, -2).map((l) => l.title).join(' / ')}>…</button>
+                    </React.Fragment>
+                  ) : null;
+                }
                 return (
                   <React.Fragment key={lvl.id + '-' + idx}>
                     {idx > 0 && <span className="text-gray-600 select-none">/</span>}
@@ -1571,7 +1580,7 @@ export function LogicCanvas({
                       }`}
                     >
                       <span className={isCurrent ? 'text-(--accent-amber)' : 'text-gray-600'}>L{lvl.level || idx + 1}:</span>
-                      <span>{lvl.title.length > 25 ? lvl.title.slice(0, 23) + '…' : lvl.title}</span>
+                      <span>{((n) => (lvl.title.length > n ? lvl.title.slice(0, n - 2) + '…' : lvl.title))(!isCurrent && hierarchyStack.length > 4 ? 14 : 25)}</span>
                     </button>
                   </React.Fragment>
                 );
@@ -1586,7 +1595,7 @@ export function LogicCanvas({
 
           {/* Subtitle / Micro-Architecture Formula Banner */}
           {hierarchyStack[hierarchyStack.length - 1].subtitle && (
-            <div className="mt-1.5 px-3 py-1 bg-(--bg-dark)/90 border border-(--line) flex items-baseline gap-2">
+            <div className="mt-1.5 px-3 py-1 bg-(--bg-dark)/90 border border-(--line) flex items-baseline gap-2 w-[min(860px,90vw)]">{/* pevná šířka: nezávisí na délce drobečků */}
               <span className="serif-accent text-[13px]">{hierarchyStack[hierarchyStack.length - 1].subtitle}</span>
               <span className="meta text-[9px]">dvojklik = hlouběji</span>
             </div>

@@ -80,6 +80,16 @@ test('každý díl L1 se dá rozkliknout a cesta vede až k atomům', () => {
   assert.equal(PROJECTS[2].circuit, MY_PC_SYSTEM);
 });
 
+test('Super I/O NCT6796D (ověřeno): deska → čip → logika tlačítka POWER', () => {
+  const board = H.mypc_board;
+  const stack = [{ key: 'root', level: 1 }, { key: 'mypc_board', level: 2 }];
+  const sio = findSubcircuit(board.components.find((x) => x.id === 'sio'), stack);
+  assert.equal(sio.key, 'nct6796d');
+  assert.match(sio.subtitle, /0xD423/);
+  const acpi = findSubcircuit(sio.components.find((x) => x.id === 'acpi'), [...stack, { key: 'nct6796d', level: 3 }]);
+  assert.equal(acpi.key, 'cell_pwrbtn');
+});
+
 test('až úplně dolů: každý funkční blok mého PC vede přes simulovaný obvod k atomům', () => {
   // pasivní díly (měď, plast, cívky, kondenzátory, mechanika) jsou konec cesty
   const PASSIVE = new Set(['atx', 'panel', 'p8a', 'p8b', 'osd', 'stator', 'hub', 'btn', 'ac', 'bulk', 'cab', 'm2', 'edge', 'term', 'pwr', 'lc', 'pair']);

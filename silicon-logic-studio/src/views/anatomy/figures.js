@@ -96,7 +96,34 @@ export function myPcParts() {
   return { parts: P, shell: { W, D, H }, camera: [0.75, 0.5, -0.8] }; // 3D: pohled zepředu přes okno (three −Z = dopředu)
 }
 
-export const ASSEMBLIES = { p100pc: pcParts, mypc: myPcParts }; // projekty se sestavou ve skříni
+/** Můj PC + 2× P100: sestava mého PC bez RTX 3060 Ti, P100 v PCIEX16_1 a PCIEX16_2, shroud + 9733 za koncem karet. */
+export function myPcP100Parts() {
+  const base = myPcParts();
+  const top = 422, bx = 10, z = (v) => top - v;
+  const P = base.parts.filter((p) => p.id !== 'my_gpu');
+  [182.8, 243.6].forEach((v, i) => {
+    const z0 = z(v) - 37;
+    P.push(part('p100', `p100_${i}`, [bx + 4.6, 4, z0, 111.15, 267, 37], [260, 0, 40 - i * 80], { orient: CARD }));
+    P.push(part('shroud', `shroud_${i}`, [bx + 4.6, 271, z0, 111.15, 91, 37], [260, 90, 40 - i * 80], { tone: 'mid', orient: CARD }));
+    P.push(part('blower', `blower_${i}`, [bx + 12, 362, z0 + 2, 94, 97, 33], [260, 190, 40 - i * 80], { orient: CARD,
+      lines: (pr, o) => lineSvg(ringOn(o[0] + 50, o[1] + 50, 30, o[2] + 33, pr, 40), { tone: 'mid' }),
+    }));
+  });
+  // za skříní: druhý zdroj, Add2PSU, regulátor, redukce, pasta
+  P.push(part('psu2', 'psu2', [10, -190, 0, 150, 140, 86], [0, -60, 0], { tone: 'mid', orient: FLAT }));
+  P.push(part('add2psu', 'add2psu', [30, -170, 86, 70, 30, 17], [0, -60, 40], { orient: FLAT }));
+  P.push(part('pwm_ctrl', 'pwm', [110, -170, 86, 32, 63, 20.3], [0, -60, 60], { orient: FLAT_TURNED }));
+  P.push(part('eps_cable', 'eps0', [230, -150, 0, 50, 140, 15.1], [80, -40, 0], { orient: FLAT_TURNED }));
+  P.push(part('eps_cable', 'eps1', [290, -150, 0, 50, 140, 15.1], [120, -40, 0], { orient: FLAT_TURNED }));
+  P.push(part('paste', 'paste', [250, 20, 0, 15, 92, 15], [80, 0, 0], { round: 'x', orient: FLAT_TURNED }));
+  return {
+    ...base, parts: P,
+    // karty s krytem a 9733 (~459 mm od zadního plechu) jsou delší než skříň (413 mm): výřez v čele, kudy prostrčí ven
+    cutout: { y: base.shell.D, box: [bx, bx + 121, z(243.6) - 37 - 5, z(182.8) + 6], note: 'VÝŘEZ V ČELE 121 × 109 mm · karty přečnívají ~46 mm' },
+  };
+}
+
+export const ASSEMBLIES = { p100pc: pcParts, mypc: myPcParts, mypc_p100: myPcP100Parts }; // projekty se sestavou ve skříni
 
 /** Karta NV1: deska podle PCB pohledu (3,7 px/mm), součástky na skutečných pozicích. */
 export function nv1Parts(circuit) {
@@ -184,17 +211,25 @@ export function anatomyFigure(project, { explode = 0, focus = null } = {}) {
     const edges = [[[W, 0, 0], [W, D, 0]], [[W, D, 0], [0, D, 0]], [[W, 0, H], [W, D, H]], [[W, D, H], [0, D, H]], [[0, D, H], [0, 0, H]], [[0, 0, H], [W, 0, H]], [[W, 0, 0], [W, 0, H]], [[W, D, 0], [W, D, H]], [[0, D, 0], [0, D, H]]];
     body.push(edges.map(([a, b]) => lineSvg(pathOf([c(...a), c(...b)]), { tone: 'mid', dashed: true })).join(''));
   }
+  if (model.cutout) {
+    // výřez v čele skříně (jantarově), kudy karty s krytem a ventilátorem vyčnívají ven
+    const c = (x, y, z) => iso([x, y, z], P);
+    const { y, box: [x0, x1, z0, z1], note } = model.cutout;
+    body.push(lineSvg(pathOf([c(x0, y, z0), c(x0, y, z1), c(x1, y, z1), c(x1, y, z0)], true), { tone: 'lit', dashed: true }));
+    if (explode < 0.05) { const t = c(x1, y, z1 + 5); body.push(`<text class="an-cut" x="${t[0].toFixed(1)}" y="${(t[1] - 6).toFixed(1)}">${note}</text>`); }
+  }
   if (model.clash) {
     // limit plné délky PCIe a kolize karet s krytem a ventilátorem
     const c = (x, y, z) => iso([x, y, z], P);
     const y = model.clash.y0;
-    body.push(lineSvg(pathOf([c(12, y, 40), c(12, y, 200), c(170, y, 200), c(170, y, 40)], true), { tone: 'red', dashed: true }));
+    const [bx0, bx1, bz0, bz1] = model.clash.box || [12, 170, 40, 200]; // obrys limitu (výchozí: sloty Dellu)
+    body.push(lineSvg(pathOf([c(bx0, y, bz0), c(bx0, y, bz1), c(bx1, y, bz1), c(bx1, y, bz0)], true), { tone: 'red', dashed: true }));
     if (explode < 0.05) {
       for (const p of model.parts.filter((q) => q.id === 'blower' || q.id === 'shroud')) {
         const [x0, y0, z0, w, d, h] = p.b;
         if (y0 + d > y) body.push(lineSvg(pathOf([c(x0, Math.max(y0, y), z0 + h), c(x0 + w, Math.max(y0, y), z0 + h), c(x0 + w, y0 + d, z0 + h), c(x0, y0 + d, z0 + h)], true), { tone: 'red' }));
       }
-      const t = c(170, y, 205);
+      const t = c(bx1, y, bz1 + 5);
       body.push(`<text class="an-warn" x="${t[0].toFixed(1)}" y="${(t[1] - 6).toFixed(1)}">${model.clash.note}</text>`);
     }
   }

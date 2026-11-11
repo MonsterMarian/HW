@@ -18,6 +18,7 @@ const THEME_CSS = `
 .an-root .an-focus .an-num{fill:#07080a}
 .an-root .an-focus .an-dot{fill:#FFA909}
 .an-root .an-warn{fill:var(--anatomy-red);font:700 11px "Courier New",monospace}
+.an-root .an-cut{fill:#FFA909;font:700 11px "Courier New",monospace}
 .an-root [data-part]{cursor:pointer}
 .an3d-ball{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:700 10px "Courier New",monospace;color:#c9c6c0;background:rgba(7,8,10,.85);border:1px solid #7a7d82;transform:translateY(-50%)}
 .an3d-ball.an3d-on{background:#FFA909;border-color:#FFA909;color:#07080a}
@@ -78,6 +79,7 @@ export function AnatomyView({ project }) {
             <div>{mode === '3d' ? '3D modely dílů v mm, otáčení myší' : 'Izometrický výkres v mm, kit Anatomy (MIT)'}</div>
             <div>Číslo ve výkresu = řádek níže</div>
             {project.id === 'p100pc' && <div className="text-(--conflict)">Červeně: limit 312 mm a kolize krytu s držákem</div>}
+            {project.id === 'mypc_p100' && <div className="text-(--accent-amber)">Jantarově: výřez v čele skříně, kudy karty s krytem a 9733 vyčnívají ven</div>}
           </div>
           <label className="flex items-center gap-2 pt-1 text-[11px] text-gray-300">
             ROZLOŽIT

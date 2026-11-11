@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
-  assetsInclude: ['**/*.glb'], // CAD modely výrobců (views/economic/realModels.js)
+  assetsInclude: ['**/*.glb', '**/*.stl'], // CAD modely výrobců (views/economic/realModels.js)
   plugins: [
     react(),
     tailwindcss(),

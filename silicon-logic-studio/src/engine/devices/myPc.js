@@ -1,13 +1,13 @@
 // Modely dílů projektu MŮJ PC (i7-9700 + RTX 3060 Ti) pro schéma L1. Sítě nesou napětí ve voltech, logická 1 = linka
 // běží (PCIe/DMI/DDR4/USB natrénované), 'Z' = bez napájení. Postup zapnutí podle Intel ATX12V DG: +5VSB je stále,
 // tlačítko → deska stáhne PS_ON# na COM → zdroj naběhne a pošle PWR_OK → VRM desky → PLTRST# uvolní CPU → POST.
-import { nameNets } from './pcBuild.js';
+import { nameNets, PC_DEVICES } from './pcBuild.js';
 import { HW_PINS } from '../myPcLayout.js';
 
 const Z = 'Z';
 const num = (v) => typeof v === 'number';
 const at = (v, volts) => num(v) && Math.abs(v - volts) < 0.01;
-const VCORE = 1.2; // VID i7-9700 pod zátěží ~1,2 V (neověřeno, mění se s P-stavy)
+const VCORE = 1.2; // napětí jader i7-9700 ~1,19–1,21 V (změřeno 11. 11. 2026 LibreHardwareMonitorem při běžné zátěži; mění se s P-stavy)
 
 export const MY_PC_DEVICES = {
   // Endorfy Vero L5 Bronze 600 W (ODHAD modelu): +5VSB pořád, ostatní větve až po PS_ON# = 0
@@ -19,13 +19,14 @@ export const MY_PC_DEVICES = {
         '24P +12V': Z, '24P +5V': Z, '24P +3,3V': Z, '24P COM': 0, '9 +5VSB': 5, '8 PWR_OK': 0,
         'EPS 5-8 +12V': Z, 'EPS 1-4 GND': 0,
         'PCIe1 1-3 +12V': Z, 'PCIe1 4-8 GND': 0, 'PCIe2 1-3 +12V': Z, 'PCIe2 4-8 GND': 0,
+        'SATA13 +12V': Z, 'SATA4 GND': 0,
       },
     },
     pulls: { '16 PS_ON#': 1 },
     eval(comp) {
       const on = comp.inputs['16 PS_ON#'] === 0;
       const o = comp.outputs;
-      o['24P +12V'] = o['EPS 5-8 +12V'] = o['PCIe1 1-3 +12V'] = o['PCIe2 1-3 +12V'] = on ? 12 : Z;
+      o['24P +12V'] = o['EPS 5-8 +12V'] = o['PCIe1 1-3 +12V'] = o['PCIe2 1-3 +12V'] = o['SATA13 +12V'] = on ? 12 : Z;
       o['24P +5V'] = on ? 5 : Z;
       o['24P +3,3V'] = on ? 3.3 : Z;
       o['9 +5VSB'] = 5;
@@ -46,6 +47,7 @@ export const MY_PC_DEVICES = {
         'SLOT +12V': Z, 'SLOT +3,3V': Z, 'SLOT GND': 0, 'M.2_2 PCIe x4': Z, 'M.2_2 +3,3V': Z,
         'CPU_FAN +12V': Z, 'CPU_FAN GND': 0, 'CPU_FAN PWM': Z, 'CHA_FAN +12V': Z, 'CHA_FAN GND': 0, 'CHA_FAN PWM': Z,
         'USB +5V': Z, 'USB DATA': Z,
+        'PCIEX16_2 PCIe x4': Z, 'HDMI (iGPU)': Z, // druhý slot x16 (elektricky x4 z PCH) a výstup UHD 630 na zadním panelu
       },
     },
     // VccSA je 1,05 V; VccIO má u Coffee Lake S vlastní regulátor a typ. 0,95 V (Intel 337344, tab. 7-5 a 7-6) – tady jedna větev
@@ -57,13 +59,14 @@ export const MY_PC_DEVICES = {
       const pg = i['8 PWR_OK'] === 1 && at(i['24P +12V'], 12) && at(i['24P +5V'], 5) && at(i['24P +3,3V'], 3.3) && i['24P COM'] === 0
         && at(i['EPS +12V'], 12) && i['EPS GND'] === 0;
       o['VCORE'] = pg ? VCORE : Z;
-      o['VCCSA/VCCIO'] = pg ? 1.05 : Z;
+      o['VCCSA/VCCIO'] = pg ? 1.05 : Z; // Super I/O změřilo VTT/VCCIO 1,048 V (11. 11. 2026)
       o['VDDQ A'] = o['VDDQ B'] = pg ? 1.2 : Z;
       o['PLTRST#'] = pg ? 1 : 0;
       o['SLOT +12V'] = pg ? 12 : Z;
       o['SLOT +3,3V'] = o['M.2_2 +3,3V'] = pg ? 3.3 : Z;
       const pch = pg && i['DMI 3.0 x4'] === 1; // model: datové linky PCH (M.2, USB) až po natrénování DMI. Skutečný PCH běží už z pohotovostní větve: přijme PWRBTN#, uvolní SLP_S3# (→ PS_ON#) a po PWR_OK PLTRST#
-      o['M.2_2 PCIe x4'] = pch ? 1 : Z;
+      o['M.2_2 PCIe x4'] = o['PCIEX16_2 PCIe x4'] = pch ? 1 : Z;
+      o['HDMI (iGPU)'] = pch ? 1 : Z; // iGPU je v CPU: obraz až po POST (DMI natrénované = CPU prošel POST)
       o['USB +5V'] = pg ? 5 : Z;
       o['USB DATA'] = pch ? 1 : Z;
       o['CPU_FAN +12V'] = o['CHA_FAN +12V'] = pg ? 12 : Z;
@@ -163,4 +166,4 @@ export const MY_PC_DEVICES = {
 
 nameNets(MY_PC_DEVICES);
 // pohled PCB: vývody na skutečných místech (konektory desky, patice, slot, M.2)
-for (const [type, pins] of Object.entries(HW_PINS)) MY_PC_DEVICES[type].hwPins = pins;
+for (const [type, pins] of Object.entries(HW_PINS)) (MY_PC_DEVICES[type] || PC_DEVICES[type]).hwPins = pins; // TESLA_P100 z AI PC v projektu MŮJ PC + 2× P100

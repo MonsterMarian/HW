@@ -64,6 +64,14 @@ export function buildAnatomyScene(project) {
     edges.computeLineDistances();
     root.add(edges);
   }
+  if (model.cutout) {
+    // výřez v čele: jantarový rámeček (zobrazený jen ve složeném stavu, stejně jako kolize)
+    const { y, box: [x0, x1, z0, z1] } = model.cutout;
+    const amber = new THREE.MeshBasicMaterial({ color: 0xffa909, transparent: true, opacity: 0.9, depthWrite: false });
+    clash = new THREE.Group();
+    for (const b of [[x0, y, z0, x1 - x0, 1, 2], [x0, y, z1 - 2, x1 - x0, 1, 2], [x0, y, z0, 2, 1, z1 - z0], [x1 - 2, y, z0, 2, 1, z1 - z0]]) clash.add(boxMesh(b, amber));
+    root.add(clash);
+  }
   if (model.clash) {
     // limit plné délky PCIe a přesah krytu + ventilátoru za něj (jen ve složeném stavu)
     clash = new THREE.Group();

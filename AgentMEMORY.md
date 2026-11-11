@@ -9,12 +9,14 @@ až k atomům (8 úrovní) ve 2D (schéma, PCB) i 3D. Uživatel chce: vzhled jak
 vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zařízení (ne jen schéma).
 
 ## Stav a jak spustit
-- `cd silicon-logic-studio && npm install && npm test` (node --test, 278 testů, ~10 s), `npm run build`.
+- `cd silicon-logic-studio && npm install && npm test` (node --test, ~290 testů, ~10 s), `npm run build`.
+- Pravidla repa (commit + push po každém kroku) jsou v `../CLAUDE.md`.
 - Vývoj: `npx vite --port 5287 --strictPort` (port 5199 bývá obsazený portfoliem!).
 - Vizuální kontrola bez okna: `SHOT_URL=http://localhost:5287/ npx electron tools/shot.cjs <steps.json> <outdir>`
   (okno `show:false`, `SHOT_SIZE=1280x800`; helpery `__view('SCHEMATIC'|'PCB'|'DIE 3D')`, `__dbl(x,y)`, `__crumb()`,
   `__active()`, `window.__errs`; v DEV i `window.__engine`, `window.__three`, `window.__slsCanvas`).
   Uživatel NECHCE, aby se mu aplikace otevírala – nikdy `npm run desktop` ani viditelný prohlížeč.
+<<<<<<< HEAD
 - Rychlost simulace karty (měřeno 11. 11., kolísá podle zátěže stroje): 317 kroků na µs simulovaného času (z toho 200 jsou hrany MCLKx2 100 MHz),
   ~2,5 ms reálného času na µs → jeden snímek 640×480 (16,7 ms) trvá ~42 s. Testy proto používají malý video režim `TINY`
   + `monitor.modes`. `TINY` = htotal 64, hdisp 32, hss 44, hse 52: přední zatemnění MUSÍ být delší než zpoždění
@@ -32,6 +34,7 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - ZNÁMÉ OMEZENÍ: `BUS_SWITCH_32` pozná směr podle toho, že strana není buzená (Z). Když je v obvodu s kartou jakýkoli
   tranzistor NMOS/PMOS, engine přejde na spínačové řešení sítí, kde nebuzená síť drží náboj a nikdy není Z → spínač
   (čtení banky 1) nefunguje. Správné řešení = skutečný průchozí spínač v enginu (zařízení deklaruje spojení sítí), neuděláno.
+
 ## Hotovo (2026-11-10)
 - Nové jádro `src/engine/logicEngine.js`: dráty = vodivé sítě (union-find), obousměrné piny, tri-state,
   zkrat = 'X', plovoucí = 'Z' (NE 2/3 – stará chyba: sběrnicová hodnota 2 se brala jako Z), pull-upy,
@@ -200,15 +203,14 @@ envytools, fotka), tabulku „model vs. skutečnost“, 8 kroků s kritériem ho
   v aiCopilot.js opravdu simuluje (ustálení + zkraty), funkci neověřuje. Assembler hlásí chyby rozsahu (LDI jen 0–3).
 - Nedořešeno z review knihovny: primitivní FULL_ADDER je s X pesimističtější než hradlový model (SR latch → X a DEMUX do hloubky jsou hotové).
 ## Další kroky / známé vady
-- Nabídky stárnou (inzeráty z Bazoše zmizí) – při další
-  práci přerešeršovat. eBay/Alza/Heureka blokují stahování (403): jejich ceny jsou jen z výpisu vyhledávače.
-  NV1 a STG1764X se dnes neprodávají (jen celé karty ~16–23 tis. Kč). Odhady rozměrů: čelo Dellu ±5 mm, IHS Xeonu,
-  poloha kontaktů PCIe od záslepky, MX-6, periferie NV1, tloušťka P100 (37 mm).
-- Rychlost: ~3 µs na hranu; profil ukazuje režii v `_settle`/`step` + modely čipů. Vyzkoušeno bez efektu:
-  rychlá cesta pro sestupné hrany, pole místo Set. Další nápad: Web Worker nebo jemnější sensitivity listy.
-- Breadcrumb/HUD ve 3D na hlubokých úrovních přetéká; na L2 schématu se překrývá blok PCI TARGET s pady.
+- Nabídky stárnou (inzeráty z Bazoše zmizí) – zhruba po měsíci přerešeršovat. eBay/Alza/Heureka blokují stahování
+  (403): jejich ceny jsou jen z výpisu vyhledávače. NV1 a STG1764X se dnes neprodávají (jen celé karty ~16–23 tis. Kč).
+  Odhady rozměrů: čelo Dellu ±5 mm, IHS Xeonu, poloha kontaktů PCIe od záslepky, MX-6, periferie NV1, tloušťka P100 (37 mm).
+- Rychlost: viz „Stav a jak spustit“ (věrnost před rychlostí – každá hrana má vlastní krok). Web Worker by simulaci
+  nezrychlil (jen odlehčil UI) → neděláno.
 - Pin vývody na pouzdrech = konvence (vstupy vlevo, výstupy vpravo), ne skutečný pinout; cesty nejsou layout Diamondu.
-- Lint: jen stará varování v LogicCanvas (refs during render, deps).
+- MŮJ PC: odhady k ověření štítkem (skříň, zdroj, chladič, ventilátory, výrobce čipů RAM/GDDR6X) – `../MujPC_odhady.md`.
+- Lint: 0 chyb, 0 varování. Build: hlavní balík 519 kB, three.js v líně načítaném chunku (752 kB).
 
 ## Rozhodnutí a poznámky
 - Co je model, ne kopie čipu: registrová mapa NV1 (CRTC/audio/gameport) je vlastní, skutečný NV1 měl
@@ -258,3 +260,9 @@ envytools, fotka), tabulku „model vs. skutečnost“, 8 kroků s kritériem ho
 - 2026-11-11 18:06 — po pokynu „věrnost před rychlostí“ přečteny celé datasheety STG2000 a STG1732/64 + envytools → opraveny bity Saturn portu a popisy; rozdíly modelu proti skutečnému čipu sepsány v sekci „DALŠÍ KROK“ (FIFO, zpoždění DAC, skutečné registry PFB/PDAC).
 - 2026-11-11 18:26 — nezávislá kontrola obou commitů → opraveno 5 nálezů (monitor 640×480, čtení ROM při obraze, klid PCI, sdílený objekt dvou karet, kurzory analyzátoru), 3 nové testy; 284/284 testů, diagnostika v aplikaci 7/7.
 - 2026-11-11 19:02 — „zapiš to do plánu na další session a pushni“ → `docs/PLAN_VERNOST_NV1_2026-11-11.md` (fakta ze zdrojů, model vs. skutečnost, 8 kroků), odkaz v paměti, README a starém plánu.
+- 2026-11-11 (paralelní session) — „pokračuj podle plánu“ → die shoty (CFL, B360, GP100, HBM2 DRAM + logic, CoWoS interposer) a bloky podle
+  fotek v `siliconScenes.js`; CAD jako assety (`?url`) + 2,5" disk z FreeCAD; 3D pohledy líně (`React.lazy`);
+  nový 4. projekt `mypc_p100` (můj PC + 2× P100 z AI PC: PCIEX16_1 x16 + PCIEX16_2 x4, iGPU, Add2PSU) se všemi
+  pohledy; ověřeno: monitor VA249HE (HDMI), Super I/O NCT6796D, Vcore 1,2 V (LibreHardwareMonitor + PawnIO, obojí
+  pak odinstalováno); drobečky ve SCHEMATIC zkracované jako ve 3D; výřez v čele skříně pro P100; rebase na 091d0b4.
+  Podrobně v `PLAN_POKRACOVANI.md`.

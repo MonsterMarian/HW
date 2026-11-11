@@ -8,6 +8,7 @@
 import { blk, w } from './pcDeepSubcircuits.js';
 
 export const UNIT_SUBCIRCUITS = {};
+// level 4 = jednotka čipu; 4.5 = podjednotka uvnitř jednotky L4 (např. Tensor Core v SM) – dvojklik musí jít vždy hlouběji
 const def = (key, sub) => { UNIT_SUBCIRCUITS[key] = { key, level: 4, ...sub }; };
 
 // ================================================================ PCIe 3.0 řadič (obecně: PEG, DMI 3.0, porty PCH, hostitel GPU)
@@ -316,6 +317,149 @@ def('cortex_m0', {
   ],
   wires: [w('fetch.INSTR', 'dec.INSTR'), w('dec.ŘÍZENÍ', 'rf.ŘÍZENÍ'), w('rf.OPERANDY', 'alu.OPERANDY'), w('rf.OPERANDY', 'mul.OPERANDY')],
   drills: { fetch: 'D_FF', dec: 'cell_decoder', rf: 'cell_sram', alu: 'FULL_ADDER', mul: 'cell_mac', nvic: 'cell_arbiter', mem: 'cell_eeprom' },
+});
+
+// ================================================================ grafické čipy NVIDIA (GA104 v RTX 3060 Ti, GP100 v Tesla P100)
+// Zdroje: NVIDIA Ampere GA102 GPU Architecture whitepaper V2 (GA104 v příloze), Pascal GP100 whitepaper WP-08019,
+// Micron GDDR6X technický brief (PAM4, MTA), JEDEC JESD235 (HBM / HBM2), SK hynix HBM2 4-Hi.
+def('nv_l2', {
+  name: 'L2 cache GPU — plátky u řadičů paměti',
+  subtitle: 'Whitepapery GA102 / GP100: L2 je rozdělená na plátky, každý patří k jednomu řadiči paměti, a sdílí ji všechny SM přes crossbar. GA104: 4 MB (8 × 512 KB), GP100: 4 MB. L2 dělá i atomické operace a kompresi barev; řádek 128 B v sektorech po 32 B.',
+  components: [
+    blk('xbar', 'CROSSBAR Z GPC', 50, 50, [], ['POŽADAVKY'], 'KAŽDÝ SM K KAŽDÉMU PLÁTKU', 210, 80),
+    blk('hash', 'HASH ADRESY → PLÁTEK', 50, 170, [], [], 'ROZLOŽENÍ ZÁTĚŽE', 210, 70),
+    ...[0, 1, 2, 3].map((i) => blk(`sl${i}`, `PLÁTEK ${i * 2}–${i * 2 + 1}`, 330 + (i % 2) * 230, 50 + Math.floor(i / 2) * 120, ['POŽADAVKY'], ['ŘADIČ'], 'TAGY + DATA 128 B ŘÁDEK', 210, 90)),
+    blk('atom', 'ATOMICKÉ OPERACE', 330, 290, [], [], 'ADD, CAS, MIN/MAX V L2', 210, 70),
+    blk('comp', 'KOMPRESE BAREV / DAT', 560, 290, [], [], 'BEZZTRÁTOVÁ', 210, 70),
+  ],
+  wires: [0, 1, 2, 3].map((i) => w('xbar.POŽADAVKY', `sl${i}.POŽADAVKY`)),
+  drills: { xbar: 'cell_arbiter', hash: 'XOR', sl0: 'cell_sram', sl1: 'cell_sram', sl2: 'cell_sram', sl3: 'cell_sram', atom: 'FULL_ADDER', comp: 'cell_decoder' },
+});
+
+def('gddr6x_ctrl', {
+  name: 'Řadič paměti GDDR6X — 32 bit (1 čip)',
+  subtitle: 'GA102 whitepaper + Micron GDDR6X: každý řadič obsluhuje jeden čip x32 jako 2 nezávislé kanály po 16 bitech. Signalizace PAM4 (2 bity na symbol, 19 Gb/s na pin u RTX 3060 Ti GDDR6X), kódování MTA omezuje plné přechody mezi úrovněmi, EDC hlídá přenos kontrolním CRC a chybný přenos se opakuje. Plánovač řadí příkazy podle otevřených řádků jako u DDR.',
+  components: [
+    blk('q', 'FRONTA POŽADAVKŮ Z L2', 50, 50, [], ['PŘÍKAZ'], 'ČTENÍ / ZÁPISY', 210, 70),
+    blk('sch', 'PLÁNOVAČ + ČASOVAČE', 50, 150, ['PŘÍKAZ'], ['CA'], '16 BANK, 4 SKUPINY', 210, 70),
+    blk('mta', 'KÓDOVÁNÍ MTA', 320, 50, [], ['SYMBOLY'], 'BEZ SKOKU 0 ↔ 3', 200, 70),
+    blk('edc', 'EDC: CRC + OPAKOVÁNÍ', 320, 150, [], [], 'CHYBA PŘENOSU → ZNOVU', 200, 70),
+    blk('pam4', 'PAM4 PHY 2 × 16 BIT', 580, 50, ['SYMBOLY', 'CA'], [], '4 ÚROVNĚ NAPĚTÍ, 19 Gb/s', 220, 80),
+    blk('train', 'TRÉNINK LINKY', 580, 170, [], [], 'ÚROVNĚ PAM4, ČASOVÁNÍ', 220, 70),
+  ],
+  wires: [w('q.PŘÍKAZ', 'sch.PŘÍKAZ'), w('mta.SYMBOLY', 'pam4.SYMBOLY'), w('sch.CA', 'pam4.CA')],
+  drills: { q: 'cell_sram', sch: 'cell_arbiter', mta: 'cell_decoder', edc: 'cell_parity', pam4: 'cell_lt', train: 'cell_lt' },
+});
+
+def('gddr6x_chip', {
+  name: 'Čip GDDR6X 8 Gb x32 (Micron)',
+  subtitle: 'Micron GDDR6X: 8 Gb, rozhraní x32 jako 2 kanály po 16 bitech, každý kanál 16 bank ve 4 skupinách, I/O PAM4. Na RTX 3060 Ti GDDR6X 8 čipů = 8 GB, 256 bit. Výrobce čipů na mé kartě neověřen (GDDR6X ale dělá jen Micron).',
+  components: [
+    ...['A', 'B'].map((ch, i) => blk(`ch${i}`, `KANÁL ${ch} · 16 BIT`, 50 + i * 300, 50, [], ['PŘÍKAZ'], 'ROZHRANÍ CA + DQ', 250, 70)),
+    ...['A', 'B'].map((ch, i) => blk(`dec${i}`, `DEKODÉRY ŘÁDKŮ / SLOUPCŮ ${ch}`, 50 + i * 300, 160, ['PŘÍKAZ'], ['WL'], '', 250, 70)),
+    ...['A', 'B'].map((ch, i) => blk(`arr${i}`, `16 BANK ${ch} (4 SKUPINY)`, 50 + i * 300, 270, ['WL'], [], 'BUŇKY 1T1C', 250, 80)),
+    blk('io', 'I/O PAM4 + EDC', 650, 50, [], [], 'ZPĚTNÝ KANÁL CRC', 220, 70),
+    blk('pump', 'NÁBOJOVÉ PUMPY + REFRESH', 650, 160, [], [], '', 220, 70),
+  ],
+  wires: [0, 1].flatMap((i) => [w(`ch${i}.PŘÍKAZ`, `dec${i}.PŘÍKAZ`), w(`dec${i}.WL`, `arr${i}.WL`)]),
+  drills: { ch0: 'cell_decoder', ch1: 'cell_decoder', dec0: 'cell_decoder', dec1: 'cell_decoder', arr0: 'ddr4_cells', arr1: 'ddr4_cells', io: 'cell_lt', pump: 'cell_buck' },
+});
+
+def('ampere_nvenc', {
+  name: 'NVENC 7. gen + NVDEC 5. gen (Ampere)',
+  subtitle: 'GA102 whitepaper: kodér NVENC 7. generace (H.264, HEVC) a dekodér NVDEC 5. generace (navíc AV1). Pevná logika video kodeku: odhad pohybu, transformace (DCT), kvantizace, entropické kódování (CABAC) a smyčkové filtry – vnitřní zapojení NVIDIA nezveřejňuje, bloky odpovídají stavbě normy HEVC.',
+  components: [
+    blk('me', 'ODHAD POHYBU', 50, 50, [], ['ROZDÍL'], 'HLEDÁ BLOK V MINULÉM SNÍMKU', 220, 80),
+    blk('tq', 'TRANSFORMACE + KVANTIZACE', 330, 50, ['ROZDÍL'], ['KOEFICIENTY'], 'DCT', 220, 80),
+    blk('cabac', 'ENTROPICKÉ KÓDOVÁNÍ CABAC', 610, 50, ['KOEFICIENTY'], [], 'BITOVÝ TOK H.264 / HEVC', 220, 80),
+    blk('lf', 'SMYČKOVÉ FILTRY (DEBLOCK, SAO)', 330, 170, [], [], 'REKONSTRUKCE REFERENCE', 220, 70),
+    blk('dec', 'NVDEC: H.264 · HEVC · VP9 · AV1', 50, 170, [], [], 'DEKÓDOVÁNÍ', 220, 70),
+  ],
+  wires: [w('me.ROZDÍL', 'tq.ROZDÍL'), w('tq.KOEFICIENTY', 'cabac.KOEFICIENTY')],
+  drills: { me: 'cell_lt', tq: 'cell_mac', cabac: 'cell_decoder', lf: 'cell_lt', dec: 'cell_mac' },
+});
+
+def('nv_display', {
+  name: 'Display engine GPU (Ampere) — HDMI 2.1 + DP 1.4a',
+  subtitle: 'GA102 whitepaper: až 4 obrazové výstupy (heads), HDMI 2.1 (FRL až 48 Gb/s) a DisplayPort 1.4a s kompresí DSC 1.2a. Každý head čte framebuffer, skládá roviny, má vlastní časovač a PLL. V mém PC jede HDMI do monitoru VA249HE (1920 × 1080 @ 60 Hz).',
+  components: [
+    blk('heads', '4 HEADY: ČTENÍ FRAMEBUFFERU', 50, 50, [], ['PIXELY'], 'ROVINY, KURZOR', 220, 80),
+    blk('csc', 'BARVY + ŠKÁLOVÁNÍ', 320, 50, ['PIXELY'], ['RGB'], 'GAMMA, LUT', 200, 70),
+    blk('dsc', 'KOMPRESE DSC 1.2a', 320, 160, [], [], 'PRO VYSOKÁ ROZLIŠENÍ', 200, 70),
+    blk('hdmi', 'HDMI 2.1: TMDS / FRL', 580, 50, ['RGB'], [], 'NA MÉM PC → VA249HE', 220, 70),
+    blk('dp', '3× DISPLAYPORT 1.4a', 580, 160, [], [], 'NEPOUŽITÉ', 220, 70),
+    blk('pll', 'PLL HEADŮ', 50, 170, [], [], 'PIXELOVÉ HODINY', 220, 70),
+  ],
+  wires: [w('heads.PIXELY', 'csc.PIXELY'), w('csc.RGB', 'hdmi.RGB')],
+  drills: { heads: 'cell_sram', csc: 'cell_mac', dsc: 'cell_decoder', hdmi: 'MUX', dp: 'MUX', pll: 'D_FF' },
+});
+
+def('ampere_tensor', {
+  level: 4.5,
+  name: 'Tensor Core 3. generace (Ampere SM)',
+  subtitle: 'GA102 whitepaper: každý ze 4 bloků SM má 1 Tensor Core, který v jednom kroku spočítá maticové D = A × B + C (FP16, BF16, TF32, INT8, INT4) s akumulací ve vyšší přesnosti. Řídká akcelerace 2:4: ze 4 vah jsou 2 nulové, jednotka je přeskočí. Vnitřní uspořádání násobiček NVIDIA nezveřejňuje.',
+  components: [
+    blk('a', 'MATICE A (FRAGMENT)', 50, 50, [], ['A'], 'Z REGISTRŮ WARPU', 200, 70),
+    blk('b', 'MATICE B (FRAGMENT)', 50, 150, [], ['B'], 'SPARSITY: INDEXY 2:4', 200, 70),
+    blk('mul', 'POLE NÁSOBIČEK', 320, 50, ['A', 'B'], ['SOUČINY'], 'FP16 / BF16 / TF32 / INT8', 220, 90),
+    blk('acc', 'SČÍTACÍ STROM + AKUMULACE C', 590, 50, ['SOUČINY'], [], 'FP32 / INT32', 230, 90),
+    blk('sel', 'VÝBĚR NENULOVÝCH VAH', 320, 180, [], [], 'ŘÍDKÁ MATICE 2:4', 220, 70),
+  ],
+  wires: [w('a.A', 'mul.A'), w('b.B', 'mul.B'), w('mul.SOUČINY', 'acc.SOUČINY')],
+  drills: { a: 'cell_sram', b: 'cell_sram', mul: 'cell_mac', acc: 'FULL_ADDER', sel: 'MUX' },
+});
+
+def('rt_core2', {
+  level: 4.5,
+  name: 'RT Core 2. generace (Ampere SM)',
+  subtitle: 'GA102 whitepaper: jednotka sledování paprsků v každém SM prochází hierarchii obálek BVH (test paprsek × kvádr) a hledá průsečík paprsku s trojúhelníkem; oproti Turingu 2× rychlejší test trojúhelníků a interpolace pohybu pro rozmazání. Shader dostane zpět nejbližší zásah.',
+  components: [
+    blk('ray', 'PAPRSEK: POČÁTEK + SMĚR', 50, 50, [], ['PAPRSEK'], 'ZE SHADERU', 210, 70),
+    blk('bvh', 'PRŮCHOD BVH (ZÁSOBNÍK)', 330, 50, ['PAPRSEK'], ['UZEL'], 'STROM OBÁLEK SCÉNY', 220, 80),
+    blk('box', 'TEST PAPRSEK × KVÁDR', 330, 170, ['UZEL'], [], 'SLAB TEST', 220, 70),
+    blk('tri', 'TEST PAPRSEK × TROJÚHELNÍK', 610, 50, ['UZEL'], ['ZÁSAH'], 'NEJBLIŽŠÍ PRŮSEČÍK', 220, 80),
+    blk('mb', 'INTERPOLACE POHYBU', 610, 170, [], [], 'MOTION BLUR', 220, 70),
+  ],
+  wires: [w('ray.PAPRSEK', 'bvh.PAPRSEK'), w('bvh.UZEL', 'box.UZEL'), w('bvh.UZEL', 'tri.UZEL')],
+  drills: { ray: 'cell_sram', bvh: 'cell_sram', box: 'cell_lt', tri: 'cell_mac', mb: 'cell_mac' },
+});
+
+def('hbm2_ctrl', {
+  name: 'Řadič HBM2 (GP100) — 2 × 512 bit k jednomu stacku',
+  subtitle: 'Pascal whitepaper: GP100 má 8 řadičů po 512 bitech, po dvou na každý stack HBM2 (4 × 1024 bit = 4096 bit, 732 GB/s ≈ 1,4 Gb/s na pin). Stack má 8 nezávislých kanálů po 128 bitech; propoj vede křemíkovým interposerem CoWoS, ne deskou. Paměť umí ECC bez ztráty kapacity.',
+  components: [
+    blk('q', 'FRONTY Z L2', 50, 50, [], ['PŘÍKAZ'], '', 200, 70),
+    blk('sch', 'PLÁNOVAČ 8 KANÁLŮ', 50, 150, ['PŘÍKAZ'], ['CA'], 'BANKY, OTEVŘENÉ ŘÁDKY', 200, 70),
+    blk('ecc', 'ECC (SECDED)', 320, 50, [], [], 'OPRAVÍ 1 BIT, ODHALÍ 2', 200, 70),
+    blk('phy', 'PHY 1024 BIT PŘES INTERPOSER', 580, 50, ['CA'], [], 'MIKROBUMPY, KRÁTKÉ SPOJE', 230, 80),
+    blk('ref', 'OBNOVA + TEPLOTA STACKU', 320, 150, [], [], '', 200, 70),
+  ],
+  wires: [w('q.PŘÍKAZ', 'sch.PŘÍKAZ'), w('sch.CA', 'phy.CA')],
+  drills: { q: 'cell_sram', sch: 'cell_arbiter', ecc: 'cell_parity', phy: 'MUX', ref: 'cell_lt' },
+});
+
+def('hbm2_stack', {
+  name: 'Stack HBM2 4 GB (4-Hi) na interposeru P100',
+  subtitle: 'JEDEC JESD235 + SK hynix: 4 paměťové čipy 8 Gb nad sebou na bázovém logickém čipu, propojené tisíci TSV (průchody křemíkem). Rozhraní 1024 bit = 8 kanálů po 128 bitech (každý jde rozdělit na 2 pseudokanály po 64 bitech), každý paměťový čip nese 2 kanály. Rozměr stacku 7,75 × 11,87 mm.',
+  components: [
+    blk('base', 'BÁZOVÝ LOGICKÝ ČIP', 50, 50, [], ['TSV'], 'PHY, TEST, OPRAVY', 220, 80),
+    blk('tsv', 'TSV PROPOJE (TISÍCE)', 50, 170, ['TSV'], ['KANÁLY'], 'SKRZ KŘEMÍK', 220, 70),
+    ...[0, 1, 2, 3].map((i) => blk(`die${i}`, `ČIP DRAM ${i}: 2 KANÁLY × 128 BIT`, 330 + (i % 2) * 260, 50 + Math.floor(i / 2) * 120, ['KANÁLY'], [], '8 Gb, BANKY 1T1C', 240, 90)),
+    blk('therm', 'TEPLOTNÍ ČIDLO STACKU', 330, 290, [], [], 'ŘÍDÍ OBNOVU', 240, 70),
+  ],
+  wires: [w('base.TSV', 'tsv.TSV'), ...[0, 1, 2, 3].map((i) => w('tsv.KANÁLY', `die${i}.KANÁLY`))],
+  drills: { base: 'cell_decoder', tsv: 'cell_buck', die0: 'ddr4_cells', die1: 'ddr4_cells', die2: 'ddr4_cells', die3: 'ddr4_cells', therm: 'cell_lt' },
+});
+
+def('nvlink_hub', {
+  name: 'HSHUB + NVLink 1.0 (GP100)',
+  subtitle: 'Pascal whitepaper: 4 linky NVLink, každá 20 GB/s v každém směru (celkem 160 GB/s obousměrně), pro spojení GPU-GPU nebo GPU-CPU (POWER8). Na kartě P100 PCIe NVLink vyveden NENÍ – data mezi mými dvěma P100 jdou přes PCIe a CPU.',
+  components: [
+    blk('hub', 'HSHUB (PŘEPÍNAČ)', 50, 50, [], ['LINKY'], 'MEZI L2 A LINKAMI', 200, 80),
+    ...[0, 1, 2, 3].map((i) => blk(`l${i}`, `NVLINK ${i} · 20 GB/s`, 320 + (i % 2) * 230, 50 + Math.floor(i / 2) * 110, ['LINKY'], [], 'NA PCIe KARTĚ NEVYVEDENO', 210, 80)),
+  ],
+  wires: [0, 1, 2, 3].map((i) => w('hub.LINKY', `l${i}.LINKY`)),
+  drills: { hub: 'cell_arbiter', l0: 'cell_parity', l1: 'cell_parity', l2: 'cell_parity', l3: 'cell_parity' },
 });
 
 // dvojkliky bloků jednotek → buňky L5

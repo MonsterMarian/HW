@@ -400,7 +400,7 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
                       className={`px-1.5 py-1 whitespace-nowrap transition-colors ${isCurrent ? 'text-(--text-light) font-bold cursor-default!' : 'text-gray-500 hover:text-(--accent-amber)'}`}
                       title={lvl.title}
                     >
-                      <span className={`mr-1 ${isCurrent ? 'text-(--accent-amber)' : 'text-gray-600'}`}>L{lvl.level || idx + 1}</span>
+                      <span className={`mr-1 ${isCurrent ? 'text-(--accent-amber)' : 'text-gray-600'}`}>L{String(lvl.level || idx + 1).replace('.', ',')}</span>
                       {lvl.title.length > 24 ? lvl.title.slice(0, 22) + '…' : lvl.title}
                     </button>
                   </React.Fragment>
@@ -408,7 +408,7 @@ export function PhysicsView({ engine, hierarchyStack = [], onNavigateUp, onDrill
               })}
             </div>
             <span className={`flex items-center px-3 border-l border-(--line) whitespace-nowrap shrink-0 ${level >= 11 ? 'text-(--accent-amber)' : 'text-gray-500'}`}>
-              ÚROVEŇ&nbsp;<b className="text-(--accent-amber)">{level}</b>&nbsp;/ 11
+              ÚROVEŇ&nbsp;<b className="text-(--accent-amber)">{String(level).replace('.', ',')}</b>&nbsp;/ 11
             </span>
           </div>
           {entry.subtitle && (

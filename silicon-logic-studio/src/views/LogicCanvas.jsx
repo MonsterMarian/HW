@@ -1128,7 +1128,7 @@ export function LogicCanvas({
       ctx.fillText(`CLK ${Number.isFinite(eng.clockFrequency) ? `${eng.clockFrequency} Hz` : 'MAX'} · ${fmtTime(eng.simTime)}`, x + 10, y + 55);
 
       ctx.fillStyle = THEME.muted;
-      ctx.fillText(`ÚROVEŇ ${level?.level || hierarchyStack?.length || 1}`, x + 200, y + 38);
+      ctx.fillText(`ÚROVEŇ ${String(level?.level || hierarchyStack?.length || 1).replace('.', ',')}`, x + 200, y + 38);
       ctx.fillText('LIST 1/1', x + 200, y + 55);
 
       ctx.restore();
@@ -1582,7 +1582,7 @@ export function LogicCanvas({
                         isCurrent ? 'text-(--text-light) font-bold cursor-default!' : 'text-gray-500 hover:text-(--accent-amber)'
                       }`}
                     >
-                      <span className={isCurrent ? 'text-(--accent-amber)' : 'text-gray-600'}>L{lvl.level || idx + 1}:</span>
+                      <span className={isCurrent ? 'text-(--accent-amber)' : 'text-gray-600'}>L{String(lvl.level || idx + 1).replace('.', ',')}:</span>
                       <span>{((n) => (lvl.title.length > n ? lvl.title.slice(0, n - 2) + '…' : lvl.title))(!isCurrent && hierarchyStack.length > 4 ? 14 : 25)}</span>
                     </button>
                   </React.Fragment>
@@ -1592,7 +1592,7 @@ export function LogicCanvas({
 
             {/* Depth Badge */}
             <span className="flex items-center px-3 border-l border-(--line) text-gray-500 whitespace-nowrap">
-              ÚROVEŇ&nbsp;<b className="text-(--accent-amber)">{hierarchyStack[hierarchyStack.length - 1].level || hierarchyStack.length}</b>&nbsp;/ 11
+              ÚROVEŇ&nbsp;<b className="text-(--accent-amber)">{String(hierarchyStack[hierarchyStack.length - 1].level || hierarchyStack.length).replace('.', ',')}</b>&nbsp;/ 11
             </span>
           </div>
 

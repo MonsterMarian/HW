@@ -26,7 +26,7 @@ const clk = (e, id, level) => { e.components.get(id).manualState = level; e.prop
 describe('subcircuit data', () => {
   for (const sub of canonical) {
     it(`${sub.key}: valid netlist, readable layout, settles`, () => {
-      assert.ok(Number.isInteger(sub.level) && sub.level >= 2 && sub.level <= 11, 'level');
+      assert.ok(Number.isInteger(sub.level * 2) && sub.level >= 2 && sub.level <= 11, 'level'); // x,5 = podjednotka (Tensor Core v SM …)
       assert.ok(sub.name && sub.subtitle, 'name/subtitle');
       const e = load(sub.key);
       for (const wire of sub.wires) {

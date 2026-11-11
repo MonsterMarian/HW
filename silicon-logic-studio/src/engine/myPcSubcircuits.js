@@ -647,7 +647,7 @@ const DRILLS = {
   cfl_core: { fe: 'x86_frontend', ooo: 'x86_ooo', prf: 'cell_sram', p0: 'FULL_ADDER', p1: 'FULL_ADDER', p5: 'MUX', p6: 'MUX', p23: 'FULL_ADDER', p4: 'cell_sram', p7: 'FULL_ADDER', l1d: 'x86_memsub' },
   mypc_gpu_board: { edge: 'pcie3_ctrl', vrm: 'vrm_multiphase', mvdd: 'vrm_multiphase', m0: 'gddr6x_chip', m1: 'gddr6x_chip', out: 'nv_display', fan: 'cell_lt' },
   ga104_die: { host: 'pcie3_ctrl', gt: 'cell_arbiter', media: 'ampere_nvenc', disp: 'nv_display', l2: 'nv_l2', ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [`mc${i}`, 'gddr6x_ctrl'])) },
-  ampere_sm: { ic: 'cell_sram', pb0: 'cell_arbiter', pb1: 'cell_arbiter', pb2: 'cell_arbiter', pb3: 'cell_arbiter', rf: 'cell_sram', fp32: 'FULL_ADDER', fpint: 'FULL_ADDER', tc: 'ampere_tensor', ldst: 'FULL_ADDER', sfu: 'cell_decoder', rt: 'rt_core2', l1: 'cell_sram', tex: 'cell_mac' },
+  ampere_sm: { ic: 'cell_sram', pb0: 'warp_scheduler', pb1: 'warp_scheduler', pb2: 'warp_scheduler', pb3: 'warp_scheduler', rf: 'gpu_regfile', fp32: 'FULL_ADDER', fpint: 'FULL_ADDER', tc: 'ampere_tensor', ldst: 'FULL_ADDER', sfu: 'gpu_sfu', rt: 'rt_core2', l1: 'gpu_l1_smem', tex: 'gpu_tex' },
   va249_inside: { hdmi: SERDES, vga: 'sigma_delta', edid: 'cell_eeprom', psu: 'cell_buck', scaler: 'lcd_scaler', panel: 'tcon_panel', led: 'cell_lt' },
   pwm_fan_inside: { drv: 'bldc_driver', note: 'cell_lt' },
   mypc_keyboard: { usb: 'usb_fs_device', mcu: 'cortex_m0', mx: 'cell_decoder', led: 'cell_lt' },

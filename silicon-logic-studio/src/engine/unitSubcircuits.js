@@ -52,7 +52,7 @@ def('gen9_gt2', {
     w('cs.PŘÍKAZY', 'gtd.PŘÍKAZY'), w('cs.PŘÍKAZY', 'geo.PŘÍKAZY'), w('geo.TROJÚHELNÍKY', 'raster.TROJÚHELNÍKY'), w('raster.PIXELY', 'pbe.PIXELY'),
     ...[0, 1, 2].flatMap((i) => [w('gtd.VLÁKNA', `ss${i}.VLÁKNA`), w(`ss${i}.DATA`, 'l3.DATA')]), w('l3.GTI', 'gti.GTI'),
   ],
-  drills: { cs: 'cell_decoder', gtd: 'cell_arbiter', geo: 'cell_mac', raster: 'cell_lt', media: 'cell_mac', ss0: 'cell_mac', ss1: 'cell_mac', ss2: 'cell_mac', eu: 'FULL_ADDER', grf: 'cell_sram', sampler: 'cell_mac', icache: 'cell_sram', l3: 'cell_sram', pbe: 'cell_lt', gti: 'cell_arbiter' },
+  drills: { cs: 'cell_decoder', gtd: 'cell_arbiter', geo: 'cell_mac', raster: 'cell_lt', media: 'cell_mac', ss0: 'gen9_eu', ss1: 'gen9_eu', ss2: 'gen9_eu', eu: 'gen9_eu', grf: 'cell_sram', sampler: 'gpu_tex', icache: 'cell_sram', l3: 'cell_sram', pbe: 'cell_lt', gti: 'cell_arbiter' },
 });
 
 // ================================================================ Coffee Lake: kruhová sběrnice + LLC
@@ -861,6 +861,98 @@ def('x86_memsub', {
   ],
   wires: [w('agu.ADRESA', 'dtlb.ADRESA'), w('dtlb.FYZ. ADRESA', 'l1d.FYZ. ADRESA'), w('l1d.VÝPADEK', 'fb.VÝPADEK'), w('fb.L2', 'l2.L2')],
   drills: { agu: 'FULL_ADDER', dtlb: 'cell_match', pmh: 'FULL_ADDER', lb: 'cell_sram', sb: 'cell_match', l1d: 'cell_sram', fb: 'cell_sram', l2: 'cell_sram', pf: 'cell_lt' },
+});
+
+// ================================================================ podjednotky výpočetních bloků GPU (SM Pascal / Ampere, EU Gen9), L4,5
+// Zdroje: whitepapery Pascal GP100 a Ampere GA102, Intel Gen9 compute architecture; Oberman & Siu, „A high-performance
+// area-efficient multifunction interpolator“ (ARITH 2005, stavba SFU NVIDIA); patenty NVIDIA k operand collectoru.
+def('warp_scheduler', {
+  level: 4.5,
+  name: 'Plánovač warpů (SM NVIDIA) — výběr instrukce každý takt',
+  subtitle: 'Whitepapery Pascal / Ampere: warp = 32 vláken se společnou instrukcí. Každý blok SM má buffer instrukcí, scoreboard hlídající nedokončené zápisy registrů a plánovač, který každý takt vybere warp připravený k běhu a pošle jeho instrukci dispečerovi (Pascal 2 dispečery na blok, Ampere 1 × 32 vláken). Rozbíhající se větve řeší maska aktivních vláken; od Volty má každé vlákno vlastní čítač instrukcí.',
+  components: [
+    blk('ibuf', 'BUFFER INSTRUKCÍ', 50, 50, [], ['INSTR'], 'Z L0 / L1 I-CACHE', 200, 70),
+    blk('sb', 'SCOREBOARD', 50, 160, [], ['PŘIPRAVENO'], 'ČEKÁ NA VÝSLEDKY', 200, 70),
+    blk('sel', 'VÝBĚR WARPU', 320, 50, ['INSTR', 'PŘIPRAVENO'], ['WARP'], 'NEJSTARŠÍ PŘIPRAVENÝ', 200, 90),
+    blk('mask', 'MASKA AKTIVNÍCH VLÁKEN', 320, 180, [], [], 'DIVERGENCE VĚTVÍ', 200, 70),
+    blk('disp', 'DISPEČER → JEDNOTKY', 580, 50, ['WARP'], [], 'FP32 / INT / LD/ST / SFU', 220, 80),
+  ],
+  wires: [w('ibuf.INSTR', 'sel.INSTR'), w('sb.PŘIPRAVENO', 'sel.PŘIPRAVENO'), w('sel.WARP', 'disp.WARP')],
+  drills: { ibuf: 'cell_sram', sb: 'cell_match', sel: 'cell_arbiter', mask: 'AND', disp: 'cell_decoder' },
+});
+
+def('gpu_regfile', {
+  level: 4.5,
+  name: 'Registrový soubor SM — banky a sběrač operandů',
+  subtitle: 'Whitepapery Pascal / Ampere: 64 Ki registrů × 32 bit = 256 KB na SM, rozdělených mezi bloky. Soubor je z několika bank SRAM s jedním portem; sběrač operandů (operand collector) načítá operandy instrukce postupně z různých bank a když dvě chtějí stejnou banku, čeká se takt (konflikt). Mezipaměť znovupoužití operandů ušetří čtení. Počet bank nezveřejněn.',
+  components: [
+    ...[0, 1, 2, 3].map((i) => blk(`bank${i}`, `BANKA ${i} (SRAM)`, 50 + i * 200, 50, ['ADRESA'], ['DATA'], '1 PORT', 180, 70)),
+    blk('arb', 'ARBITRÁŽ BANK', 50, 170, [], ['ADRESA'], 'KONFLIKT = +1 TAKT', 210, 70),
+    blk('oc', 'SBĚRAČ OPERANDŮ', 320, 170, ['DATA'], ['OPERANDY'], 'A, B, C INSTRUKCE', 210, 80),
+    blk('reuse', 'CACHE ZNOVUPOUŽITÍ', 600, 170, [], [], 'ŠETŘÍ ČTENÍ BANK', 210, 70),
+  ],
+  wires: [...[0, 1, 2, 3].map((i) => w('arb.ADRESA', `bank${i}.ADRESA`)), ...[0, 1, 2, 3].map((i) => w(`bank${i}.DATA`, 'oc.DATA'))],
+  drills: { bank0: 'cell_sram', bank1: 'cell_sram', bank2: 'cell_sram', bank3: 'cell_sram', arb: 'cell_arbiter', oc: 'D_FF', reuse: 'cell_sram' },
+});
+
+def('gpu_l1_smem', {
+  level: 4.5,
+  name: 'L1 cache + sdílená paměť SM — 32 bank',
+  subtitle: 'Whitepapery: sdílená paměť má 32 bank po 4 B, takže 32 vláken warpu ji přečte za takt, pokud každé míří do jiné banky; více vláken do jedné banky (různé adresy) = konflikt, přístupy se serializují. Ampere slučuje L1 a sdílenou paměť do 128 KB na SM (poměr nastavitelný), GP100 má 64 KB sdílené paměti zvlášť. L1 drží data čtená z globální paměti (řádek 128 B).',
+  components: [
+    blk('agen', 'ADRESY 32 VLÁKEN', 50, 50, [], ['ADRESY'], 'Z JEDNOTKY LD/ST', 210, 70),
+    blk('bank', 'ROZDĚLENÍ NA 32 BANK', 320, 50, ['ADRESY'], ['BANKY'], 'KONFLIKT → SERIALIZACE', 210, 80),
+    blk('smem', 'SDÍLENÁ PAMĚŤ (32 × 4 B)', 600, 50, ['BANKY'], [], 'AMPERE ČÁST ZE 128 KB', 220, 80),
+    blk('tags', 'TAGY L1', 320, 170, [], [], '', 210, 70),
+    blk('l1', 'DATA L1 (ŘÁDEK 128 B)', 600, 170, [], [], 'GLOBÁLNÍ PAMĚŤ', 220, 70),
+  ],
+  wires: [w('agen.ADRESY', 'bank.ADRESY'), w('bank.BANKY', 'smem.BANKY')],
+  drills: { agen: 'FULL_ADDER', bank: 'cell_decoder', smem: 'cell_sram', tags: 'cell_match', l1: 'cell_sram' },
+});
+
+def('gpu_sfu', {
+  level: 4.5,
+  name: 'SFU — speciální funkce (sin, cos, 1/x, √x, log₂, 2ˣ)',
+  subtitle: 'Oberman & Siu (ARITH 2005, stavba SFU NVIDIA): vstup se rozdělí na horní bity, které vyberou koeficienty z tabulky (ROM), a dolní bity x; výsledek = C0 + C1·x + C2·x² (kvadratická interpolace) se spočítá násobičkami a sčítačkou. Přesnost ~22–23 bitů; argument sin/cos se předtím převede do základního intervalu.',
+  components: [
+    blk('red', 'REDUKCE ARGUMENTU', 50, 50, [], ['X'], 'SIN/COS DO ZÁKL. INTERVALU', 210, 70),
+    blk('rom', 'TABULKA KOEFICIENTŮ C0, C1, C2', 320, 50, ['X'], ['C'], 'ADRESA = HORNÍ BITY', 230, 80),
+    blk('sq', 'ČTVEREC x²', 320, 170, ['X'], [], 'DOLNÍ BITY', 230, 70),
+    blk('mac', 'C0 + C1·x + C2·x²', 610, 50, ['C'], [], 'NÁSOBIČKY + SČÍTAČKA', 220, 80),
+  ],
+  wires: [w('red.X', 'rom.X'), w('red.X', 'sq.X'), w('rom.C', 'mac.C')],
+  drills: { red: 'cell_mac', rom: 'cell_decoder', sq: 'cell_mac', mac: 'FULL_ADDER' },
+});
+
+def('gpu_tex', {
+  level: 4.5,
+  name: 'Texturovací jednotka — adresy, filtrace, cache',
+  subtitle: 'Whitepapery: SM má 4 texturovací jednotky. Z souřadnic (u, v) a derivací spočítá úroveň mipmapy (LOD), adresy texelů, načte je přes cache textur a bilineárně je zprůměruje: 4 sousední texely × váhy podle zlomkové části souřadnic (trilineární = ještě mezi 2 mipmapami, anizotropní = víc vzorků). Formáty a dekomprese bloků (BCn) také tady.',
+  components: [
+    blk('lod', 'VÝPOČET LOD (MIPMAPA)', 50, 50, [], ['UV'], 'Z DERIVACÍ SOUŘADNIC', 210, 70),
+    blk('addr', 'ADRESY 4 TEXELŮ', 320, 50, ['UV'], ['ADRESY'], 'WRAP / CLAMP', 210, 70),
+    blk('cache', 'CACHE TEXTUR + DEKOMPRESE BCn', 590, 50, ['ADRESY'], ['TEXELY'], '', 230, 80),
+    blk('filt', 'BILINEÁRNÍ FILTR (4 × VÁHA)', 590, 170, ['TEXELY'], [], 'TRI / ANIZO = VÍC VZORKŮ', 230, 80),
+  ],
+  wires: [w('lod.UV', 'addr.UV'), w('addr.ADRESY', 'cache.ADRESY'), w('cache.TEXELY', 'filt.TEXELY')],
+  drills: { lod: 'cell_lt', addr: 'FULL_ADDER', cache: 'cell_sram', filt: 'cell_mac' },
+});
+
+def('gen9_eu', {
+  level: 4.5,
+  name: 'Execution Unit Intel Gen9 (UHD 630) — 7 vláken, 2× SIMD-4',
+  subtitle: 'Intel Gen9 whitepaper: EU drží 7 vláken, každé má 128 registrů GRF po 32 B (4 KB) a vlastní architektonické registry. Arbitr vláken každý takt vybere až 4 instrukce z různých vláken a pošle je na 4 jednotky: 2× FPU SIMD-4 (FP32 i INT, FPU0 navíc sin/cos/log/odmocnina), jednotku větvení a jednotku send (zprávy do paměti, sampleru, atomické operace). 2 × 4 × FMA = 16 FP32 operací za takt.',
+  components: [
+    blk('thr', '7 VLÁKEN: IP + STAV', 50, 50, [], ['INSTR'], 'ARCHITEKTONICKÉ REGISTRY', 210, 80),
+    blk('grf', 'GRF 7 × 4 KB', 50, 170, [], ['OPERANDY'], '128 REGISTRŮ × 32 B / VLÁKNO', 210, 80),
+    blk('arb', 'ARBITR VLÁKEN (AŽ 4 INSTR / TAKT)', 320, 50, ['INSTR'], ['VYDÁNÍ'], '', 230, 80),
+    blk('fpu0', 'FPU0 SIMD-4 + EM', 600, 50, ['VYDÁNÍ', 'OPERANDY'], [], 'FMA, SIN/COS/LOG', 210, 70),
+    blk('fpu1', 'FPU1 SIMD-4', 600, 140, ['VYDÁNÍ', 'OPERANDY'], [], 'FMA FP32 / INT', 210, 70),
+    blk('br', 'JEDNOTKA VĚTVENÍ', 600, 230, ['VYDÁNÍ'], [], '', 210, 60),
+    blk('send', 'JEDNOTKA SEND (PAMĚŤ, SAMPLER)', 320, 180, ['VYDÁNÍ'], [], 'ZPRÁVY MIMO EU', 230, 70),
+  ],
+  wires: [w('thr.INSTR', 'arb.INSTR'), w('arb.VYDÁNÍ', 'fpu0.VYDÁNÍ'), w('arb.VYDÁNÍ', 'fpu1.VYDÁNÍ'), w('arb.VYDÁNÍ', 'br.VYDÁNÍ'), w('arb.VYDÁNÍ', 'send.VYDÁNÍ'), w('grf.OPERANDY', 'fpu0.OPERANDY'), w('grf.OPERANDY', 'fpu1.OPERANDY')],
+  drills: { thr: 'cell_sram', grf: 'cell_sram', arb: 'cell_arbiter', fpu0: 'cell_mac', fpu1: 'FULL_ADDER', br: 'cell_lt', send: 'cell_decoder' },
 });
 
 // dvojkliky bloků jednotek → buňky L5

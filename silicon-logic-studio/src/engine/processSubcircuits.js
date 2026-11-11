@@ -1,7 +1,7 @@
 // Tranzistory skutečných výrobních procesů (L7) a jejich atomy (L8). Vybírá je findSubcircuit podle `process` nejbližšího
 // předka (cfl_die / b360_pch → intel14, ga104_die → samsung8n, cell_buck → power, cell_tft → tft, jinde v mém PC unknown).
 // Zdroje: Natarajan et al., IEDM 2014 (Intel 14 nm); Intel 14++ CPP 84 nm (SemiWiki, Motley Fool); Chipworks/TechInsights
-// k Broadwellu (gate stack); Samsung 8LPP – VLSI 2018 (WikiChip, jen výpisy); patent US7696599 a Silvaco (trench MOSFET se
+// k Broadwellu (gate stack); Samsung 8LPP – VLSI 2018 (WikiChip, jen výpisy); patent US7696599 (rozměry trench MOSFETu, ten má na dně zákopu izolační zátku) a Silvaco (trench MOSFET se
 // stínicí elektrodou); HfO₂ / TiN – Materials Project, Wikipedie; Si – CODATA. Co zdroj nemá, je v popisku „neověřeno“.
 const c = (id, type, label, x, y, extra = {}) => ({ id, type, label, x, y, inputs: {}, outputs: {}, ...extra });
 const layer = (id, label, x, y, drill) => c(id, 'LAYER', label, x, y, drill ? { drill } : {});
@@ -38,7 +38,7 @@ for (const type of ['NMOS', 'PMOS']) {
   fet(`${type}_intel14`, {
     type, scene: 'finfet', lattice: 'hkmg_lattice', geom: { ...INTEL, pmos: p },
     name: `${type} – Intel 14 nm++ FinFET (i7-9700, B360)`,
-    subtitle: `IEDM 2014: 2. generace tri-gate, žebra rozteč 42 nm, šířka 8 nm, výška 42 nm, Lg ≈ 20 nm, kovy M0/M1/M2 56/70/52 nm, 13 vrstev Cu s low-k a 2 vrstvami air gap, W kontakty, HKMG 4. generace. 14++ (Coffee Lake): CPP 84 nm (14 nm: 70 nm), o ~24 % vyšší proud. Chipworks (Broadwell): high-k na bázi Hf ~1 nm, ${p ? 'PMOS kov TiN' : 'NMOS kov TiAl/TiAlN + TiN'}. Tloušťka IL SiOx a Lg u 14++ neověřeny. Hradlo obepíná žebro ze 3 stran.`,
+    subtitle: `IEDM 2014: 2. generace FinFET (tri-gate), žebra rozteč 42 nm, šířka 8 nm, výška 42 nm, Lg ≈ 20 nm, kovy M0/M1/M2 56/70/52 nm, 13 vrstev Cu s low-k a 2 vrstvami air gap, W kontakty, HKMG 4. generace. 14++ (Coffee Lake): CPP 84 nm (14 nm: 70 nm), o ~24 % vyšší proud. Chipworks (Broadwell): high-k na bázi Hf ~1 nm, ${p ? 'PMOS kov TiN' : 'NMOS kov TiAl/TiAlN + TiN'}. Tloušťka IL SiOx a Lg u 14++ neověřeny. Hradlo obepíná žebro ze 3 stran.`,
     layers: [
       ['ŽEBRA Si: ROZTEČ 42, ŠÍŘKA 8, VÝŠKA 42 nm'],
       ['HRADLO: Lg ≈ 20 nm, CPP 84 nm (14++)'],
@@ -88,14 +88,14 @@ for (const type of ['NMOS', 'PMOS']) {
 }
 
 // ---------------------------------------------------------------- AI PC: TSMC 16FF+ (GP100)
-const TSMC16 = { title: 'TSMC 16FF+ FinFET', short: '16 nm FinFET', fins: 2, finPitch: 48, finW: 8, finH: 40, cpp: 90, lg: 30, il: 0.8, hk: 1.2, gateH: 45, spacer: 8, src: 'Chipworks IEDM 2014; výška žeber, Lg a vrstvy hradla neověřeny – ilustrativní' };
+const TSMC16 = { title: 'TSMC 16FF+ FinFET', short: '16 nm FinFET', fins: 2, finPitch: 48, finW: 8, finH: 37, cpp: 90, lg: 30, il: 0.8, hk: 1.2, gateH: 45, spacer: 8, src: 'Chipworks IEDM 2014; výška žeber ~37 nm podle tabulky na Wikipedii; Lg a vrstvy hradla neověřeny – ilustrativní' };
 for (const type of ['NMOS', 'PMOS']) {
   fet(`${type}_tsmc16`, {
     type, scene: 'finfet', lattice: 'hkmg_lattice', geom: { ...TSMC16, pmos: type === 'PMOS' },
     name: `${type} – TSMC 16FF+ FinFET (GP100, Tesla P100)`,
     subtitle: 'Chipworks (IEDM 2014): rozteč žeber 48 nm, CPP 90 nm, M1 64 nm (pravděpodobně SADP), ostatní kovy 80/90 nm, HKMG gate-last s dvojím oxidem, dvojí epitaxní zvýšené S/D, W lokální propojení, low-k. GP100: 610 mm², 15,3 mld. tranzistorů. Výška žeber, Lg a SRAM buňka neověřeny.',
     layers: [
-      ['ŽEBRA: ROZTEČ 48 nm (VÝŠKA NEOVĚŘENA)'],
+      ['ŽEBRA: ROZTEČ 48 nm, VÝŠKA ~37 nm'],
       ['CPP 90 nm · M1 64 nm'],
       ['HKMG GATE-LAST, DVOJÍ OXID', 'hkmg_lattice'],
       ['DVOJÍ EPITAXNÍ ZVÝŠENÉ S/D'],
@@ -123,11 +123,11 @@ for (const type of ['NMOS', 'PMOS']) {
 fet('NMOS_dram', {
   type: 'NMOS', scene: 'planar', lattice: 'sio2_gate_lattice', geom: { title: 'BCAT – zapuštěné hradlo buňky DRAM (tvar ilustrativní)', short: 'BCAT', recess: true },
   name: 'Přístupový tranzistor DRAM – BCAT (zapuštěná wordline)',
-  subtitle: 'Moderní DRAM (DDR4, GDDR6X, HBM2, LPDDR4) má v každé buňce jeden tranzistor a jeden kondenzátor. Tranzistor je BCAT (buried channel array transistor): wordline je zapuštěná do drážky v křemíku, kanál obtéká dno drážky, takže je delší a méně uniká. Nad ním stojí válcový kondenzátor vysoký ~1,5–2 µm (poměr stran 20–30, obecný patent). TechInsights to potvrzuje pro Samsung 1y/1a a Winbond 20 nm; pro konkrétní čipy v tvém PC neověřeno.',
+  subtitle: 'Moderní DRAM (DDR4, GDDR6X, HBM2, LPDDR4) má v každé buňce jeden tranzistor a jeden kondenzátor. Tranzistor je BCAT (buried channel array transistor): wordline je zapuštěná do drážky v křemíku, kanál obtéká dno drážky, takže je delší a méně uniká. Nad ním stojí kondenzátor (válec, u generací 1x nm a menších i sloupek) vysoký ~1,5–2 µm s poměrem stran aspoň 40:1 (Applied Materials; starší údaj 20–30: obecný patent). TechInsights to potvrzuje pro Samsung 1y/1a a Winbond 20 nm; pro konkrétní čipy v tvém PC neověřeno.',
   layers: [
     ['WORDLINE ZAPUŠTĚNÁ V DRÁŽCE'],
     ['OXID HRADLA SiO₂', 'sio2_gate_lattice'],
-    ['KONDENZÁTOR: VÁLEC ~1,5–2 µm (OBECNĚ)'],
+    ['KONDENZÁTOR: VÁLEC / SLOUPEK, POMĚR STRAN ≥ 40:1'],
     ['BITLINE KONTAKT'],
     ['20 nm 8 Gb: BUŇKA ≈ 0,0033 µm² (DOPOČET)'],
   ],
@@ -135,14 +135,14 @@ fet('NMOS_dram', {
 
 // ---------------------------------------------------------------- V-NAND: buňka se zachyceným nábojem
 fet('NMOS_vnand', {
-  type: 'NMOS', scene: 'vnand', lattice: 'ono_lattice', geom: { title: 'V-NAND – svislý kanál, slova kolem (výřez 6 z 92–136 vrstev)', short: 'V-NAND charge trap' },
+  type: 'NMOS', scene: 'vnand', lattice: 'ono_lattice', geom: { title: 'V-NAND – svislý kanál, slova kolem (výřez 6 z 92–128 aktivních vrstev)', short: 'V-NAND charge trap' },
   name: 'Buňka Samsung V-NAND – charge trap, hradlo kolem kanálu',
   subtitle: 'V-NAND (970 EVO Plus: V5 92 aktivních vrstev; 870 EVO: V6 128 aktivních, 136 hradel na řetězec – TechInsights): svislý kanál z poly-Si (trubka s oxidovým jádrem) prochází otvorem ve stohu, každá vrstva wolframové wordline ho obepíná (gate-all-around, TCAT). Mezi kanálem a wordline je tunelový oxid, zachycovací SiN (náboj zůstane v nevodivé vrstvě) a blokovací oxid. TLC = 8 úrovní náboje = 3 bity. Tloušťky vrstev a průměr otvoru neověřeny.',
   layers: [
     ['KANÁL poly-Si (TRUBKA, OXIDOVÉ JÁDRO)', 'ono_lattice'],
     ['TUNELOVÝ OXID SiO₂', 'ono_lattice'],
     ['ZACHYCOVACÍ VRSTVA SiN', 'ono_lattice'],
-    ['BLOKOVACÍ OXID'],
+    ['BLOKOVACÍ OXID SiO₂ + Al₂O₃ (HIGH-k), BARIÉRA TiN'],
     ['WORDLINE W – VRSTVY STOHU'],
     ['V5 92 / V6 128 AKTIVNÍCH VRSTEV'],
   ],
@@ -151,9 +151,9 @@ fet('NMOS_vnand', {
 // ---------------------------------------------------------------- výkonový trench MOSFET (VRM, DC-DC, PFC)
 fet('NMOS_power', {
   type: 'NMOS', scene: 'trench', lattice: 'sio2_gate_lattice',
-  geom: { title: 'Trench MOSFET se stínicí elektrodou', short: 'trench, výkonový', pitch: 0.5, trenchW: 0.25, trenchD: 1.2, ox: 0.04, bodyD: 0.5, srcD: 0.15, drift: 1.5, len: 1.5, src: 'příklad 30 V z patentu US7696599' },
+  geom: { title: 'Trench MOSFET se stínicí elektrodou', short: 'trench, výkonový', pitch: 0.5, trenchW: 0.25, trenchD: 1.2, ox: 0.04, bodyD: 0.5, srcD: 0.15, drift: 1.5, len: 1.5, src: 'rozměry z příkladu 25 V patentu US7696599 (ten má na dně zákopu izolační zátku; stínicí elektroda podle Silvaco)' },
   name: 'Výkonový trench MOSFET (DrMOS ve VRM a DC-DC)',
-  subtitle: 'VRM desky a karty: DrMOS = budič + horní a dolní MOSFET v jednom pouzdře (např. onsemi FDMF6821C 6 × 6 mm, 50 A). MOSFETy jsou svislé: hradlo v zákopu, pod ním stínicí elektroda spojená se source (nižší Qgd), proud teče z povrchu dolů do substrátu. Pro ≤ 30 V rozteč buněk typicky 0,2–0,7 µm (patent: 0,5 µm, zákop 1,2 × 0,25 µm), Rds(on) diskrétních 25V typů ~0,5–3 mΩ. Konkrétní typ MOSFETů na tvé desce a kartě i tloušťka oxidu neověřeny.',
+  subtitle: 'VRM desky a karty: DrMOS = budič + horní a dolní MOSFET v jednom pouzdře (např. onsemi FDMF6821C 6 × 6 mm, 50 A). MOSFETy jsou svislé: hradlo v zákopu, pod ním stínicí elektroda spojená se source (nižší Qgd), proud teče z povrchu dolů do substrátu. Patent US7696599 udává pro ≤ 30 V rozteč buněk 0,2–0,7 µm (příklad s průrazem 25 V: 0,5 µm, zákop 1,2 × 0,25 µm), Rds(on) diskrétních 25V typů ~0,5–3 mΩ. Konkrétní typ MOSFETů na tvé desce a kartě i tloušťka oxidu neověřeny.',
   layers: [
     ['ZÁKOP 0,25 × 1,2 µm, ROZTEČ 0,5 µm (PŘÍKLAD)'],
     ['OXID HRADLA SiO₂ (TLOUŠŤKA NEOVĚŘENA)', 'sio2_gate_lattice'],
@@ -198,10 +198,10 @@ fet('NMOS_tft', {
 // ---------------------------------------------------------------- L8 atomy vrstev
 const SI_INFO = 'Si: a = 5,431 Å, Si–Si 2,352 Å (CODATA)';
 def('hkmg_lattice', 8, {
-  name: 'Atomy hradla FinFET: Si / SiOx / HfO₂ / TiN',
-  subtitle: 'Bok žebra Si (krystal), tenká mezivrstva SiOx, high-k HfO₂ (v hradle amorfní; ε ≈ 20–25, Eg 5,3–5,7 eV, Hf–O 2,05–2,23 Å, Hf 6–7 sousedů O) a kovové hradlo TiN (NaCl, a = 4,241 Å). High-k je proto, aby šlo dostat elektrické pole do kanálu bez tunelování přes příliš tenký SiO₂. Tloušťky vrstev u 14 nm/8N kromě ~1 nm high-k neověřeny.',
+  name: 'Atomy hradla HKMG: Si / SiOx / HfO₂ / TiN',
+  subtitle: 'Kanál Si (u FinFET bok žebra, u planárního 28 nm povrch; krystal), tenká mezivrstva SiOx (u TSMC 28HP ~1,2 nm podle TechInsights), high-k HfO₂ (v hradle amorfní; ε ≈ 20–25, Eg 5,3–5,7 eV, Hf–O 2,05–2,23 Å, Hf 6–7 sousedů O) a kovové hradlo TiN (NaCl, a = 4,241 Å). High-k je proto, aby šlo dostat elektrické pole do kanálu bez tunelování přes příliš tenký SiO₂. Tloušťky vrstev u 14 nm/8N kromě ~1 nm high-k neověřeny.',
   scene: 'lattice',
-  stack: [{ name: 'Si žebro (krystal)', kind: 'si', thick: 10.9 }, { name: 'IL SiOx (neověřeno)', kind: 'sio2', thick: 6 }, { name: 'HfO₂ amorfní ~1 nm', kind: 'hfo2', thick: 10 }, { name: 'TiN a = 4,241 Å', kind: 'tin', thick: 8.5 }],
+  stack: [{ name: 'Si kanál – krystal (výřez)', kind: 'si', thick: 10.9 }, { name: 'IL SiOx (neověřeno)', kind: 'sio2', thick: 6 }, { name: 'HfO₂ amorfní ~1 nm', kind: 'hfo2', thick: 10 }, { name: 'TiN a = 4,241 Å (výřez)', kind: 'tin', thick: 8.5 }],
   components: [
     atom('el_si', 'Si – ŽEBRO A MEZIVRSTVA', 60, 60, 'atom_si'), atom('el_o', 'O – V SiOx A HfO₂', 60, 200, 'atom_o'), atom('el_hf', 'Hf – HIGH-k HfO₂', 60, 340, 'atom_hf'),
     atom('el_ti', 'Ti – KOVOVÉ HRADLO TiN', 360, 60, 'atom_ti'), atom('el_n', 'N – KOVOVÉ HRADLO TiN', 360, 200, 'atom_n'),
@@ -228,9 +228,9 @@ def('cu_lattice', 8, {
 
 def('ono_lattice', 8, {
   name: 'Atomy buňky V-NAND: poly-Si / SiO₂ / SiN / SiO₂',
-  subtitle: 'Kanál z polykrystalického Si, tunelový oxid, zachycovací Si₃N₄ (elektrony uvíznou v pastech dusíkové vrstvy a nevodivostí se nerozutečou) a blokovací oxid. Tloušťky vrstev nejsou veřejné – výřez ilustrativní.',
+  subtitle: 'Kanál z polykrystalického Si, tunelový oxid, zachycovací Si₃N₄ (elektrony uvíznou v pastech dusíkové vrstvy a nevodivostí se nerozutečou) a blokovací oxid (SiO₂ + Al₂O₃). Tloušťky pro Samsung V5/V6 nejsou veřejné; publikovaný příklad stohu: tunelový oxid ~4,5 nm, nitrid ~5,5 nm, blokovací oxid ~7 nm. Výřez je kreslený tenčí, než je skutečnost.',
   scene: 'lattice',
-  stack: [{ name: 'poly-Si kanál (výřez)', kind: 'si', thick: 10.9 }, { name: 'tunelový SiO₂', kind: 'sio2', thick: 8 }, { name: 'zachycovací SiN', kind: 'sinx', thick: 10 }, { name: 'blokovací SiO₂', kind: 'sio2', thick: 8 }],
+  stack: [{ name: 'poly-Si kanál (výřez)', kind: 'si', thick: 10.9 }, { name: 'tunelový SiO₂ (výřez; reálně ~4–5 nm)', kind: 'sio2', thick: 8 }, { name: 'zachycovací SiN (výřez; ~5–6 nm)', kind: 'sinx', thick: 10 }, { name: 'blokovací oxid (výřez; ~7 nm)', kind: 'sio2', thick: 8 }],
   components: [atom('el_si', 'Si – KANÁL A OXIDY', 60, 60, 'atom_si'), atom('el_o', 'O – OXIDY', 60, 200, 'atom_o'), atom('el_n', 'N – ZACHYCOVACÍ SiN', 60, 340, 'atom_n'), atom('i_trap', 'PASTI V SiN DRŽÍ ELEKTRONY ROKY', 400, 200)],
   wires: [],
 });

@@ -326,7 +326,7 @@ export function buildLatticeScene(ctx) {
         bonds.push([c.p, h]);
       }
     }
-    layerLabels.push({ text: `${layer.name} · ${String(layer.thick / 10).replace('.', ',')} nm`, y: (y0 + y1) / 2 });
+    // u výřezu z tlusté vrstvy se nakreslená tloušťka nevypisuje (není to tloušťka skutečné vrstvy)
     y = y1;
   }
   const sphere = new THREE.SphereGeometry(1, 16, 12), stick = new THREE.CylinderGeometry(1, 1, 1, 8);
@@ -377,7 +377,7 @@ export function buildAtomModelScene(ctx) {
     [/nucleus/, nucleus, new THREE.Vector3(0, 1.6, 0)],
     ...shellObjs.map((sg, i) => [new RegExp(`^shell_${'KLMNOP'[i]}$`), sg, new THREE.Vector3(R(i) * 0.71, R(i) * 0.71, 0)]),
   ], { x: outer + 4, y: outer, z: 0, r: 0.4 });
-  const cap = caption(`${a.sym}: ${a.Z} e⁻ · jádro zvětšené ~10 000× (ve skutečnosti ~100 000× menší než atom)`, outer * 2.6);
+  const cap = caption(`${a.sym}: ${a.Z} e⁻ · jádro zvětšené ~10 000× (ve skutečnosti 20 000–40 000× menší než atom)`, outer * 2.6);
   cap.position.set(0, outer + 2.5, 0);
   group.add(cap);
   return { camera: [outer * 1.4, outer * 1.1, outer * 2.6], target: [0, 0, 0], floorY: -outer - 2 };
@@ -439,7 +439,7 @@ export function buildNucleonScene(ctx) {
     ...quarks.map((m, i) => [new RegExp(`^q${i}$`), m, pos[i].clone().multiplyScalar(1.5).add(new THREE.Vector3(0, 0.15, 0))]),
     [/gluons/, gluons, new THREE.Vector3(0, -0.55, 0)],
   ], { x: 1.3, y: 0.6, z: 0, r: 0.05 });
-  const cap = caption(`${q.join(' ').toUpperCase()} · poloměr ~0,84 fm · barvy = barevný náboj (konvence)`, 2.6);
+  const cap = caption(`${q.join(' ').toUpperCase()} · ${q.filter((x) => x === 'u').length === 2 ? 'nábojový poloměr 0,84 fm' : 'poloměr ~0,8 fm'} · barvy = barevný náboj (konvence)`, 2.6);
   cap.position.set(0, 1.05, 0);
   group.add(cap);
   return { camera: [0.6, 0.5, 2.6], target: [0, 0, 0], floorY: -1 };

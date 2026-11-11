@@ -141,9 +141,9 @@ const PACKAGES = {
   phoenix_ctl: { pkg: 'FCBGA (rozměry odhad)', mark: 'SAMSUNG S4LR020 PHOENIX · DIE ODHAD', body: [12, 12, 1.0], die: [5, 5], flip: 'bga', pitch: 0.65 },
   // AI PC
   xeon_die: { pkg: 'FCLGA2011-3 52,5 × 45 mm', mark: 'XEON E5-1650 v3 · HASWELL-EP LCC 354 mm² (strany odhad) · IHS SUNDANÝ', body: [52.5, 45, 1.2], die: [18.8, 18.8], flip: 'lga', pitch: 1.0 },
-  gp100_die: { pkg: 'CoWoS: křemíkový interposer + 4× HBM2 (substrát odhad)', mark: 'GP100 610 mm² · INTERPOSER ~1200 mm² · HBM2 7,75 × 11,87 mm', body: [55, 55, 1.4], die: [23.3, 26.2], flip: 'bga', pitch: 1.0, cowos: { iw: 40, id: 30, hbm: [7.75, 11.87, 0.72] } }, // 40 × 30 = 1200 mm² interposer, strany die odhad
+  gp100_die: { pkg: 'CoWoS: křemíkový interposer + 4× HBM2, BGA 55 × 55 mm (Yole)', mark: 'GP100 610 mm² · INTERPOSER ~1200 mm² · HBM2 7,75 × 11,87 mm (rozměr SK hynix)', body: [55, 55, 1.4], die: [23.3, 26.2], flip: 'bga', pitch: 1.0, cowos: { iw: 40, id: 30, hbm: [7.75, 11.87, 0.72] } }, // 40 × 30 = 1200 mm² interposer, strany die odhad
   gm107_die: { pkg: 'FCBGA-908 (rozměry odhad)', mark: 'GM107 · 148 mm² (strany odhad)', body: [27, 27, 1.2], die: [12.2, 12.2], flip: 'bga', pitch: 0.8 },
-  ddr4_chip: { pkg: 'FBGA-78 (9 × 13, střed bez kuliček)', mark: 'K4A4G045WE 4 Gb x4 · ROZMĚRY TYPICKÉ', body: [7.5, 11, 1.0], die: [6, 9.5], flip: 'bga', pitch: 0.8, grid: [9, 13], gapCols: [3, 4, 5] },
+  ddr4_chip: { pkg: 'FBGA-78 (9 × 13, střed bez kuliček)', mark: 'K4A4G045WE 4 Gb x4 · DIE ODHAD (polovina 8Gb die 5,8 × 9,7 mm)', body: [7.5, 11, 1.0], die: [5.8, 4.9], flip: 'bga', pitch: 0.8, grid: [9, 13], gapCols: [3, 4, 5] },
   ddr4_8g_x8: { pkg: 'FBGA-78 (9 × 13, střed bez kuliček)', mark: 'DDR4 8 Gb x8 · ROZMĚRY TYPICKÉ, NE TVÉHO ČIPU', body: [7.5, 11, 1.0], die: [6, 9.5], flip: 'bga', pitch: 0.8, grid: [9, 13], gapCols: [3, 4, 5] },
 };
 

@@ -15,7 +15,7 @@ const ATOMS = {
   ti: { Z: 22, sym: 'Ti', name: 'titan', A: 48, abund: '73,7 %', shells: [['K', '1s²', 2], ['L', '2s² 2p⁶', 8], ['M', '3s² 3p⁶ 3d²', 10], ['N', '4s²', 2]], r: 'kovalentní poloměr 160 pm', role: 'V TiN (KOVOVÉ HRADLO) KUBICKÁ MŘÍŽKA NaCl', valence: 4 },
   n: { Z: 7, sym: 'N', name: 'dusík', A: 14, abund: '99,6 %', shells: [['K', '1s²', 2], ['L', '2s² 2p³', 5]], r: 'kovalentní poloměr 71 pm', role: 'V TiN A V SiNₓ (IZOLANT HRADLA TFT)', valence: 5 },
   cu: { Z: 29, sym: 'Cu', name: 'měď', A: 63, abund: '69,2 %', shells: [['K', '1s²', 2], ['L', '2s² 2p⁶', 8], ['M', '3s² 3p⁶ 3d¹⁰', 18], ['N', '4s¹', 1]], r: 'kovalentní poloměr 132 pm', role: 'V KOVU: 4s ELEKTRON VOLNÝ – VEDE PROUD', valence: 1 },
-  h: { Z: 1, sym: 'H', name: 'vodík', A: 1, abund: '99,98 %', shells: [['K', '1s¹', 1]], r: 'kovalentní poloměr 31 pm', role: 'V a-Si:H PASIVUJE VOLNÉ VAZBY Si', valence: 1 },
+  h: { Z: 1, sym: 'H', name: 'vodík', A: 1, abund: '99,99 %', shells: [['K', '1s¹', 1]], r: 'kovalentní poloměr 31 pm', role: 'V a-Si:H PASIVUJE VOLNÉ VAZBY Si', valence: 1 },
 };
 
 const NUCLEI = {
@@ -27,7 +27,7 @@ for (const [k, a] of Object.entries(ATOMS)) {
   const N = a.A - a.Z;
   def(`atom_${k}`, 9, {
     name: `Atom ${a.sym} (${a.name}, Z = ${a.Z}) — elektronový obal a jádro`,
-    subtitle: `Konfigurace: ${a.shells.map((s) => s[1]).join(' ')} – ${a.Z} elektronů ve slupkách ${a.shells.map((s) => `${s[0]} ${s[2]}`).join(', ')}. Nejčastější izotop ${a.A}${a.sym} (${a.abund}). ${a.r}; jádro je asi 100 000× menší než celý atom. Elektrony jsou podle současné fyziky elementární – dál se nedá. Dvojklik na jádro.`,
+    subtitle: `Konfigurace: ${a.shells.map((s) => s[1]).join(' ')} – ${a.Z} elektronů ve slupkách ${a.shells.map((s) => `${s[0]} ${s[2]}`).join(', ')}. Nejčastější izotop ${a.A}${a.sym} (${a.abund}). ${a.r}; jádro je zhruba 20 000–40 000× menší než celý atom (kovalentní poloměr proti 1,2 fm · A^⅓). Elektrony jsou podle současné fyziky elementární – dál se nedá. Dvojklik na jádro.`,
     scene: 'atom',
     atom: { Z: a.Z, sym: a.sym, A: a.A, shells: a.shells.map((s) => s[2]), valence: a.valence },
     components: [

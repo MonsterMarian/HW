@@ -4,11 +4,12 @@ import { IsaAssembler } from '../engine/isaAssembler';
 import { audioEngine } from '../engine/audioEngine';
 
 const SAMPLE_PROGRAM = `; SILICON-8 RISC DEMO PROGRAM
-; Vykreslí pixel na virtuální GPU obrazovku a inkrementuje
+; Kreslí úhlopříčku: pixel (X, Y), pak X i Y o 1 dál
+; (LDI umí jen hodnoty 0-3: instrukce má 8 bitů)
 START:
-  LDI R0, 1        ; R0 = barva azurová
-  LDI R1, 10       ; R1 = souřadnice X
-  LDI R2, 10       ; R2 = souřadnice Y
+  LDI R0, 1        ; R0 = krok 1
+  LDI R1, 2        ; R1 = souřadnice X
+  LDI R2, 2        ; R2 = souřadnice Y
 LOOP:
   PIX R1, R2       ; Vykresli pixel (X, Y)
   ADD R1, R0       ; X = X + 1
@@ -65,8 +66,8 @@ export function AsmEditor({ engine, onClose }) {
       {/* Editor Body */}
       <div className="flex-1 p-3 flex flex-col font-mono">
         <div className="text-[11px] text-gray-500 mb-1.5 flex justify-between">
-          <span>ISA: SILICON-8 (4x Reg, 16 Opcodes)</span>
-          <span className="text-cyan-400">PC: 0x00</span>
+          <span>ISA: SILICON-8 (4 registry, 11 instrukcí, 8 bitů)</span>
+          <span className="text-cyan-400">ROM 256 B</span>
         </div>
         <textarea
           value={code}

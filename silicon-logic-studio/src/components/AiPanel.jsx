@@ -15,19 +15,19 @@ export function AiPanel({ engine, onClose, onCircuitReplaced = () => {} }) {
   const handleSynthesize = async (overridePrompt) => {
     const activePrompt = overridePrompt || prompt;
     setIsSynthesizing(true);
-    setStatusStep('1/4 Parsování logické specifikace...');
+    setStatusStep('1/3 Hledám předvolbu podle klíčových slov...');
     audioEngine.playRelayClick(1.2);
 
     setTimeout(async () => {
-      setStatusStep('2/4 Alokace hradel, pamětí a registrů...');
+      setStatusStep('2/3 Načítám netlist předvolby...');
       const circuit = await copilot.synthesizeCircuit(activePrompt);
 
       setTimeout(() => {
-        setStatusStep('3/4 Auto-routing sběrnic a formální verifikace...');
+        setStatusStep('3/3 Simulační kontrola (ustálení, zkraty)...');
         const verify = copilot.verifyCircuit(circuit, circuit.testbench);
 
         setTimeout(() => {
-          setStatusStep('4/4 Hotovo! Netlist připraven.');
+          setStatusStep('Hotovo. Netlist připraven.');
           setSynthesizedCircuit(circuit);
           setVerificationResult(verify);
           setIsSynthesizing(false);
@@ -179,7 +179,7 @@ export function AiPanel({ engine, onClose, onCircuitReplaced = () => {} }) {
             {verificationResult && (
               <div className="flex items-center space-x-2 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 p-2 rounded text-[10px]">
                 <ShieldCheck size={13} className="text-emerald-400 shrink-0" />
-                <span>Formálně verifikováno pravdivostní tabulkou (100% PASS)</span>
+                <span>{verificationResult.verified ? '✔' : '✖'} {verificationResult.message}</span>
               </div>
             )}
 

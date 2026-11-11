@@ -110,6 +110,14 @@ export function formatProbe(v, format = 'DEC') {
   return `${v}`;
 }
 
+// Paměť 256 × 8: uložené obvody ji nesou jako krátké pole (JSON); zbytek je smazaný stav (EPROM/EEPROM = 0xFF)
+function memory256(m, blank) {
+  if (m instanceof Uint8Array && m.length === 256) return m;
+  const full = new Uint8Array(256).fill(blank);
+  full.set(Array.from(m || []).slice(0, 256));
+  return full;
+}
+
 const f16buf = new Float16Array(1);
 const u16buf = new Uint16Array(f16buf.buffer);
 const halfToNum = (bits) => { u16buf[0] = bits; return f16buf[0]; };
@@ -231,7 +239,14 @@ export class LogicEngine {
   }
 
   removeWire(wireId) {
+    const gone = this.wires.find((w) => w.id === wireId);
     this.wires = this.wires.filter((w) => w.id !== wireId);
+    // odpojený vstup se vrací na výchozí úroveň (jako nikdy nezapojený), jinak by držel poslední hodnotu drátu
+    for (const end of gone ? [gone.from, gone.to] : []) {
+      const c = this.components.get(end.id);
+      const def = c && (DEVICES[c.type]?.pins || PRIMITIVE_PINS[c.type])?.inputs?.[end.pin];
+      if (def !== undefined && !(end.pin in c.outputs)) c.inputs[end.pin] = def;
+    }
     this.invalidate();
     this.notify();
   }
@@ -728,12 +743,17 @@ export class LogicEngine {
       case 'TRI_STATE_BUFFER':
         out.out = inp.enable === 1 ? (isLogicValue(inp.in) ? inp.in : X) : inp.enable === 0 ? Z : X;
         break;
-      case 'MUX':
-        out.out = inp.sel === 0 ? inp.a : inp.sel === 1 ? inp.b : X;
+      // hradlový MUX/DEMUX výstup vždy budí: plovoucí vstup = neznámá úroveň (X), ne odpojený výstup
+      case 'MUX': {
+        const v = inp.sel === 0 ? inp.a : inp.sel === 1 ? inp.b : X;
+        out.out = isLogicValue(v) ? v : X;
         break;
-      case 'DEMUX':
-        if (inp.sel === 0) { out.out0 = inp.in; out.out1 = 0; } else if (inp.sel === 1) { out.out0 = 0; out.out1 = inp.in; } else { out.out0 = X; out.out1 = X; }
+      }
+      case 'DEMUX': {
+        const d = isLogicValue(inp.in) ? inp.in : X;
+        if (inp.sel === 0) { out.out0 = d; out.out1 = 0; } else if (inp.sel === 1) { out.out0 = 0; out.out1 = d; } else { out.out0 = X; out.out1 = X; }
         break;
+      }
       case 'D_FF': {
         if (this._rising(comp, 'clk')) comp.state = isLogicValue(inp.d) ? inp.d & 1 : X;
         out.q = comp.state ?? 0;
@@ -746,7 +766,7 @@ export class LogicEngine {
         const bits = comp.type === 'REGISTER_8BIT' ? 8 : comp.type === 'REGISTER_16BIT' ? 16 : 32;
         const edge = this._rising(comp, 'clk');
         if (inp.clr === 1) comp.state = 0;
-        else if (edge && inp.we !== 0) comp.state = isLogicValue(inp.d) ? (bits === 32 ? inp.d >>> 0 : inp.d & ((1 << bits) - 1)) : X;
+        else if (edge && inp.we !== 0) comp.state = inp.we === 1 && isLogicValue(inp.d) ? (bits === 32 ? inp.d >>> 0 : inp.d & ((1 << bits) - 1)) : X;
         out.q = comp.state ?? 0;
         break;
       }
@@ -785,14 +805,16 @@ export class LogicEngine {
         break;
       }
       case 'RAM': {
-        if (!comp.memory) comp.memory = new Uint8Array(256);
-        const addr = isLogicValue(inp.addr) ? inp.addr & 0xFF : 0;
-        if (this._rising(comp, 'clk') && inp.we === 1 && isLogicValue(inp.din)) comp.memory[addr] = inp.din & 0xFF;
+        comp.memory = memory256(comp.memory, 0);
+        const edge = this._rising(comp, 'clk');
+        if (!isLogicValue(inp.addr)) { out.dout = X; break; } // neznámá adresa: nic se nečte ani nezapisuje
+        const addr = inp.addr & 0xFF;
+        if (edge && inp.we === 1 && isLogicValue(inp.din)) comp.memory[addr] = inp.din & 0xFF;
         out.dout = comp.memory[addr];
         break;
       }
       case 'ROM': {
-        if (!comp.memory) comp.memory = new Uint8Array(256);
+        comp.memory = memory256(comp.memory, 0xFF);
         out.dout = isLogicValue(inp.addr) ? comp.memory[inp.addr & 0xFF] : X;
         break;
       }
@@ -800,8 +822,11 @@ export class LogicEngine {
         const { cols, rows, mode } = screenInfo(comp);
         if (!comp.vram || comp.vram.length !== cols * rows) comp.vram = mode === 'RGB565' ? new Uint16Array(cols * rows) : new Uint8Array(cols * rows);
         if (!this._rising(comp, 'clk')) break;
-        if (inp.we === 1 && isLogicValue(inp.x) && isLogicValue(inp.y) && isLogicValue(inp.color) && inp.x < cols && inp.y < rows) {
-          comp.vram[inp.y * cols + inp.x] = mode === 'MONO' ? inp.color & 1 : inp.color; // typované pole ořízne na 8/16 bitů
+        // port má jen tolik vodičů, kolik souřadnice potřebuje (64 → 6 bitů): vyšší bity sběrnice se nepřipojí
+        const x = inp.x & ((1 << Math.ceil(Math.log2(cols))) - 1);
+        const y = inp.y & ((1 << Math.ceil(Math.log2(rows))) - 1);
+        if (inp.we === 1 && isLogicValue(inp.x) && isLogicValue(inp.y) && isLogicValue(inp.color) && x < cols && y < rows) {
+          comp.vram[y * cols + x] = mode === 'MONO' ? inp.color & 1 : inp.color; // typované pole ořízne na 8/16 bitů
           comp.vramRev = (comp.vramRev || 0) + 1;
         }
         comp.scan = ((comp.scan || 0) + 1) % (cols * rows);

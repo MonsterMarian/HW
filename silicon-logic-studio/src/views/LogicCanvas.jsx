@@ -10,19 +10,21 @@ import { boardKindOf, myPcBoard } from '../engine/myPcLayout';
 import { pcbRoutes } from './canvas/pcbRoutes';
 
 const CHIP_PROFILES = {
-  AND: { code: 'SN74LS08N', desc: 'QUAD 2-INPUT AND GATE', family: 'FAST-TTL', mfr: 'TI' },
-  OR: { code: 'SN74LS32N', desc: 'QUAD 2-INPUT OR GATE', family: 'FAST-TTL', mfr: 'TI' },
-  XOR: { code: 'SN74LS86N', desc: 'QUAD 2-INPUT XOR GATE', family: 'FAST-TTL', mfr: 'TI' },
-  NOT: { code: 'SN74LS04N', desc: 'HEX INVERTER', family: 'FAST-TTL', mfr: 'TI' },
-  NAND: { code: 'SN74LS00N', desc: 'QUAD 2-IN NAND GATE', family: 'FAST-TTL', mfr: 'TI' },
-  NOR: { code: 'SN74LS02N', desc: 'QUAD 2-IN NOR GATE', family: 'FAST-TTL', mfr: 'TI' },
-  D_FF: { code: 'SN74LS74AN', desc: 'DUAL D-TYPE FLIP-FLOP', family: 'SCHOTTKY', mfr: 'TI' },
-  REGISTER_8BIT: { code: 'SN74LS374N', desc: '8-BIT OCTAL D-REG', family: 'SCHOTTKY', mfr: 'TI' },
-  RAM: { code: 'HM62256BLP', desc: '32K×8 HIGH-SPEED SRAM', family: 'HITACHI', mfr: 'HITACHI' },
-  ROM: { code: 'AT28C64B', desc: '64K PARALLEL EEPROM', family: 'ATMEL', mfr: 'ATMEL' },
-  MUX: { code: 'SN74LS157N', desc: 'QUAD 2-TO-1 MUX', family: 'FAST-TTL', mfr: 'TI' },
-  TRI_STATE: { code: 'SN74LS244N', desc: 'OCTAL BUS BUFFER', family: 'BUS-DRV', mfr: 'TI' },
-  PROBE: { code: 'DM7447A', desc: 'DIGITAL LOGIC PROBE', family: 'INDICATOR', mfr: 'NSC' },
+  // 74LS = Low-power Schottky TTL (ne „FAST“, to je řada 74F). Jen součástky, které funkcí opravdu odpovídají.
+  AND: { code: 'SN74LS08N', desc: 'QUAD 2-INPUT AND GATE', family: 'LS-TTL', mfr: 'TI' },
+  OR: { code: 'SN74LS32N', desc: 'QUAD 2-INPUT OR GATE', family: 'LS-TTL', mfr: 'TI' },
+  XOR: { code: 'SN74LS86N', desc: 'QUAD 2-INPUT XOR GATE', family: 'LS-TTL', mfr: 'TI' },
+  NOT: { code: 'SN74LS04N', desc: 'HEX INVERTER', family: 'LS-TTL', mfr: 'TI' },
+  NAND: { code: 'SN74LS00N', desc: 'QUAD 2-IN NAND GATE', family: 'LS-TTL', mfr: 'TI' },
+  NOR: { code: 'SN74LS02N', desc: 'QUAD 2-IN NOR GATE', family: 'LS-TTL', mfr: 'TI' },
+  D_FF: { code: 'SN74LS74AN', desc: 'DUAL D-TYPE FLIP-FLOP', family: 'LS-TTL', mfr: 'TI' },
+  // 74377 má povolení zápisu (clock enable) jako simulovaný registr; 74374 ho nemá
+  REGISTER_8BIT: { code: 'SN74LS377N', desc: 'OCTAL D FLIP-FLOP, CLOCK ENABLE', family: 'LS-TTL', mfr: 'TI' },
+  RAM: { code: 'HM62256BLP', desc: '32K×8 SRAM (MODEL: 256×8)', family: 'CMOS SRAM', mfr: 'HITACHI' },
+  ROM: { code: 'AT28C64B', desc: '64K EEPROM (MODEL: 256×8)', family: 'CMOS EEPROM', mfr: 'ATMEL' },
+  MUX: { code: 'SN74LS157N', desc: 'QUAD 2-TO-1 MUX', family: 'LS-TTL', mfr: 'TI' },
+  // 74126 má povolení aktivní v 1 jako simulovaný budič (74125 a 74244 ho mají aktivní v 0)
+  TRI_STATE_BUFFER: { code: 'SN74LS126AN', desc: 'QUAD 3-STATE BUFFER', family: 'LS-TTL', mfr: 'TI' },
 };
 
 // Piny primitiv ve schématu (hradla mají vlastní tvar značky); comp má x/y už v souřadnicích schématu
@@ -213,7 +215,8 @@ export function LogicCanvas({
     }
 
     function drawPhotorealisticDIPChip(ctx, comp, w, h, isSelected) {
-      const meta = CHIP_PROFILES[comp.type] || { code: comp.type, desc: 'LOGIC IC', family: 'TTL', mfr: 'TI' };
+      // bloky bez reálného protějšku nenesou vymyšleného výrobce ani datový kód
+      const meta = CHIP_PROFILES[comp.type] || { code: comp.type, desc: 'MODEL BLOCK', family: '', mfr: '' };
       const temp = engine.thermalMap.get(comp.id) || 28.5;
 
       // 1. Draw Soldered Metallic Pins & Pads on PCB FIRST (behind chip body)
@@ -269,11 +272,11 @@ export function LogicCanvas({
 
       ctx.fillStyle = '#718096';
       ctx.font = `600 8px ${THEME.sans}`;
-      ctx.fillText(`${meta.mfr} // ${meta.desc}`, comp.x + 22, comp.y + 38);
+      ctx.fillText(meta.mfr ? `${meta.mfr} // ${meta.desc}` : meta.desc, comp.x + 22, comp.y + 38);
 
       ctx.fillStyle = '#4A5568';
       ctx.font = `500 7px ${THEME.mono}`;
-      ctx.fillText(`MALAYSIA 2442B // ${meta.family}`, comp.x + 22, comp.y + h - 14);
+      if (meta.family) ctx.fillText(`MALAYSIA 2442B // ${meta.family}`, comp.x + 22, comp.y + h - 14);
 
       // 9. Real-time Silicon Thermal Sensor Gauge
       const heatColor = temp > 75 ? '#FF003C' : temp > 45 ? '#FF8400' : '#10B981';
@@ -538,7 +541,7 @@ export function LogicCanvas({
 
       // Segment Bitmask (0-F)
       const SEG_MAP = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71];
-      const mask = SEG_MAP[val & 0x0F] || 0;
+      const mask = typeof raw === 'number' ? SEG_MAP[val] : 0x40; // neznámý vstup (X/Z) = jen pomlčka, ne platná nula
       const activeColor = '#FF0055'; // Glowing Ruby Red LED
       const dimColor = 'rgba(60, 10, 25, 0.35)';
 
@@ -579,11 +582,9 @@ export function LogicCanvas({
       drawV(sx - t, sy + t, (mask & 0x20) !== 0); // f
       drawH(sx, sy + segH + t, (mask & 0x40) !== 0); // g
 
-      // Decimal Point DP
+      // Decimal Point DP: součástka nemá vstup DP, tečka nikdy nesvítí
       ctx.save();
-      ctx.fillStyle = activeColor;
-      ctx.shadowColor = activeColor;
-      ctx.shadowBlur = 6;
+      ctx.fillStyle = dimColor;
       ctx.beginPath();
       ctx.arc(boxX + boxW - 8, boxY + boxH - 8, 2, 0, Math.PI * 2);
       ctx.fill();
@@ -592,7 +593,7 @@ export function LogicCanvas({
       // Value read-out label at bottom
       ctx.fillStyle = THEME.high;
       ctx.font = `700 9px ${THEME.mono}`;
-      ctx.fillText(`HEX: ${hexChar} (DEC: ${val})`, comp.x + 8, comp.y + h - 4);
+      ctx.fillText(typeof raw === 'number' ? `HEX: ${hexChar} (DEC: ${val})` : `HEX: ${hexChar}`, comp.x + 8, comp.y + h - 4);
 
       if (isHardware) {
         drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
@@ -957,14 +958,15 @@ export function LogicCanvas({
         ctx.lineTo(bot.x, y1);
         ctx.lineTo(bot.x, bot.y);
         ctx.stroke();
-        // šipka na source (NMOS dovnitř, PMOS ven)
+        // šipka na vývodu source ukazuje směr proudu: NMOS ven z tranzistoru, PMOS dovnitř (jako emitor NPN/PNP)
         const sy = pmos ? y0 : y1;
-        const dir = pmos ? 1 : -1;
+        const dir = pmos ? -1 : 1;
+        const tipX = chX + (pmos ? 1 : 9);
         ctx.fillStyle = on ? THEME.high : strokeColor;
         ctx.beginPath();
-        ctx.moveTo(chX + (pmos ? 9 : 1), sy);
-        ctx.lineTo(chX + (pmos ? 9 : 1) - dir * 6, sy - 3.5);
-        ctx.lineTo(chX + (pmos ? 9 : 1) - dir * 6, sy + 3.5);
+        ctx.moveTo(tipX, sy);
+        ctx.lineTo(tipX - dir * 6, sy - 3.5);
+        ctx.lineTo(tipX - dir * 6, sy + 3.5);
         ctx.fill();
         ctx.font = `700 7px ${THEME.mono}`;
         ctx.fillStyle = THEME.muted;

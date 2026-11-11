@@ -93,11 +93,12 @@ export function buildRealPart(comp) {
 // ---------------------------------------------------------------- generic (non-NV1) circuits
 const CHIP_CODES = {
   AND: 'SN74LS08N', OR: 'SN74LS32N', XOR: 'SN74LS86N', NOT: 'SN74LS04N', NAND: 'SN74LS00N', NOR: 'SN74LS02N',
-  D_FF: 'SN74LS74AN', REGISTER_8BIT: 'SN74LS374N', REGISTER_16BIT: 'SN74LS374N', REGISTER_32BIT: 'SN74LS374N',
-  RAM: 'HM62256BLP', ROM: 'AT28C64B', MUX: 'SN74LS157N', DEMUX: 'SN74LS139N', TRI_STATE_BUFFER: 'SN74LS244N',
-  BUS_SPLITTER: 'SN74LS245N', BUS_MERGER: 'SN74LS245N',
+  // 74377 = registr s povolením zápisu (74374 ho nemá), 74126 = třístavový budič s povolením v 1.
+  // DEMUX 1:2 a rozbočení sběrnice nemají přesný protějšek v řadě 74 (74139 má výstupy aktivní v 0, 74245 je budič).
+  D_FF: 'SN74LS74AN', REGISTER_8BIT: 'SN74LS377N', REGISTER_16BIT: '2× SN74LS377N', REGISTER_32BIT: '4× SN74LS377N',
+  RAM: 'HM62256BLP', ROM: 'AT28C64B', MUX: 'SN74LS157N', TRI_STATE_BUFFER: 'SN74LS126AN',
 };
-const DIP_PINS = { RAM: 28, ROM: 28, REGISTER_8BIT: 20, REGISTER_16BIT: 20, REGISTER_32BIT: 20, MUX: 16, DEMUX: 16, TRI_STATE_BUFFER: 20, BUS_SPLITTER: 20, BUS_MERGER: 20 };
+const DIP_PINS = { RAM: 28, ROM: 28, REGISTER_8BIT: 20, REGISTER_16BIT: 20, REGISTER_32BIT: 20, MUX: 16, BUS_SPLITTER: 20, BUS_MERGER: 20 };
 
 function buildGenericPart(comp, W, D, ctx) {
   const t = comp.type;

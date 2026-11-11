@@ -5,7 +5,7 @@ export const DEFAULT_ISA = {
   name: 'SILICON-8 RISC',
   instructions: [
     { mnemonic: 'NOP',  opcode: 0x00, format: '0000 0000', desc: 'No operation' },
-    { mnemonic: 'LDI',  opcode: 0x01, format: '0001 {r:2} {imm:4}', desc: 'Load immediate value into register' },
+    { mnemonic: 'LDI',  opcode: 0x01, format: '0001 {r:2} {imm:2}', desc: 'Load immediate 0-3 into register' },
     { mnemonic: 'MOV',  opcode: 0x02, format: '0010 {rd:2} {rs:2}', desc: 'Copy register rs into rd' },
     { mnemonic: 'ADD',  opcode: 0x03, format: '0011 {rd:2} {rs:2}', desc: 'Add rd = rd + rs' },
     { mnemonic: 'SUB',  opcode: 0x04, format: '0100 {rd:2} {rs:2}', desc: 'Subtract rd = rd - rs' },
@@ -36,10 +36,12 @@ export class IsaAssembler {
       let line = lines[i].split(';')[0].trim(); // remove comments
       if (!line) continue;
 
-      if (line.endsWith(':')) {
-        const labelName = line.slice(0, -1).trim();
-        labels.set(labelName, address);
-        continue;
+      // návěští může stát samo na řádku i před instrukcí (`loop: ADD R1, R2`)
+      const label = line.match(/^(\w+):\s*(.*)$/);
+      if (label) {
+        labels.set(label[1], address);
+        line = label[2];
+        if (!line) continue;
       }
 
       parsedInstructions.push({ lineIndex: i, text: line, addr: address });
@@ -57,30 +59,30 @@ export class IsaAssembler {
       }
 
       let byte = (spec.opcode & 0x0F) << 4;
+      // chybný operand je chyba překladu: tiché oříznutí by do ROM zapsalo jinou instrukci, než je ve zdrojáku
+      const fail = (msg) => { throw new Error(`Line ${item.lineIndex + 1}: ${msg}`); };
+      const reg = (name) => {
+        const m = /^R([0-3])$/i.exec(name || '');
+        return m ? Number(m[1]) : fail(`neplatný registr '${name ?? ''}' (R0–R3)`);
+      };
+      const num = (text, max, what) => {
+        const v = Number(text);
+        return text !== undefined && Number.isInteger(v) && v >= 0 && v <= max ? v : fail(`${what} '${text ?? ''}' mimo rozsah 0–${max}`);
+      };
 
       if (mnemonic === 'LDI') {
-        const reg = this.parseReg(parts[1]);
-        const imm = Number(parts[2]) & 0x03;
-        byte |= (reg << 2) | imm;
+        byte |= (reg(parts[1]) << 2) | num(parts[2], 3, 'hodnota');
       } else if (mnemonic === 'MOV' || mnemonic === 'ADD' || mnemonic === 'SUB' || mnemonic === 'AND' || mnemonic === 'OR' || mnemonic === 'PIX') {
-        const rd = this.parseReg(parts[1]);
-        const rs = this.parseReg(parts[2]);
-        byte |= (rd << 2) | rs;
+        byte |= (reg(parts[1]) << 2) | reg(parts[2]);
       } else if (mnemonic === 'JMP' || mnemonic === 'JZ') {
-        let target = parts[1];
-        let targetAddr = labels.has(target) ? labels.get(target) : Number(target);
-        byte |= (targetAddr & 0x0F);
+        const target = parts[1];
+        if (!labels.has(target) && !/^\d/.test(target || '')) fail(`neznámé návěští '${target ?? ''}'`);
+        byte |= num(labels.has(target) ? String(labels.get(target)) : target, 15, 'adresa');
       }
 
       bytecode[item.addr] = byte;
     }
 
     return { bytecode, parsedInstructions };
-  }
-
-  parseReg(name) {
-    if (!name) return 0;
-    const clean = name.toUpperCase().replace('R', '');
-    return (Number(clean) || 0) & 0x03; // 4 registers: R0, R1, R2, R3
   }
 }

@@ -1440,7 +1440,7 @@ def('pmos_transistor', mosfet(false));
 def('sio2_lattice', {
   level: 8,
   name: 'Rozhraní Si / SiO₂ — atomy',
-  subtitle: 'Krystal Si: diamantová mřížka a = 5,431 Å, vazba Si–Si 2,35 Å. Amorfní SiO₂: tetraedry SiO₄, Si–O 1,61 Å. Při ~10 nm oxidu (≈ 20 mřížkových konstant Si) je přímé tunelování zanedbatelné.',
+  subtitle: 'Krystal Si: diamantová mřížka a = 5,431 Å, vazba Si–Si 2,35 Å. Amorfní SiO₂: tetraedry SiO₄, Si–O 1,61 Å. Při ~10 nm oxidu (≈ 18 mřížkových konstant Si) je přímé tunelování zanedbatelné.',
   components: [
     c('si_atom', 'ATOM', 'Si – KRYSTAL, a = 5,431 Å, Si–Si 2,35 Å', 0, 1),
     c('o_atom', 'ATOM', 'O – MŮSTKOVÝ KYSLÍK V SiO₂', 2, 0),

@@ -4,30 +4,31 @@
 import { NV1_BOARD } from './presets/nv1Board.js';
 import { PC_POWER } from './presets/pcPower.js';
 import { MY_PC_SYSTEM } from './presets/myPcSystem.js';
+import { LogicEngine } from './logicEngine.js';
 
 export const PRESET_CIRCUITS = {
   nvidia_nv1: NV1_BOARD,
   ai_pc_power: PC_POWER,
   my_pc: MY_PC_SYSTEM,
 
+  // Není to počítač: žádný dekodér instrukcí ani řadič. PC čte ROM bajt po bajtu, sčítačka sčítá dva po sobě
+  // jdoucí bajty a výsledek se kreslí na CRT (X = PC, Y = A + B; 6bitový port bere dolních 6 bitů).
   mini_pc: {
-    name: 'Mini 8-Bit Computer (CPU + ROM + ALU + CRT)',
-    prompt: 'Postav kompletní 8bitový Mini PC počítač s procesorem, pamětí ROM, registry, ALU a výstupem na CRT monitor',
+    name: 'ROM sekvencer 8 bit (PC + ROM + registry + sčítačka + CRT)',
+    prompt: 'Postav čítač programu, který čte ROM bajt po bajtu, sčítá dva po sobě jdoucí bajty a kreslí je na CRT monitor',
     components: [
-      { id: 'clk', type: 'CLOCK', label: 'MASTER CLOCK (14.318M)', x: 50, y: 170, inputs: {}, outputs: { out: 0 } },
-      { id: 'in_run', type: 'INPUT', label: 'CPU RUN / HALT', x: 50, y: 70, inputs: {}, outputs: { out: 1 } },
+      { id: 'clk', type: 'CLOCK', label: 'CLOCK', x: 50, y: 170, inputs: {}, outputs: { out: 0 } },
+      { id: 'in_run', type: 'INPUT', label: 'RUN / HALT (PC.WE)', x: 50, y: 70, inputs: {}, outputs: { out: 1 } },
       { id: 'pc', type: 'REGISTER_8BIT', label: 'PC (PROG COUNTER)', x: 230, y: 110, inputs: { d: 0, clk: 0, we: 1 }, outputs: { q: 0 } },
-      { id: 'probe_pc', type: 'PROBE', label: 'PC ADDR', x: 420, y: 70, inputs: { in: 0 }, outputs: { val: 0 } },
-      { id: 'rom', type: 'ROM', label: '64K INSTRUCTION EEPROM', x: 230, y: 250, inputs: { addr: 0 }, outputs: { dout: 0x42 } },
-      { id: 'reg_a', type: 'REGISTER_8BIT', label: 'ACCUMULATOR (A)', x: 450, y: 170, inputs: { d: 0, clk: 0, we: 1 }, outputs: { q: 0x0F } },
-      { id: 'reg_b', type: 'REGISTER_8BIT', label: 'DATA REG (B)', x: 450, y: 290, inputs: { d: 0, clk: 0, we: 1 }, outputs: { q: 0x05 } },
-      { id: 'alu_xor', type: 'XOR', label: 'ALU XOR UNIT', x: 680, y: 140, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
-      { id: 'alu_and', type: 'AND', label: 'ALU AND UNIT', x: 680, y: 240, inputs: { a: 0, b: 0 }, outputs: { out: 0 } },
-      { id: 'alu_mux', type: 'MUX', label: 'ALU OP SELECT (MUX)', x: 820, y: 170, inputs: { a: 0, b: 0, sel: 0 }, outputs: { out: 0 } },
-      { id: 'probe_alu', type: 'PROBE', label: 'ALU RESULT', x: 950, y: 170, inputs: { in: 0 }, outputs: { val: 0 } },
-      { id: 'screen', type: 'VIRTUAL_SCREEN', label: '64x64 DUAL-PORT CRT', x: 700, y: 340, inputs: { x: 0, y: 0, color: 0x1F, we: 1, clk: 0 }, outputs: {} },
-      { id: 'sw_color', type: 'INPUT', label: 'VRAM COLOR (RGB)', x: 450, y: 440, inputs: {}, outputs: { out: 1 } },
-      { id: 'probe_bus', type: 'PROBE', label: 'INSTRUCTION BUS', x: 450, y: 70, inputs: { in: 0 }, outputs: { val: 0 } },
+      { id: 'probe_pc', type: 'PROBE', label: 'PC ADDR', x: 420, y: 70, inputs: { in: 0 }, outputs: {} },
+      { id: 'rom', type: 'ROM', label: 'ROM 256×8', x: 230, y: 250, inputs: { addr: 0 }, outputs: { dout: 0 } },
+      { id: 'reg_a', type: 'REGISTER_8BIT', label: 'REG A (BAJT Z ROM)', x: 450, y: 170, inputs: { d: 0, clk: 0, we: 1 }, outputs: { q: 0 } },
+      { id: 'reg_b', type: 'REGISTER_8BIT', label: 'REG B (PŘEDCHOZÍ BAJT)', x: 450, y: 290, inputs: { d: 0, clk: 0, we: 1 }, outputs: { q: 0 } },
+      { id: 'alu_add', type: 'ADDER_8BIT', label: 'A + B', x: 680, y: 170, inputs: {}, outputs: {} },
+      { id: 'probe_alu', type: 'PROBE', label: 'A + B', x: 950, y: 170, inputs: { in: 0 }, outputs: {} },
+      { id: 'screen', type: 'VIRTUAL_SCREEN', label: '64x64 CRT (X = PC, Y = A + B)', x: 700, y: 340, inputs: { x: 0, y: 0, color: 0x1F, we: 1, clk: 0 }, outputs: {} },
+      { id: 'sw_color', type: 'CONSTANT', label: 'BARVA 0x1F (AZUROVÁ)', x: 450, y: 440, inputs: {}, outputs: { out: 0x1F } },
+      { id: 'probe_bus', type: 'PROBE', label: 'ROM DATA', x: 450, y: 70, inputs: { in: 0 }, outputs: {} },
       // PC + 1 (without it the program counter never moves)
       { id: 'pc_inc', type: 'ADDER_8BIT', label: 'PC + 1', x: 50, y: 290, inputs: {}, outputs: {} },
       { id: 'pc_one', type: 'CONSTANT', label: '+1', x: 50, y: 420, inputs: {}, outputs: { out: 1 } },
@@ -36,6 +37,7 @@ export const PRESET_CIRCUITS = {
       { from: { id: 'pc', pin: 'q' }, to: { id: 'pc_inc', pin: 'a' } },
       { from: { id: 'pc_one', pin: 'out' }, to: { id: 'pc_inc', pin: 'b' } },
       { from: { id: 'pc_inc', pin: 'sum' }, to: { id: 'pc', pin: 'd' } },
+      { from: { id: 'in_run', pin: 'out' }, to: { id: 'pc', pin: 'we' } },
       { from: { id: 'clk', pin: 'out' }, to: { id: 'pc', pin: 'clk' } },
       { from: { id: 'clk', pin: 'out' }, to: { id: 'reg_a', pin: 'clk' } },
       { from: { id: 'clk', pin: 'out' }, to: { id: 'reg_b', pin: 'clk' } },
@@ -45,22 +47,14 @@ export const PRESET_CIRCUITS = {
       { from: { id: 'pc', pin: 'q' }, to: { id: 'screen', pin: 'x' } },
       { from: { id: 'rom', pin: 'dout' }, to: { id: 'reg_a', pin: 'd' } },
       { from: { id: 'rom', pin: 'dout' }, to: { id: 'probe_bus', pin: 'in' } },
-      { from: { id: 'reg_a', pin: 'q' }, to: { id: 'alu_xor', pin: 'a' } },
-      { from: { id: 'reg_a', pin: 'q' }, to: { id: 'alu_and', pin: 'a' } },
-      { from: { id: 'reg_b', pin: 'q' }, to: { id: 'alu_xor', pin: 'b' } },
-      { from: { id: 'reg_b', pin: 'q' }, to: { id: 'alu_and', pin: 'b' } },
-      { from: { id: 'alu_xor', pin: 'out' }, to: { id: 'alu_mux', pin: 'a' } },
-      { from: { id: 'alu_and', pin: 'out' }, to: { id: 'alu_mux', pin: 'b' } },
-      { from: { id: 'alu_mux', pin: 'out' }, to: { id: 'probe_alu', pin: 'in' } },
-      { from: { id: 'alu_mux', pin: 'out' }, to: { id: 'screen', pin: 'y' } },
+      { from: { id: 'reg_a', pin: 'q' }, to: { id: 'reg_b', pin: 'd' } },
+      { from: { id: 'reg_a', pin: 'q' }, to: { id: 'alu_add', pin: 'a' } },
+      { from: { id: 'reg_b', pin: 'q' }, to: { id: 'alu_add', pin: 'b' } },
+      { from: { id: 'alu_add', pin: 'sum' }, to: { id: 'probe_alu', pin: 'in' } },
+      { from: { id: 'alu_add', pin: 'sum' }, to: { id: 'screen', pin: 'y' } },
       { from: { id: 'sw_color', pin: 'out' }, to: { id: 'screen', pin: 'color' } },
     ],
-    testbench: [
-      { inputs: { clk: 1 }, expected: { pc: 1 } },
-      { inputs: { clk: 0 }, expected: { pc: 1 } },
-    ]
   },
-
   calculator: {
     name: '4-Bit Digital Calculator (Add / Sub + 7-Segment LED)',
     prompt: 'Postav 4bitovou hardwarovou kalkulačku se sčítáním, odčítáním dvojkovým doplňkem a číslicovým 7segmentovým LED displejem',
@@ -102,7 +96,7 @@ export const PRESET_CIRCUITS = {
       { id: 'res1', type: 'PROBE', label: 'R1 (2)', x: 740, y: 280, inputs: { in: 0 }, outputs: { val: 0 } },
       { id: 'res2', type: 'PROBE', label: 'R2 (4)', x: 740, y: 430, inputs: { in: 0 }, outputs: { val: 0 } },
       { id: 'res3', type: 'PROBE', label: 'R3 (8)', x: 740, y: 580, inputs: { in: 0 }, outputs: { val: 0 } },
-      { id: 'carry_out', type: 'PROBE', label: 'OVERFLOW C4', x: 800, y: 650, inputs: { in: 0 }, outputs: { val: 0 } },
+      { id: 'carry_out', type: 'PROBE', label: 'CARRY C4 (SUB: 1 = BEZ VÝPŮJČKY)', x: 800, y: 650, inputs: { in: 0 }, outputs: { val: 0 } },
       { id: 'display', type: 'SEVEN_SEGMENT', label: 'RESULT DISPLAY', x: 860, y: 240, inputs: { b0: 0, b1: 0, b2: 0, b3: 0 }, outputs: { val: 0 } },
     ],
     wires: [
@@ -255,7 +249,7 @@ export const PRESET_CIRCUITS = {
   },
 
   d_ff_register: {
-    name: 'D Flip-Flop Synchronous Latch',
+    name: 'D Flip-Flop (edge-triggered)',
     prompt: 'Vytvoř synchronní klopný obvod D-FF řízený hodinovým pulzem CLK',
     components: [
       { id: 'in_d', type: 'INPUT', label: 'Data In (D)', x: 60, y: 100, inputs: {}, outputs: { out: 1 } },
@@ -381,19 +375,20 @@ export class AiCopilot {
     return PRESET_CIRCUITS.mini_pc;
   }
 
-  // Formal verification testbench runner
-  verifyCircuit(circuit, testbench) {
-    const tests = testbench || [
-      { name: 'Power Rail Check', status: 'PASS' },
-      { name: 'Bus Contention Sweep', status: 'PASS' },
-      { name: 'Logic Level Convergence', status: 'PASS' },
-    ];
-
+  // Skutečná kontrola: obvod se nahraje do vlastního enginu a krokuje. Hlásí jen to, co se opravdu změřilo
+  // (ustálení a zkraty), funkci proti zadání neověřuje.
+  verifyCircuit(circuit) {
+    const e = new LogicEngine();
+    e.loadCircuit(circuit);
+    let oscillating = e.oscillating;
+    for (let i = 0; i < 64 && !oscillating; i++) { e.step(); oscillating = e.oscillating; }
+    const shorts = e._ensureTopology().nets.filter((n) => n.value === 'X' && n.drivers.length > 1).length;
+    const checks = [!oscillating, shorts === 0];
     return {
-      verified: true,
-      passedTests: tests.length,
-      totalTests: tests.length,
-      message: `Všech ${tests.length} testovacích vektorů úspěšně ověřeno (100% verifikace pravdivostní tabulkou).`,
+      verified: checks.every(Boolean),
+      passedTests: checks.filter(Boolean).length,
+      totalTests: checks.length,
+      message: `Simulace 64 hran hodin: ${oscillating ? 'obvod kmitá (neustálí se)' : 'obvod se ustálí'}, zkratů na sítích: ${shorts}. Funkce proti zadání se neověřuje.`,
     };
   }
 }

@@ -156,7 +156,7 @@ export function Toolbar({
     {
       name: 'SEQUENTIAL & MEMORY', short: 'MEMORY',
       items: [
-        { type: 'D_FF', label: 'D Flip-Flop', desc: 'Clocked D Latch' },
+        { type: 'D_FF', label: 'D Flip-Flop', desc: 'Edge-triggered D flip-flop' },
         { type: 'REGISTER_8BIT', label: '8-Bit Register', desc: 'Octal D Register' },
         { type: 'RAM', label: 'SRAM 256×8', desc: 'Static Random Access' },
         { type: 'ROM', label: 'ROM 256×8', desc: 'Read Only Memory' },
@@ -312,7 +312,7 @@ export function Toolbar({
           value={String(freq)}
           onChange={(e) => engine.setFrequency(Number(e.target.value))}
           className="h-7 bg-(--bg-dark) border border-(--line) text-(--accent-amber) px-1.5 outline-none text-[11px] font-bold focus:border-(--accent-amber)"
-          title="Rychlost simulace: hrany hodin za sekundu, MAX = co nejrychleji (karta NV1 má reálné takty 33/50/25 MHz)"
+          title="Rychlost simulace: periody hodin za sekundu, MAX = co nejrychleji (karta NV1 má reálné takty 33/50/25 MHz)"
         >
           <option value="1">1 Hz</option>
           <option value="5">5 Hz</option>

@@ -153,3 +153,47 @@ describe('sonda', () => {
     assert.equal(formatProbe(undefined), '-');
   });
 });
+
+describe('opravy z review knihovny (2026-11-11)', () => {
+  const X = WireState.CONFLICT;
+  it('MUX a DEMUX výstup vždy budí: plovoucí vstup dá X, ne Z', () => {
+    const e = build([sw('a', 1), sw('en', 1), part('t', 'TRI_STATE_BUFFER'), sw('s', 0), part('m', 'MUX'), part('d', 'DEMUX')],
+      [['a', 'out', 't', 'in'], ['en', 'out', 't', 'enable'], ['t', 'out', 'm', 'a'], ['s', 'out', 'm', 'sel'], ['t', 'out', 'd', 'in'], ['s', 'out', 'd', 'sel']]);
+    assert.equal(out(e, 'm').out, 1);
+    set(e, 'en', 0); // budič se odpojí, síť plave
+    assert.equal(out(e, 'm').out, X);
+    assert.equal(out(e, 'd').out0, X);
+    assert.equal(out(e, 'd').out1, 0);
+  });
+
+  it('ROM s kratším obsahem čte nenaprogramované buňky jako 0xFF a výstup budí', () => {
+    const e = new LogicEngine();
+    e.loadCircuit({ components: [sw('a', 200), part('r', 'ROM', { memory: [1, 2, 3] })], wires: [{ from: { id: 'a', pin: 'out' }, to: { id: 'r', pin: 'addr' } }] });
+    assert.equal(out(e, 'r').dout, 0xFF);
+    set(e, 'a', 1);
+    assert.equal(out(e, 'r').dout, 2);
+  });
+
+  it('RAM s neznámou adresou čte X a nic nezapíše', () => {
+    const e = build([sw('a', X), sw('d', 0x99), sw('we', 1), sw('clk'), part('r', 'RAM')],
+      [['a', 'out', 'r', 'addr'], ['d', 'out', 'r', 'din'], ['we', 'out', 'r', 'we'], ['clk', 'out', 'r', 'clk']]);
+    tick(e);
+    assert.equal(out(e, 'r').dout, X);
+    assert.equal(e.components.get('r').memory[0], 0);
+  });
+
+  it('registr s neznámým WE přejde do X (nezapíše potichu)', () => {
+    const e = build([sw('d', 0x11), sw('we', X), sw('clk'), part('r', 'REGISTER_8BIT')],
+      [['d', 'out', 'r', 'd'], ['we', 'out', 'r', 'we'], ['clk', 'out', 'r', 'clk']]);
+    tick(e);
+    assert.equal(out(e, 'r').q, X);
+  });
+
+  it('odpojený vstup se vrátí na výchozí úroveň (nedrží poslední hodnotu drátu)', () => {
+    const e = build([sw('a', 1), sw('b', 1), part('g', 'AND')], [['a', 'out', 'g', 'a'], ['b', 'out', 'g', 'b']]);
+    assert.equal(out(e, 'g').out, 1);
+    e.removeWire(e.wires.find((w) => w.to.pin === 'b').id);
+    e.propagate();
+    assert.equal(out(e, 'g').out, 0);
+  });
+});

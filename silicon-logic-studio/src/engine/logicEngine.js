@@ -57,7 +57,15 @@ export const PRIMITIVE_PINS = {
   BUS_MERGER: { inputs: { b0: 0, b1: 0, b2: 0, b3: 0, b4: 0, b5: 0, b6: 0, b7: 0 }, outputs: { bus: 0 } },
   RAM: { inputs: { addr: 0, din: 0, we: 0, clk: 0 }, outputs: { dout: 0 } },
   ROM: { inputs: { addr: 0 }, outputs: { dout: 0 } },
-  VIRTUAL_SCREEN: { inputs: { x: 0, y: 0, color: 0, we: 0, clk: 0 }, outputs: {} },
+  // port A = zápis (x, y, color, we, clk); port B = skener obrazovky, který na každý takt postoupí o pixel
+  VIRTUAL_SCREEN: { inputs: { x: 0, y: 0, color: 0, we: 0, clk: 0 }, outputs: { hsync: 0, vsync: 0 } },
+  // PLAN_PROJEKTU.md §4.3–4.4
+  MULTIPLIER_8BIT: { inputs: { a: 0, b: 0 }, outputs: { p: 0 } },
+  BARREL_SHIFTER_8BIT: { inputs: { in: 0, shift: 0 }, outputs: { out: 0 } },
+  FPU_HALF: { inputs: { a: 0, b: 0, op: 0 }, outputs: { out: 0 } }, // op 0 = a + b, 1 = a × b (IEEE 754 binary16)
+  MMIO_DECODER: { inputs: { addr: 0, we: 0 }, outputs: { sel: 0, reg: 0, io_we: 0, mem_we: 0 } },
+  IRQ_CONTROLLER: { inputs: { irq0: 0, irq1: 0, irq2: 0, mask: 7, ack: 0, clk: 0 }, outputs: { int: 0, vector: 0 } },
+  DMA_CONTROLLER: { inputs: { start: 0, src: 0, dst: 0, len: 0, din: 0, clk: 0 }, outputs: { raddr: 0, waddr: 0, dout: 0, we: 0, busy: 0, irq: 0 } },
   PROBE: { inputs: { in: 0 }, outputs: {} },
   SEVEN_SEGMENT: { inputs: { b0: 0, b1: 0, b2: 0, b3: 0 }, outputs: {} },
   NMOS: { inputs: { g: 0, s: Z, d: Z }, outputs: {} },
@@ -72,8 +80,40 @@ const PRIMITIVE_WIDTHS = {
   ADDER_8BIT: { a: 8, b: 8, sum: 8 }, COMPARATOR_8BIT: { a: 8, b: 8 },
   BUS_SPLITTER: { bus: 8 }, BUS_MERGER: { bus: 8 },
   RAM: { addr: 8, din: 8, dout: 8 }, ROM: { addr: 8, dout: 8 },
-  VIRTUAL_SCREEN: { x: 6, y: 6, color: 8 },
+  VIRTUAL_SCREEN: { x: 9, y: 8, color: 16 }, // stačí i pro 320×240 RGB565
+  MULTIPLIER_8BIT: { a: 8, b: 8, p: 16 }, BARREL_SHIFTER_8BIT: { in: 8, shift: 3, out: 8 },
+  FPU_HALF: { a: 16, b: 16, out: 16 }, MMIO_DECODER: { addr: 16, reg: 12 }, IRQ_CONTROLLER: { mask: 3, vector: 2 },
+  DMA_CONTROLLER: { src: 8, dst: 8, len: 8, din: 8, raddr: 8, waddr: 8, dout: 8 },
 };
+
+// ---- virtuální monitor: rozlišení a barevný režim nese součástka (cols, rows, colorMode)
+export const SCREEN_MODES = ['MONO', 'INDEXED8', 'RGB565'];
+export function screenInfo(comp) {
+  return { cols: comp.cols || 64, rows: comp.rows || 64, mode: SCREEN_MODES.includes(comp.colorMode) ? comp.colorMode : 'INDEXED8' };
+}
+/** Barva pixelu z VRAM jako [r, g, b] 0–255. INDEXED8 = pevná paleta 3-3-2. */
+export function screenRgb(comp, p) {
+  const { mode } = screenInfo(comp);
+  if (mode === 'MONO') return p & 1 ? [255, 255, 255] : [0, 0, 0];
+  if (mode === 'RGB565') return [Math.round(((p >> 11) & 31) * 255 / 31), Math.round(((p >> 5) & 63) * 255 / 63), Math.round((p & 31) * 255 / 31)];
+  return [((p >> 5) & 7) * 36, ((p >> 2) & 7) * 36, (p & 3) * 85];
+}
+
+// ---- sonda: zobrazení hodnoty sběrnice (PLAN §5.4)
+export const PROBE_FORMATS = ['DEC', 'HEX', 'BIN', 'ASCII'];
+export function formatProbe(v, format = 'DEC') {
+  if (v === undefined || v === null) return '-';
+  if (typeof v !== 'number') return `${v}`; // Z / X
+  if (format === 'HEX') return `0x${(v >>> 0).toString(16).toUpperCase()}`;
+  if (format === 'BIN') return (v >>> 0).toString(2);
+  if (format === 'ASCII') return v >= 32 && v < 127 ? String.fromCharCode(v) : '·';
+  return `${v}`;
+}
+
+const f16buf = new Float16Array(1);
+const u16buf = new Uint16Array(f16buf.buffer);
+const halfToNum = (bits) => { u16buf[0] = bits; return f16buf[0]; };
+const numToHalf = (x) => { f16buf[0] = x; return u16buf[0]; }; // zaokrouhlí k nejbližší sudé jako hardware
 
 const SWITCH_TYPES = new Set(['NMOS', 'PMOS']);
 // Pins of these parts never drive a net; they only carry it (labels, connectors, transistor terminals)
@@ -757,10 +797,69 @@ export class LogicEngine {
         break;
       }
       case 'VIRTUAL_SCREEN': {
-        if (!comp.vram) comp.vram = new Uint8Array(64 * 64);
-        if (this._rising(comp, 'clk') && inp.we === 1 && isLogicValue(inp.x) && isLogicValue(inp.y) && isLogicValue(inp.color)) {
-          comp.vram[(inp.y & 63) * 64 + (inp.x & 63)] = inp.color & 0xFF;
+        const { cols, rows, mode } = screenInfo(comp);
+        if (!comp.vram || comp.vram.length !== cols * rows) comp.vram = mode === 'RGB565' ? new Uint16Array(cols * rows) : new Uint8Array(cols * rows);
+        if (!this._rising(comp, 'clk')) break;
+        if (inp.we === 1 && isLogicValue(inp.x) && isLogicValue(inp.y) && isLogicValue(inp.color) && inp.x < cols && inp.y < rows) {
+          comp.vram[inp.y * cols + inp.x] = mode === 'MONO' ? inp.color & 1 : inp.color; // typované pole ořízne na 8/16 bitů
+          comp.vramRev = (comp.vramRev || 0) + 1;
         }
+        comp.scan = ((comp.scan || 0) + 1) % (cols * rows);
+        out.hsync = comp.scan % cols === cols - 1 ? 1 : 0;
+        out.vsync = comp.scan >= cols * (rows - 1) ? 1 : 0;
+        break;
+      }
+      case 'MULTIPLIER_8BIT':
+        out.p = isLogicValue(inp.a) && isLogicValue(inp.b) ? (inp.a & 0xFF) * (inp.b & 0xFF) : X;
+        break;
+      case 'BARREL_SHIFTER_8BIT': {
+        if (!isLogicValue(inp.in) || !isLogicValue(inp.shift)) { out.out = X; break; }
+        const v = inp.in & 0xFF; const s = inp.shift & 7;
+        out.out = ((v << s) | (v >> (8 - s))) & 0xFF;
+        break;
+      }
+      case 'FPU_HALF': {
+        if (!isLogicValue(inp.a) || !isLogicValue(inp.b) || bit(inp.op) === null) { out.out = X; break; }
+        const a = halfToNum(inp.a & 0xFFFF); const b = halfToNum(inp.b & 0xFFFF);
+        out.out = numToHalf(inp.op ? a * b : a + b); // součet i součin dvou binary16 je v double přesný → jediné zaokrouhlení
+        break;
+      }
+      case 'MMIO_DECODER': {
+        if (!isLogicValue(inp.addr)) { out.sel = X; out.reg = X; out.io_we = X; out.mem_we = X; break; }
+        const sel = (inp.addr & 0xFFFF) >= 0xF000 ? 1 : 0;
+        const we = bit(inp.we);
+        out.sel = sel;
+        out.reg = inp.addr & 0xFFF;
+        out.io_we = we === null ? X : we & sel;
+        out.mem_we = we === null ? X : we & (1 - sel);
+        break;
+      }
+      case 'IRQ_CONTROLLER': {
+        // hrana na lince se zachytí hned (i krátký pulz), ACK na taktu smaže právě obsluhovanou linku
+        let pending = comp.state || 0;
+        for (let i = 0; i < 3; i++) if (this._rising(comp, `irq${i}`)) pending |= 1 << i;
+        const active = () => pending & (isLogicValue(inp.mask) ? inp.mask : 0) & 7;
+        if (this._rising(comp, 'clk') && inp.ack === 1 && active()) pending &= ~(active() & -active());
+        comp.state = pending;
+        const a = active();
+        out.int = a ? 1 : 0;
+        out.vector = a ? 31 - Math.clz32(a & -a) : 0;
+        break;
+      }
+      case 'DMA_CONTROLLER': {
+        const s = comp.state || (comp.state = { busy: 0, i: 0, src: 0, dst: 0, len: 0 });
+        if (this._rising(comp, 'clk')) {
+          out.irq = 0;
+          if (s.busy && s.i < s.len) {
+            out.raddr = (s.src + s.i) & 0xFF; out.waddr = (s.dst + s.i) & 0xFF; out.we = 1; s.i++;
+          } else if (s.busy) {
+            s.busy = 0; out.we = 0; out.irq = 1; // poslední bajt cíl zapsal právě na téhle hraně
+          } else if (inp.start === 1 && isLogicValue(inp.src) && isLogicValue(inp.dst) && isLogicValue(inp.len)) {
+            Object.assign(s, { busy: 1, i: 0, src: inp.src & 0xFF, dst: inp.dst & 0xFF, len: inp.len & 0xFF });
+          }
+        }
+        out.busy = s.busy;
+        out.dout = out.we === 1 ? inp.din : 0; // data jdou z RAM rovnou na zápisový port cíle
         break;
       }
       case 'PROBE':

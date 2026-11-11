@@ -110,12 +110,13 @@ export function Toolbar({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleToggleRun]);
 
-  const handleStep = () => {
+  // edges: 1 = půlkrok (jedna hrana hodin), 2 = celý takt
+  const handleStep = (edges = 1) => {
     if (engine.isRunning) {
       engine.stop();
       setIsRunning(false);
     }
-    engine.stepClock();
+    for (let i = 0; i < edges; i++) engine.stepClock();
     audioEngine.playRelayClick(1.1);
   };
 
@@ -125,9 +126,9 @@ export function Toolbar({
   };
 
   // Piny i výchozí stav doplní engine (ensurePins / init zařízení)
-  const addComponent = (type, label) => {
+  const addComponent = (type, label, props) => {
     audioEngine.playRelayClick(1.0);
-    const comp = { ...newPlacement(type), type, label: label || type, inputs: {}, outputs: {} };
+    const comp = { ...newPlacement(type), type, label: label || type, inputs: {}, outputs: {}, ...props };
     if (type === 'CRYSTAL') comp.freqHz = 14.31818e6;
     engine.addComponent(comp);
     setActiveCategory(null);
@@ -169,7 +170,20 @@ export function Toolbar({
         { type: 'MUX', label: '2:1 Multiplexer', desc: 'Data Path Selector' },
         { type: 'PROBE', label: 'Logic Probe', desc: 'Signal Level Meter' },
         { type: 'SEVEN_SEGMENT', label: '7-Segment Display', desc: 'Hex/Dec LED Digit Display' },
-        { type: 'VIRTUAL_SCREEN', label: 'CRT Display', desc: '64x64 Dual-Port VRAM' },
+        { type: 'VIRTUAL_SCREEN', label: 'CRT Display 64×64', desc: 'Dual-Port VRAM, 8bit paleta 3-3-2, H/V-Sync' },
+        { type: 'VIRTUAL_SCREEN', label: 'CRT Display 160×120 MONO', desc: 'Dual-Port VRAM, 1 bit na pixel', props: { cols: 160, rows: 120, colorMode: 'MONO' } },
+        { type: 'VIRTUAL_SCREEN', label: 'CRT Display 320×240 RGB565', desc: 'Dual-Port VRAM, 16 bitů na pixel', props: { cols: 320, rows: 240, colorMode: 'RGB565' } },
+      ],
+    },
+    {
+      name: 'CPU ↔ GPU & AKCELERÁTORY', short: 'GPU',
+      items: [
+        { type: 'MULTIPLIER_8BIT', label: 'HW Multiplier 8×8', desc: 'Součin 16 bitů' },
+        { type: 'BARREL_SHIFTER_8BIT', label: 'Barrel Shifter', desc: 'Rotace 8 bitů doleva o 0–7' },
+        { type: 'FPU_HALF', label: 'FPU Half-Precision', desc: 'IEEE 754 binary16: op 0 = a + b, 1 = a × b' },
+        { type: 'MMIO_DECODER', label: 'MMIO Decoder', desc: 'Adresy 0xF000–0xFFFF → registry GPU' },
+        { type: 'DMA_CONTROLLER', label: 'DMA Controller', desc: 'Kopíruje blok RAM → VRAM, po dokončení IRQ' },
+        { type: 'IRQ_CONTROLLER', label: 'Interrupt Controller', desc: 'IRQ0 V-Sync, IRQ1 časovač, IRQ2 klávesnice' },
       ],
     },
     { name: 'DIAMOND EDGE 3D (NV1, 1995)', short: 'NV1', items: itemsOf(NV1_DEVICES) },
@@ -250,8 +264,8 @@ export function Toolbar({
                   <div className="meta px-3 py-1.5 border-b border-(--line)">{group.name}</div>
                   {group.items.map((item) => (
                     <button
-                      key={item.type}
-                      onClick={() => addComponent(item.type, item.label)}
+                      key={item.label}
+                      onClick={() => addComponent(item.type, item.label, item.props)}
                       title={item.desc}
                       className="w-full text-left px-3 py-1.5 hover:bg-(--bg-card-light) text-gray-300 hover:text-(--accent-amber) transition-colors flex items-center justify-between gap-3 group"
                     >
@@ -277,13 +291,22 @@ export function Toolbar({
           <span className="max-[1400px]:hidden">{isRunning ? 'HALT' : 'RUN'}</span>
         </button>
         <button
-          onClick={handleStep}
+          onClick={() => handleStep(1)}
           disabled={isRunning}
           className={`${btn(false)} disabled:opacity-30`}
-          title="Krokovat o jednu hranu hodin"
+          title="Půlkrok: jedna hrana hodin"
         >
           <SkipForward size={12} />
-          <span className="max-[1400px]:hidden">STEP</span>
+          <span className="max-[1400px]:hidden">½ STEP</span>
+        </button>
+        <button
+          onClick={() => handleStep(2)}
+          disabled={isRunning}
+          className={`${btn(false)} disabled:opacity-30`}
+          title="Krok o celý takt hodin (dvě hrany)"
+        >
+          <SkipForward size={12} />
+          <span className="max-[1400px]:hidden">CYCLE</span>
         </button>
         <select
           value={String(freq)}

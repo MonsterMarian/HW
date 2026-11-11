@@ -66,6 +66,18 @@ export default function App() {
     setProjectId(id);
   }, [engine, projectId, project, hierarchyStack, viewMode]);
 
+  // Tab přepíná Logic View ↔ Physics View (PLAN §2), pokud je projekt oba má
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Tab' || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if (!['schematic', 'physics'].every((v) => project.views.includes(v))) return;
+      e.preventDefault();
+      setViewMode((v) => (v === 'physics' ? 'schematic' : 'physics'));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [project]);
+
   useEffect(() => {
     if (!drillHint) return;
     const t = setTimeout(() => setDrillHint(null), 2200);

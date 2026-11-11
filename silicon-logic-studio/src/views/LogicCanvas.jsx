@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { audioEngine } from '../engine/audioEngine';
-import { WireState } from '../engine/logicEngine';
+import { screenInfo, formatProbe, PROBE_FORMATS } from '../engine/logicEngine';
+import { paintScreen } from './canvas/screen';
 import { componentDims, NV1_CARD } from '../engine/boardLayout';
 import { THEME, signalStyle, fmtTime } from './canvas/theme';
 import { makeLayout, viewPos, setViewPos, isDevice, isBoxPart, isOffBoard, labelTag, routeOrtho, routeAround, tracePolyline } from './canvas/geometry';
@@ -70,7 +71,6 @@ export function LogicCanvas({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   const animFrameRef = useRef(null);
-  const animTimeRef = useRef(0);
   const layoutRef = useRef(null);
 
   // Keyboard shortcut listener: Backspace or Esc to navigate up
@@ -166,7 +166,7 @@ export function LogicCanvas({
     // ==========================================
     // ULTRA-REALISTIC HARDWARE PCB RENDERER
     // ==========================================
-    function drawRealisticHardwarePCB(ctx, comp, isSelected, time) {
+    function drawRealisticHardwarePCB(ctx, comp, isSelected) {
       const { w, h } = getDims(comp);
       ctx.save();
 
@@ -193,7 +193,7 @@ export function LogicCanvas({
         return;
       }
       if (comp.type === 'VIRTUAL_SCREEN') {
-        drawRealisticCRT(ctx, comp, w, h, isSelected, time);
+        drawRealisticCRT(ctx, comp, w, h, isSelected);
         ctx.restore();
         return;
       }
@@ -453,7 +453,7 @@ export function LogicCanvas({
       drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
     }
 
-    function drawRealisticCRT(ctx, comp, w, h, isSelected, time) {
+    function drawRealisticCRT(ctx, comp, w, h, isSelected) {
       ctx.fillStyle = '#0E121A';
       roundRect(ctx, comp.x, comp.y, w, h, 8);
       ctx.fill();
@@ -463,7 +463,7 @@ export function LogicCanvas({
 
       ctx.fillStyle = THEME.label;
       ctx.font = `700 9px ${THEME.mono}`;
-      ctx.fillText('VIRTUAL CRT-64 // DUAL-PORT', comp.x + 12, comp.y + 16);
+      ctx.fillText(`CRT ${screenInfo(comp).cols}x${screenInfo(comp).rows} ${screenInfo(comp).mode} // DUAL-PORT`, comp.x + 12, comp.y + 16);
 
       const scrX = comp.x + 12;
       const scrY = comp.y + 26;
@@ -471,66 +471,7 @@ export function LogicCanvas({
       roundRect(ctx, scrX, scrY, 128, 128, 4);
       ctx.fill();
 
-      if (comp.label?.includes('NV1') || comp.label?.includes('3D') || engine.components.has('nv1_core')) {
-        // Live 1995 NV1 3D Quadratic Curved Mesh Demo
-        const cx = scrX + 64;
-        const cy = scrY + 54;
-        const t = (time || 0) * 0.0018;
-
-        ctx.save();
-        ctx.strokeStyle = THEME.high;
-        ctx.lineWidth = 1.4;
-        ctx.shadowColor = THEME.high;
-        ctx.shadowBlur = 8;
-
-        const numLines = 5;
-        for (let i = -numLines; i <= numLines; i++) {
-          const u = i / numLines;
-          ctx.beginPath();
-          for (let j = -numLines; j <= numLines; j++) {
-            const v = j / numLines;
-            // Quadratic curved surface (saddle hyperboloid)
-            const x3d = u * 36;
-            const y3d = v * 36;
-            const z3d = (u * u - v * v) * 20;
-
-            const cosY = Math.cos(t);
-            const sinY = Math.sin(t);
-            const rx = x3d * cosY + z3d * sinY;
-            const rz = -x3d * sinY + z3d * cosY;
-            const ry = y3d * Math.cos(0.5) - rz * Math.sin(0.5);
-
-            const projX = cx + rx;
-            const projY = cy + ry;
-
-            if (j === -numLines) ctx.moveTo(projX, projY);
-            else ctx.lineTo(projX, projY);
-          }
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        // Retro 1995 3D Demo Overlay
-        ctx.fillStyle = THEME.high;
-        ctx.font = `800 8px ${THEME.mono}`;
-        ctx.fillText('NVIDIA NV1 (1995)', scrX + 6, scrY + 112);
-        ctx.fillStyle = '#10B981';
-        ctx.font = `600 7px ${THEME.mono}`;
-        ctx.fillText('QTM 3D ENGINE: 60 FPS', scrX + 6, scrY + 122);
-      } else if (comp.vram) {
-        for (let y = 0; y < 64; y++) {
-          for (let x = 0; x < 64; x++) {
-            const pixel = comp.vram[y * 64 + x];
-            if (pixel) {
-              const r = ((pixel >> 5) & 7) * 36;
-              const g = ((pixel >> 2) & 7) * 36;
-              const b = (pixel & 3) * 85;
-              ctx.fillStyle = `rgb(${r},${g},${b})`;
-              ctx.fillRect(scrX + x * 2, scrY + y * 2, 2, 2);
-            }
-          }
-        }
-      }
+      paintScreen(ctx, comp, scrX, scrY, 128, 128); // jen skutečný obsah VRAM
 
       // CRT Scanlines
       ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
@@ -549,15 +490,17 @@ export function LogicCanvas({
       ctx.stroke();
 
       const val = shownValue(comp);
-      const strVal = val === WireState.HIGH_Z ? 'Z' : val !== undefined ? `${val}` : '-';
+      const strVal = formatProbe(val, comp.format);
 
       ctx.fillStyle = '#030508';
       roundRect(ctx, comp.x + 30, comp.y + 24, 48, 38, 4);
       ctx.fill();
 
       ctx.fillStyle = val === 1 ? THEME.high : '#475569';
-      ctx.font = `700 24px ${THEME.mono}`;
-      ctx.fillText(strVal, comp.x + 46, comp.y + 51);
+      ctx.font = `700 ${strVal.length > 2 ? Math.max(8, Math.floor(66 / strVal.length)) : 24}px ${THEME.mono}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(strVal, comp.x + 54, comp.y + 51);
+      ctx.textAlign = 'left';
 
       drawPhotorealisticPadsAndLeads(ctx, comp, w, h);
     }
@@ -930,7 +873,7 @@ export function LogicCanvas({
         ctx.fill();
       } else if (comp.type === 'PROBE') {
         const val = shownValue(comp);
-        const str = val === WireState.HIGH_Z ? 'Z' : val !== undefined ? `${val}` : '-';
+        const str = formatProbe(val, comp.format);
         const isHigh = val === 1;
 
         const cx = comp.x + w / 2;
@@ -949,39 +892,28 @@ export function LogicCanvas({
         ctx.stroke();
 
         ctx.fillStyle = isHigh ? THEME.high : THEME.text;
-        ctx.font = `700 16px ${THEME.mono}`;
-        ctx.fillText(str, cx - 5, cy + 5);
+        ctx.font = `700 ${str.length > 2 ? Math.max(7, Math.floor(46 / str.length)) : 16}px ${THEME.mono}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(str, cx, cy + 5);
+        ctx.textAlign = 'left';
 
         ctx.fillStyle = THEME.muted;
         ctx.font = `700 7px ${THEME.mono}`;
-        ctx.fillText('PROBE', comp.x + 4, comp.y + 8);
+        ctx.fillText(comp.format && comp.format !== 'DEC' ? comp.format : 'PROBE', comp.x + 4, comp.y + 8);
       } else if (comp.type === 'VIRTUAL_SCREEN') {
         ctx.strokeRect(comp.x, comp.y, w, h);
         ctx.fillRect(comp.x, comp.y, w, h);
 
         ctx.fillStyle = THEME.label;
         ctx.font = `700 9px ${THEME.mono}`;
-        ctx.fillText('GPU DISPLAY // 64x64', comp.x + 10, comp.y + 16);
+        const scr = screenInfo(comp);
+        ctx.fillText(`GPU DISPLAY // ${scr.cols}x${scr.rows} ${scr.mode}`, comp.x + 10, comp.y + 16);
 
         const scrX = comp.x + 12;
         const scrY = comp.y + 24;
         ctx.fillStyle = '#000000';
         ctx.fillRect(scrX, scrY, 128, 128);
-
-        if (comp.vram) {
-          for (let y = 0; y < 64; y++) {
-            for (let x = 0; x < 64; x++) {
-              const pixel = comp.vram[y * 64 + x];
-              if (pixel) {
-                const r = ((pixel >> 5) & 7) * 36;
-                const g = ((pixel >> 2) & 7) * 36;
-                const b = (pixel & 3) * 85;
-                ctx.fillStyle = `rgb(${r},${g},${b})`;
-                ctx.fillRect(scrX + x * 2, scrY + y * 2, 2, 2);
-              }
-            }
-          }
-        }
+        paintScreen(ctx, comp, scrX, scrY, 128, 128);
 
         drawSchematicLeads(ctx, comp, w, h, strokeColor);
       } else if (comp.type === 'SEVEN_SEGMENT') {
@@ -1220,7 +1152,6 @@ export function LogicCanvas({
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
-    const animTime = animTimeRef.current;
     const layout = freshLayout();
     const schematic = displayMode === 'schematic';
     const z = viewState.zoom;
@@ -1377,7 +1308,7 @@ export function LogicCanvas({
         const p = viewPos(comp, 'schematic');
         painters.drawSchematicComponent(ctx, p.x === comp.x && p.y === comp.y ? comp : { ...comp, x: p.x, y: p.y }, isSelected);
       } else {
-        painters.drawRealisticHardwarePCB(ctx, comp, isSelected, animTime);
+        painters.drawRealisticHardwarePCB(ctx, comp, isSelected);
       }
     };
     for (const comp of comps) if (schematic || (!isOffBoard(comp) && !(board === 'mypc' && comp.type === 'MYPC_BOARD'))) drawComp(comp); // deska B360 = podklad
@@ -1394,8 +1325,7 @@ export function LogicCanvas({
   // Animation Loop
   useEffect(() => {
     let active = true;
-    const loop = (time) => {
-      animTimeRef.current = time;
+    const loop = () => {
       renderCanvas();
       if (active) animFrameRef.current = requestAnimationFrame(loop);
     };
@@ -1491,6 +1421,10 @@ export function LogicCanvas({
       } else if (comp.type === 'CLOCK') {
         engine.stepClock();
         audioEngine.playRelayClick(1.1);
+      } else if (comp.type === 'PROBE') {
+        // klik na sondu přepíná zobrazení hodnoty: DEC → HEX → BIN → ASCII
+        comp.format = PROBE_FORMATS[(PROBE_FORMATS.indexOf(comp.format || 'DEC') + 1) % PROBE_FORMATS.length];
+        engine.notify();
       } else if (typeof comp.knob === 'number') {
         // otočný knoflík (regulátor ventilátorů): klik = o 10 % víc, po 100 % zpět na 0 %
         comp.knob = comp.knob >= 100 ? 0 : Math.min(100, comp.knob + 10);

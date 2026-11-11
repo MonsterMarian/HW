@@ -9,6 +9,7 @@ import { DEVICES } from '../../engine/devices/index.js';
 import { std, textTexture, ribbonGeometry, mergeGeos, isActive } from './common.js';
 import * as P from './packages.js';
 import { createRouter } from './pcbRouter.js';
+import { paintScreen } from '../canvas/screen.js';
 
 export const BOARD_SCALE = 0.05; // 2D px → 3D units (648 px card ≈ 32.4 units)
 const S = BOARD_SCALE;
@@ -139,15 +140,7 @@ function drawVram(c, comp, tex) {
   const W = c.canvas.width, H = c.canvas.height;
   c.fillStyle = '#050605';
   c.fillRect(0, 0, W, H);
-  if (comp.vram) {
-    const px = W / 64, py = H / 64;
-    for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
-      const p = comp.vram[y * 64 + x];
-      if (!p) continue;
-      c.fillStyle = `rgb(${((p >> 5) & 7) * 36},${((p >> 2) & 7) * 36},${(p & 3) * 85})`;
-      c.fillRect(x * px, y * py, px, py);
-    }
-  }
+  paintScreen(c, comp, 0, 0, W, H);
   tex.needsUpdate = true;
 }
 

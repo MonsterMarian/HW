@@ -573,6 +573,100 @@ def('samsung_mkx', {
   drills: { sata: 'cell_parity', cores: 'FULL_ADDER', ftl: 'cell_sram', dram: 'cell_arbiter', ecc: 'cell_parity', nand: 'MUX', tw: 'cell_nand' },
 });
 
+// ================================================================ SSD 970 EVO Plus (řadič Phoenix) a monitor VA249HE
+// Zdroje: NVM Express Base Spec 1.3, JEDEC JESD209-4 (LPDDR4), Toggle DDR / ONFI (rozhraní NAND), VESA/DVI (TMDS),
+// obecná stavba scaleru a T-CON monitoru (konkrétní čipy VA249HE nezjištěné – teardown neexistuje).
+def('nvme_host', {
+  name: 'Rozhraní NVMe 1.3 (PCIe 3.0 x4) — fronty příkazů',
+  subtitle: 'NVM Express 1.3: ovladač zapisuje příkazy (64 B) do front v paměti počítače (submission queue) a „zazvoní“ zápisem do registru doorbell; řadič si příkaz přečte DMA přes PCIe, provede ho a výsledek zapíše do fronty dokončení (completion queue) + přerušení MSI-X. Až 64 Ki front po 64 Ki příkazech; Windows používá jednu frontu na jádro CPU.',
+  components: [
+    blk('pcie', 'PCIe 3.0 x4 (ENDPOINT)', 50, 50, [], ['TLP'], '3500 MB/s ČTENÍ', 210, 80),
+    blk('db', 'REGISTRY DOORBELL', 50, 170, [], ['FRONTA'], 'ZÁPIS = NOVÝ PŘÍKAZ', 210, 70),
+    blk('sq', 'ČTENÍ SUBMISSION QUEUE (DMA)', 320, 50, ['TLP', 'FRONTA'], ['PŘÍKAZ'], '64 B PŘÍKAZ', 220, 80),
+    blk('arb', 'ARBITRÁŽ FRONT', 320, 170, ['PŘÍKAZ'], ['DO FTL'], 'ROUND ROBIN', 220, 70),
+    blk('prp', 'PRP / SGL → DMA DAT', 590, 50, [], [], 'ADRESY BUFFERŮ V RAM', 220, 80),
+    blk('cq', 'COMPLETION QUEUE + MSI-X', 590, 170, [], [], 'HOTOVO → PŘERUŠENÍ', 220, 70),
+  ],
+  wires: [w('pcie.TLP', 'sq.TLP'), w('db.FRONTA', 'sq.FRONTA'), w('sq.PŘÍKAZ', 'arb.PŘÍKAZ')],
+  drills: { pcie: 'MUX', db: 'cell_sram', sq: 'cell_sram', arb: 'cell_arbiter', prp: 'FULL_ADDER', cq: 'cell_sram' },
+});
+
+def('ssd_ftl', {
+  name: 'FTL — překlad logických bloků na stránky NAND',
+  subtitle: 'Obecná stavba řadiče SSD: NAND nejde přepsat na místě, jen smazat celý blok (stovky stránek) a zapsat stránku jednou. FTL proto mapuje logickou adresu (LBA) na fyzickou stránku, nová data píše jinam a starou stránku označí za neplatnou; úklid (garbage collection) přesune platná data a blok smaže; rozkládání opotřebení (wear leveling) střídá bloky. Mapa leží v LPDDR4 (zhruba 1 B DRAM na 1 KB kapacity). Konkrétní algoritmus Samsung nezveřejňuje.',
+  components: [
+    blk('map', 'MAPA LBA → STRÁNKA', 50, 50, [], ['FYZ. ADRESA'], 'V LPDDR4', 220, 80),
+    blk('alloc', 'ALOKACE VOLNÝCH STRÁNEK', 330, 50, [], ['STRÁNKA'], 'ZÁPIS VŽDY NA NOVÉ MÍSTO', 220, 80),
+    blk('valid', 'TABULKA PLATNOSTI', 50, 170, [], [], 'NEPLATNÉ STRÁNKY K ÚKLIDU', 220, 70),
+    blk('gc', 'GARBAGE COLLECTION', 330, 170, [], [], 'PŘESUN + SMAZÁNÍ BLOKU', 220, 70),
+    blk('wl', 'WEAR LEVELING', 610, 50, [], [], 'POČÍTADLA SMAZÁNÍ BLOKŮ', 220, 70),
+    blk('trim', 'TRIM / DEALLOCATE', 610, 150, [], [], 'OS HLÁSÍ SMAZANÉ SOUBORY', 220, 70),
+  ],
+  wires: [],
+  drills: { map: 'cell_sram', alloc: 'cell_arbiter', valid: 'cell_sram', gc: 'cell_lt', wl: 'FULL_ADDER', trim: 'cell_decoder' },
+});
+
+def('nand_channel', {
+  name: 'Kanál NAND (Toggle DDR) — příkazy, adresy, data',
+  subtitle: 'Rozhraní Toggle DDR (Samsung) / ONFI: 8bitová sběrnice DQ sdílená více čipy NAND na kanálu, výběr čipu CE#, signály CLE/ALE určují, zda bajt je příkaz nebo adresa, data se přenáší na obě hrany strobu DQS, R/B# hlásí, že čip ještě programuje/maže. Typické operace: čtení stránky (~desítky µs), zápis stránky (stovky µs), smazání bloku (ms).',
+  components: [
+    blk('q', 'FRONTA OPERACÍ KANÁLU', 50, 50, [], ['OPERACE'], 'ČTENÍ / ZÁPIS / MAZÁNÍ', 210, 80),
+    blk('seq', 'SEKVENCER: PŘÍKAZ · ADRESA · DATA', 320, 50, ['OPERACE'], ['SBĚRNICE'], 'CLE / ALE / WE# / RE#', 240, 80),
+    blk('ce', 'VÝBĚR ČIPU CE#', 320, 170, [], [], 'VÍC ČIPŮ NA KANÁL', 240, 70),
+    blk('phy', 'DQ[7:0] + DQS (DDR)', 620, 50, ['SBĚRNICE'], [], 'OBĚ HRANY STROBU', 220, 80),
+    blk('rb', 'R/B# (ČIP ZANEPRÁZDNĚN)', 620, 170, [], [], 'ČEKÁNÍ NA PROGRAMOVÁNÍ', 220, 70),
+  ],
+  wires: [w('q.OPERACE', 'seq.OPERACE'), w('seq.SBĚRNICE', 'phy.SBĚRNICE')],
+  drills: { q: 'cell_sram', seq: 'cell_decoder', ce: 'cell_decoder', phy: 'MUX', rb: 'cell_lt' },
+});
+
+def('lpddr4_ctrl', {
+  name: 'Řadič LPDDR4 (cache mapy FTL)',
+  subtitle: 'JEDEC JESD209-4: LPDDR4 má 2 nezávislé kanály po 16 bitech na čip, adresy a příkazy jdou po 6bitové sběrnici CA ve více taktech, 8 bank na kanál, napětí 1,1 V. 970 EVO Plus 500 GB má 512 MB LPDDR4 pro mapu FTL.',
+  components: [
+    blk('q', 'FRONTA Z FTL', 50, 50, [], ['PŘÍKAZ'], '', 200, 70),
+    blk('sch', 'PLÁNOVAČ (8 BANK)', 320, 50, ['PŘÍKAZ'], ['CA'], 'OBNOVA, OTEVŘENÉ ŘÁDKY', 210, 70),
+    blk('ca', 'SBĚRNICE CA 6 BIT', 590, 50, ['CA'], [], 'PŘÍKAZ VE VÍCE TAKTECH', 210, 70),
+    blk('dq', 'DQ 2 × 16 BIT', 590, 150, [], [], '', 210, 70),
+  ],
+  wires: [w('q.PŘÍKAZ', 'sch.PŘÍKAZ'), w('sch.CA', 'ca.CA')],
+  drills: { q: 'cell_sram', sch: 'cell_arbiter', ca: 'MUX', dq: 'MUX' },
+});
+
+def('lcd_scaler', {
+  level: 3,
+  name: 'Scaler monitoru VA249HE — vstupy, přepočet, OSD',
+  subtitle: 'Typ scaleru je NEZJIŠTĚNÝ (teardown VA249HE neexistuje); bloky odpovídají obecné stavbě scaleru monitoru: přijímač HDMI (TMDS: vlastní kód 8 → 10 bitů s minimem přechodů, jiný než 8b/10b u PCIe 2.0), trojitý ADC + PLL pro analogové VGA, přepočet rozlišení (u nativních 1920 × 1080 jen průchod), OSD, mikrořadič s firmwarem, výstup LVDS do panelu a PWM jasu podsvícení.',
+  components: [
+    blk('tmds', 'PŘIJÍMAČ HDMI (TMDS)', 50, 50, [], ['RGB'], '3 DATOVÉ PÁRY + HODINY', 210, 80),
+    blk('adc', 'ADC 3× + PLL (VGA)', 50, 170, [], ['RGB'], 'ANALOG → DIGITÁL, NEPOUŽITO', 210, 80),
+    blk('mux', 'VÝBĚR VSTUPU', 330, 50, ['RGB'], ['OBRAZ'], 'HDMI / VGA', 190, 70),
+    blk('scale', 'PŘEPOČET ROZLIŠENÍ', 330, 150, ['OBRAZ'], ['OBRAZ OUT'], 'ŘÁDKOVÉ BUFFERY, FILTR', 190, 80),
+    blk('osd', 'OSD (MENU)', 330, 270, [], [], 'PŘEKRYTÍ OBRAZU', 190, 70),
+    blk('mcu', 'MIKROŘADIČ + FIRMWARE', 590, 170, [], [], 'TLAČÍTKA, DDC, ÚSPORA', 210, 70),
+    blk('lvds', 'VYSÍLAČ LVDS', 590, 50, ['OBRAZ OUT'], [], 'DO T-CON PANELU', 210, 80),
+    blk('pwm', 'PWM / DC JAS PODSVÍCENÍ', 590, 270, [], [], 'FLICKER-FREE', 210, 70),
+  ],
+  wires: [w('tmds.RGB', 'mux.RGB'), w('adc.RGB', 'mux.RGB'), w('mux.OBRAZ', 'scale.OBRAZ'), w('scale.OBRAZ OUT', 'lvds.OBRAZ OUT')],
+  drills: { tmds: 'cell_serdes', adc: 'cell_lt', mux: 'MUX', scale: 'cell_mac', osd: 'cell_sram', mcu: 'ADDER_8BIT', lvds: 'cell_serdes', pwm: 'cell_lt' },
+});
+
+def('tcon_panel', {
+  level: 3,
+  name: 'T-CON + panel VA 1920 × 1080 — od LVDS k pixelu',
+  subtitle: 'Obecná stavba panelu s aktivní maticí: T-CON přijme LVDS, upraví gamma (případně overdrive), řídí sloupcové budiče (DAC napětí pro každý subpixel) a řádkové budiče, které po jednom otvírají řádky TFT. 1920 × 1080 × 3 = ~6,2 mil. subpixelů, řádek ~15 µs při 60 Hz. Výrobce panelu (AUO M238HVN01.0?) je jen odhad.',
+  components: [
+    blk('rx', 'PŘIJÍMAČ LVDS', 50, 50, [], ['PIXELY'], 'Z SCALERU', 200, 70),
+    blk('tcon', 'ČASOVÁNÍ (T-CON)', 320, 50, ['PIXELY'], ['ŘÁDEK', 'DATA'], 'GAMMA, OVERDRIVE?', 200, 80),
+    blk('src', 'SLOUPCOVÉ BUDIČE (DAC)', 580, 50, ['DATA'], ['NAPĚTÍ'], '5760 VÝSTUPŮ', 220, 80),
+    blk('gate', 'ŘÁDKOVÉ BUDIČE', 320, 170, ['ŘÁDEK'], ['OTEVŘENÍ'], '1080 ŘÁDKŮ', 200, 70),
+    blk('tft', 'MATICE TFT + KAPALNÉ KRYSTALY VA', 580, 170, ['NAPĚTÍ', 'OTEVŘENÍ'], [], '~6,2 MIL. SUBPIXELŮ', 220, 80),
+    blk('blu', 'PODSVÍCENÍ WLED', 50, 170, [], [], 'BÍLÉ LED PO OKRAJI', 200, 70),
+  ],
+  wires: [w('rx.PIXELY', 'tcon.PIXELY'), w('tcon.DATA', 'src.DATA'), w('tcon.ŘÁDEK', 'gate.ŘÁDEK'), w('src.NAPĚTÍ', 'tft.NAPĚTÍ'), w('gate.OTEVŘENÍ', 'tft.OTEVŘENÍ')],
+  drills: { rx: 'cell_serdes', tcon: 'cell_decoder', src: 'cell_mac', gate: 'cell_decoder', tft: 'cell_tft', blu: 'cell_buck' },
+});
+
 // ================================================================ podjednotky jader x86 (Skylake / Coffee Lake i Haswell), L4,5
 // Zdroj: Intel 64 and IA-32 Architectures Optimization Reference Manual 248966 (kap. 2.2 Skylake, 2.4 Haswell).
 def('x86_frontend', {

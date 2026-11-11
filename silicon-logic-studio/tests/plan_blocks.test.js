@@ -197,3 +197,26 @@ describe('opravy z review knihovny (2026-11-11)', () => {
     assert.equal(out(e, 'g').out, 0);
   });
 });
+
+describe('zbytky z review knihovny', () => {
+  const X = WireState.CONFLICT;
+  it('SR latch po zakázaném stavu (S=R=1 → obě 0 naráz) skončí v X, ne v nemožném stavu 1/1', () => {
+    const e = build([sw('s', 1), sw('r', 1), part('q', 'NOR'), part('nq', 'NOR')],
+      [['r', 'out', 'q', 'a'], ['nq', 'out', 'q', 'b'], ['s', 'out', 'nq', 'a'], ['q', 'out', 'nq', 'b']]);
+    assert.deepEqual([out(e, 'q').out, out(e, 'nq').out], [0, 0]);
+    e.components.get('s').outputs.out = 0; e.components.get('r').outputs.out = 0; e.propagate();
+    assert.equal(e.oscillating, true);
+    assert.deepEqual([out(e, 'q').out, out(e, 'nq').out], [X, X]);
+    set(e, 's', 1); // platný vstup latch zase srovná
+    assert.deepEqual([out(e, 'q').out, out(e, 'nq').out], [1, 0]);
+  });
+
+  it('úplná sčítačka: přenos je znám, když ho určují dva známé vstupy', () => {
+    const e = build([sw('a', 1), sw('b', 1), sw('c', X), part('fa', 'FULL_ADDER')], [['a', 'out', 'fa', 'a'], ['b', 'out', 'fa', 'b'], ['c', 'out', 'fa', 'cin']]);
+    assert.deepEqual([out(e, 'fa').s, out(e, 'fa').cout], [X, 1]);
+    set(e, 'a', 0); set(e, 'b', 0);
+    assert.equal(out(e, 'fa').cout, 0);
+    set(e, 'b', 1);
+    assert.equal(out(e, 'fa').cout, X);
+  });
+});

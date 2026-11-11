@@ -813,7 +813,9 @@ export function LogicCanvas({
         ctx.font = `700 9px ${THEME.mono}`;
         ctx.fillText('D-FF', x + sw / 2 - 12, y + 38);
       } else if (comp.type === 'INPUT') {
-        const isOn = comp.outputs.out === 1;
+        // spínač může nést i hodnotu sběrnice (adresa, data): tu ukáže šestnáctkově, ne jako „0“
+        const isBus = typeof comp.outputs.out === 'number' && comp.outputs.out > 1;
+        const isOn = comp.outputs.out === 1 || isBus;
         const boxW = w - 16;
         ctx.save();
         ctx.fillStyle = isOn ? `rgba(${THEME.highRgb}, 0.15)` : '#0A0E17';
@@ -824,11 +826,11 @@ export function LogicCanvas({
 
         ctx.fillStyle = isOn ? THEME.high : THEME.muted;
         ctx.font = `700 8px ${THEME.mono}`;
-        ctx.fillText(isOn ? 'SRC: HIGH' : 'SRC: LOW', comp.x + 8, comp.y + 16);
+        ctx.fillText(isBus ? 'SRC: BUS' : isOn ? 'SRC: HIGH' : 'SRC: LOW', comp.x + 8, comp.y + 16);
 
         ctx.fillStyle = isOn ? THEME.high : THEME.text;
-        ctx.font = `700 20px ${THEME.mono}`;
-        ctx.fillText(isOn ? '1' : '0', comp.x + 18, comp.y + 42);
+        ctx.font = `700 ${isBus ? 13 : 20}px ${THEME.mono}`;
+        ctx.fillText(isBus ? formatProbe(comp.outputs.out, 'HEX') : isOn ? '1' : '0', comp.x + (isBus ? 8 : 18), comp.y + 42);
 
         ctx.strokeStyle = isOn ? THEME.high : THEME.low;
         ctx.beginPath();
@@ -1415,7 +1417,7 @@ export function LogicCanvas({
     for (const { comp, g } of items) {
       if (!inside(g)) continue;
       onSelectComponent(comp.id);
-      if (comp.type === 'INPUT') {
+      if (comp.type === 'INPUT' && !(comp.outputs.out > 1)) { // hodnotu sběrnice klik nepřepíše na 1
         comp.outputs.out = comp.outputs.out === 1 ? 0 : 1;
         audioEngine.playRelayClick(comp.outputs.out === 1 ? 1.4 : 0.8);
         engine.propagate();

@@ -1188,6 +1188,174 @@ def('OR', {
   ],
 });
 
+// ---------------------------------------------------------------------------------------------------
+// Bloky z PLAN_PROJEKTU.md §4.3–4.4 (paleta GPU): vnitřek v menší šířce, aby se vešel na list
+// ---------------------------------------------------------------------------------------------------
+def('MULTIPLIER_8BIT', {
+  level: 4,
+  name: 'NÁSOBIČKA — pole AND + sčítání částečných součinů (ukázka 2 × 2 bity)',
+  subtitle: 'Každý bit B vynásobí A hradly AND, částečné součiny se sečtou s posunem. 8 × 8 bitů je totéž s 64 AND a 56 sčítačkami.',
+  components: [
+    inp('a0', 'A0', 0, 0, 1), inp('a1', 'A1', 0, 0.6, 1), inp('b0', 'B0', 0, 1.2, 1), inp('b1', 'B1', 0, 1.8, 1),
+    c('pp00', 'AND', 'A0 · B0', 1.2, 0), c('pp10', 'AND', 'A1 · B0', 1.2, 0.7), c('pp01', 'AND', 'A0 · B1', 1.2, 1.4), c('pp11', 'AND', 'A1 · B1', 1.2, 2.1),
+    c('s1', 'XOR', 'SOUČET 1', 2.4, 0.9), c('c1', 'AND', 'PŘENOS 1', 2.4, 1.6),
+    c('s2', 'XOR', 'SOUČET 2', 3.6, 1.9), c('c2', 'AND', 'PŘENOS 2', 3.6, 2.6),
+    probe('p0', 'P0', 5, 0), probe('p1', 'P1', 5, 0.9), probe('p2', 'P2', 5, 1.9), probe('p3', 'P3', 5, 2.6),
+  ],
+  wires: [
+    ...fan('a0.out', 'pp00.a', 'pp01.a'), ...fan('a1.out', 'pp10.a', 'pp11.a'),
+    ...fan('b0.out', 'pp00.b', 'pp10.b'), ...fan('b1.out', 'pp01.b', 'pp11.b'),
+    w('pp00.out', 'p0.in'),
+    ...fan('pp10.out', 's1.a', 'c1.a'), ...fan('pp01.out', 's1.b', 'c1.b'),
+    w('s1.out', 'p1.in'),
+    ...fan('pp11.out', 's2.a', 'c2.a'), ...fan('c1.out', 's2.b', 'c2.b'),
+    w('s2.out', 'p2.in'), w('c2.out', 'p3.in'),
+  ],
+});
+
+def('BARREL_SHIFTER_8BIT', {
+  level: 4,
+  name: 'BARREL SHIFTER — vrstvy multiplexerů (ukázka 4 bity)',
+  subtitle: 'Vrstva S0 rotuje o 1, vrstva S1 o 2; dohromady 0–3 místa v jednom průchodu. 8 bitů má třetí vrstvu (o 4) a 24 MUXů.',
+  components: [
+    ...[0, 1, 2, 3].map((i) => inp(`d${i}`, `D${i}`, 0, i * 0.6, i === 0 ? 1 : 0)),
+    inp('s0', 'S0 (o 1)', 0, 2.6, 1), inp('s1', 'S1 (o 2)', 0, 3.2, 0),
+    ...[0, 1, 2, 3].map((i) => c(`m1_${i}`, 'MUX', `O 1 · BIT ${i}`, 1.5, i * 0.7)),
+    ...[0, 1, 2, 3].map((i) => c(`m2_${i}`, 'MUX', `O 2 · BIT ${i}`, 3, i * 0.7)),
+    ...[0, 1, 2, 3].map((i) => probe(`y${i}`, `Y${i}`, 4.6, i * 0.7 + 0.05)),
+  ],
+  wires: [
+    ...[0, 1, 2, 3].flatMap((i) => [
+      ...fan(`d${i}.out`, `m1_${i}.a`, `m1_${(i + 1) % 4}.b`),
+      ...fan(`m1_${i}.out`, `m2_${i}.a`, `m2_${(i + 2) % 4}.b`),
+      w(`m2_${i}.out`, `y${i}.in`),
+      w('s0.out', `m1_${i}.sel`), w('s1.out', `m2_${i}.sel`),
+    ]),
+  ],
+});
+
+def('IRQ_CONTROLLER', {
+  level: 4,
+  name: 'ŘADIČ PŘERUŠENÍ — záchyt hrany, maska, priorita',
+  subtitle: 'Náběžná hrana linky překlopí klopný obvod (D = 1, CLK = linka), takže se neztratí ani krátký pulz. Maska povolí linku, nižší číslo má přednost. Nulování po ACK není nakresleno (primitiv D-FF nemá vstup CLR).',
+  components: [
+    inp('irq0', 'IRQ0 V-SYNC', 0, 0, 0), inp('irq1', 'IRQ1 ČASOVAČ', 0, 0.8, 0), inp('irq2', 'IRQ2 KLÁVESNICE', 0, 1.6, 0),
+    k('k1', 'D = 1', 0, 2.4, 1),
+    c('ff0', 'D_FF', 'ČEKÁ 0', 1.2, 0), c('ff1', 'D_FF', 'ČEKÁ 1', 1.2, 0.8), c('ff2', 'D_FF', 'ČEKÁ 2', 1.2, 1.6),
+    inp('m0', 'MASKA 0', 1.2, 2.5, 1), inp('m1', 'MASKA 1', 1.2, 3.1, 1), inp('m2', 'MASKA 2', 1.2, 3.7, 1),
+    c('act0', 'AND', 'AKTIVNÍ 0', 2.4, 0.1), c('act1', 'AND', 'AKTIVNÍ 1', 2.4, 0.9), c('act2', 'AND', 'AKTIVNÍ 2', 2.4, 1.7),
+    c('or01', 'OR', '0 NEBO 1', 3.5, 0.4), c('or_all', 'OR', 'NĚKTERÁ', 4.5, 0.9),
+    c('n0', 'NOT', 'NE 0', 3.5, 1.3), c('v0', 'AND', '1 A NE 0', 4.5, 1.7),
+    c('n01', 'NOT', 'NE 0 ANI 1', 3.5, 2.4), c('v1', 'AND', '2 A NE 0, 1', 4.5, 2.6),
+    probe('int', 'INT', 5.3, 0.9), probe('vec0', 'VECTOR bit 0', 5.3, 1.75), probe('vec1', 'VECTOR bit 1', 5.3, 2.65),
+  ],
+  wires: [
+    ...fan('k1.out', 'ff0.d', 'ff1.d', 'ff2.d'),
+    ...[0, 1, 2].flatMap((i) => [w(`irq${i}.out`, `ff${i}.clk`), w(`ff${i}.q`, `act${i}.a`), w(`m${i}.out`, `act${i}.b`)]),
+    ...fan('act0.out', 'or01.a', 'n0.in'), ...fan('act1.out', 'or01.b', 'v0.a'), ...fan('act2.out', 'or_all.b', 'v1.a'),
+    ...fan('or01.out', 'or_all.a', 'n01.in'),
+    w('n0.out', 'v0.b'), w('n01.out', 'v1.b'),
+    w('or_all.out', 'int.in'), w('v0.out', 'vec0.in'), w('v1.out', 'vec1.in'),
+  ],
+});
+
+def('DMA_CONTROLLER', {
+  level: 3,
+  name: 'ŘADIČ DMA — čítač, dvě adresní sčítačky, porovnání délky',
+  subtitle: 'START vynuluje čítač I. Každým taktem I += 1; zdroj čte RAM[SRC + I], cíl zapisuje VRAM[DST + I]. Když I == LEN, zápis skončí a jde IRQ.',
+  components: [
+    clock('clk', 'TAKT', 0, 0), inp('start', 'START', 0, 0.6, 0),
+    k('k_src', 'SRC = 10h', 0, 1.3, 0x10), k('k_dst', 'DST = 80h', 0, 2.0, 0x80), k('k_len', 'LEN = 4', 0, 2.7, 4),
+    c('i_mux', 'MUX', 'NULOVÁNÍ I', 1.1, 0), k('k0', '0', 1.1, 0.8, 0),
+    c('i_reg', 'REGISTER_8BIT', 'ČÍTAČ I', 2, 0),
+    c('i_add', 'ADDER_8BIT', 'I + 1', 3.2, 0), k('kone', '+1', 3.2, 0.95, 1),
+    c('src_add', 'ADDER_8BIT', 'SRC + I', 2, 1.2), c('dst_add', 'ADDER_8BIT', 'DST + I', 2, 2.15),
+    c('done_cmp', 'COMPARATOR_8BIT', 'I == LEN', 2, 3.1),
+    c('we_or', 'OR', 'ČÍTAČ BĚŽÍ', 3.2, 2.5), c('busy', 'NOT', 'NEHOTOVO', 3.2, 3.2),
+    probe('raddr', 'RADDR (zdroj)', 4.6, 1.3), probe('waddr', 'WADDR (cíl)', 4.6, 2.25),
+    probe('irq', 'IRQ / HOTOVO', 4.6, 3.0), probe('we', 'WE / BUSY', 4.6, 3.6),
+  ],
+  wires: [
+    w('clk.out', 'i_reg.clk'),
+    ...fan('start.out', 'i_mux.sel', 'we_or.a'),
+    w('i_add.sum', 'i_mux.a'), w('k0.out', 'i_mux.b'), w('i_mux.out', 'i_reg.d'),
+    ...fan('i_reg.q', 'i_add.a', 'src_add.b', 'dst_add.b', 'done_cmp.a'),
+    w('kone.out', 'i_add.b'), w('k_src.out', 'src_add.a'), w('k_dst.out', 'dst_add.a'), w('k_len.out', 'done_cmp.b'),
+    w('src_add.sum', 'raddr.in'), w('dst_add.sum', 'waddr.in'),
+    ...fan('done_cmp.eq', 'busy.in', 'irq.in'),
+    ...fan('busy.out', 'we_or.b', 'we.in'),
+    w('we_or.out', 'i_reg.we'),
+  ],
+});
+
+def('MMIO_DECODER', {
+  level: 4,
+  name: 'MMIO DEKODÉR — horní 4 bity adresy + demultiplexer zápisu',
+  subtitle: 'Adresa 0xF000–0xFFFF má A15–A12 samé jedničky. SEL přepne zápisový signál z RAM na registry GPU.',
+  components: [
+    inp('a15', 'A15', 0, 0, 1), inp('a14', 'A14', 0, 0.6, 1), inp('a13', 'A13', 0, 1.2, 1), inp('a12', 'A12', 0, 1.8, 1),
+    inp('we', 'WE', 0, 2.6, 1),
+    c('and_hi', 'AND', 'A15 · A14', 1.3, 0.3), c('and_lo', 'AND', 'A13 · A12', 1.3, 1.5),
+    c('sel_and', 'AND', 'SEL', 2.5, 0.9),
+    probe('sel', 'SEL (0xFxxx)', 3.7, 0.3),
+    c('dmx', 'DEMUX', 'KAM JDE ZÁPIS', 3.7, 1.6),
+    probe('mem_we', 'MEM_WE (RAM)', 5, 1.3), probe('io_we', 'IO_WE (GPU)', 5, 2.0),
+  ],
+  wires: [
+    w('a15.out', 'and_hi.a'), w('a14.out', 'and_hi.b'), w('a13.out', 'and_lo.a'), w('a12.out', 'and_lo.b'),
+    w('and_hi.out', 'sel_and.a'), w('and_lo.out', 'sel_and.b'),
+    ...fan('sel_and.out', 'sel.in', 'dmx.sel'),
+    w('we.out', 'dmx.in'), w('dmx.out0', 'mem_we.in'), w('dmx.out1', 'io_we.in'),
+  ],
+});
+
+const fblk = (id, label, x, y, ins, outs, drill) => ({ ...blk(id, label, x, y, ins, outs, drill), w: 200, h: 64 });
+def('FPU_HALF', {
+  level: 3,
+  name: 'FPU HALF-PRECISION — blokové schéma sčítání a násobení',
+  subtitle: 'Popisné jako úroveň 2 u čipů. binary16 = 1 b znaménko, 5 b exponent (bias 15), 10 b mantisa se skrytou jedničkou. Dvojklik na blok ukáže jeho stavební prvek v menší šířce. Výsledek počítá model přesně podle IEEE 754 (zaokrouhlení k nejbližší sudé).',
+  components: [
+    inp('fa', 'A = 1,5 (3E00h)', 0, 0, 0x3E00), inp('fb', 'B = 2,25 (4080h)', 0, 0.65, 0x4080), inp('op', 'OP (0 +, 1 ×)', 0, 3.4, 0),
+    fblk('exp_cmp', 'POROVNÁNÍ EXPONENTŮ (5 b)', 200, 60, ['expA', 'expB'], ['rozdíl'], 'COMPARATOR_8BIT'),
+    fblk('align', 'ZAROVNÁNÍ MENŠÍ MANTISY (posuv)', 200, 140, ['mantisa', 'rozdíl'], ['zarovnaná'], 'BARREL_SHIFTER_8BIT'),
+    fblk('mant_add', 'SČÍTAČKA MANTIS (11 b + G/R/S)', 430, 100, ['a', 'b'], ['součet'], 'ADDER_8BIT'),
+    fblk('mant_mul', 'NÁSOBIČKA MANTIS 11 × 11 b', 200, 260, ['a', 'b'], ['součin'], 'MULTIPLIER_8BIT'),
+    fblk('exp_add', 'SOUČET EXPONENTŮ − BIAS 15', 200, 340, ['expA', 'expB'], ['exp'], 'ADDER_8BIT'),
+    fblk('op_mux', 'VÝBĚR OPERACE', 430, 300, ['součet', 'součin', 'op'], ['mantisa'], 'MUX'),
+    fblk('norm', 'NORMALIZACE (vedoucí 1 + posuv)', 660, 100, ['mantisa'], ['norm'], 'BARREL_SHIFTER_8BIT'),
+    fblk('round', 'ZAOKROUHLENÍ K SUDÉ (+1 ulp)', 660, 200, ['norm'], ['výsledek'], 'ADDER_8BIT'),
+    fblk('sign', 'ZNAMÉNKO SOUČINU (XOR) + SLOŽENÍ', 660, 300, ['znA', 'znB', 'výsledek'], ['OUT[15:0]'], 'XOR'),
+  ],
+  wires: [
+    ...fan('fa.out', 'exp_cmp.expA', 'mant_add.a', 'mant_mul.a', 'exp_add.expA', 'sign.znA'),
+    ...fan('fb.out', 'exp_cmp.expB', 'align.mantisa', 'mant_mul.b', 'exp_add.expB', 'sign.znB'),
+    w('exp_cmp.rozdíl', 'align.rozdíl'), w('align.zarovnaná', 'mant_add.b'),
+    w('mant_add.součet', 'op_mux.součet'), w('mant_mul.součin', 'op_mux.součin'), w('op.out', 'op_mux.op'),
+    w('op_mux.mantisa', 'norm.mantisa'), w('norm.norm', 'round.norm'), w('round.výsledek', 'sign.výsledek'),
+  ],
+});
+
+def('DEMUX', {  level: 5,
+  name: 'DEMUX 1:2 — 2× AND + invertor',
+  subtitle: 'Y0 = D · S#, Y1 = D · S. Nevybraný výstup je 0 (řada 74 má výstupy dekodérů obvykle aktivní v 0, např. 74139).',
+  components: [
+    c('dmx_in', 'INPUT', 'D', 0, 0.75, { outputs: { out: 1 } }),
+    c('dmx_sel', 'INPUT', 'S', 0, 2.5, { outputs: { out: 0 } }),
+    c('dmx_inv', 'NOT', 'S#', 1, 2.5),
+    c('dmx_a0', 'AND', 'D · S#', 2, 0.5),
+    c('dmx_a1', 'AND', 'D · S', 2, 2),
+    probe('dmx_o0', 'Y0 (S = 0)', 3, 0.55),
+    probe('dmx_o1', 'Y1 (S = 1)', 3, 2.05),
+  ],
+  wires: [
+    ...fan('dmx_in.out', 'dmx_a0.a', 'dmx_a1.a'),
+    ...fan('dmx_sel.out', 'dmx_inv.in', 'dmx_a1.b'),
+    w('dmx_inv.out', 'dmx_a0.b'),
+    w('dmx_a0.out', 'dmx_o0.in'),
+    w('dmx_a1.out', 'dmx_o1.in'),
+  ],
+});
+
 def('MUX', {
   level: 5,
   name: 'MUX 2:1 — 3× NAND + invertor',

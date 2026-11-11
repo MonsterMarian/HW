@@ -409,13 +409,26 @@ export class LogicEngine {
     let iter = 0;
     this.oscillating = false;
     while (this._dirtyNets.size || this._dirtyComps.size) {
-      if (++iter > maxIter) {
-        this.oscillating = true;
-        this._dirtyNets.clear();
-        this._dirtyComps.clear();
-        break;
-      }
       const t = this._ensureTopology();
+      if (++iter > maxIter) {
+        if (this.oscillating) { this._dirtyNets.clear(); this._dirtyComps.clear(); break; }
+        // Obvod se neustálí (SR latch po S = R = 1 → 0, lichý kruh invertorů): kmitající výstupy nemají
+        // definovanou úroveň. Dostanou X a obvod se nechá doběhnout, aby se X rozšířilo jen tam, kam opravdu patří.
+        this.oscillating = true;
+        iter = 0;
+        // kmitají části, které se právě chystají přepnout, a budiče sítí, které se právě změnily
+        const unstable = new Set(this._dirtyComps.a);
+        for (const n of this._dirtyNets.a) for (const d of t.nets[n].drivers) unstable.add(d.comp);
+        this._dirtyComps.clear();
+        for (const comp of unstable) {
+          if (isPassive(comp) || comp.type === 'INPUT' || comp.type === 'CONSTANT' || comp.type === 'CLOCK') continue;
+          for (const k of Object.keys(comp.outputs)) {
+            comp.outputs[k] = X;
+            const n = t.pinNet.get(`${comp.id}:${k}`);
+            if (n !== undefined) this._dirtyNets.add(n);
+          }
+        }
+      }
       // 1. resolve nets first, so every part evaluated in this round sees the same (pre-edge) values
       if (this._dirtyNets.size) {
         if (t.switches.length) this._resolveSwitchLevel(t);
@@ -779,9 +792,10 @@ export class LogicEngine {
       }
       case 'FULL_ADDER': {
         const a = bit(inp.a); const b = bit(inp.b); const c = bit(inp.cin);
-        if (a === null || b === null || c === null) { out.s = X; out.cout = X; break; }
-        out.s = a ^ b ^ c;
-        out.cout = (a & b) | (c & (a ^ b));
+        // přenos je většina ze tří: dva známé shodné vstupy ho určí, i když je třetí neznámý (jako hradlový model)
+        const ones = (a === 1) + (b === 1) + (c === 1); const zeros = (a === 0) + (b === 0) + (c === 0);
+        out.s = ones + zeros === 3 ? a ^ b ^ c : X;
+        out.cout = ones >= 2 ? 1 : zeros >= 2 ? 0 : X;
         break;
       }
       case 'COMPARATOR_8BIT':

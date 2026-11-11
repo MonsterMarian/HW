@@ -67,9 +67,11 @@ export function signalStyle(value, width = 1, label = null, lowRgb = THEME.lowRg
   }
   if (!isNum(value)) return { color: THEME.highZ, dash: [5, 4], text: String(value), state: 'z' };
   // výstup krystalu nese jeho kmitočet (referenční hodiny pro PLL / kodek)
-  if (width === 1 && value > 1000) return { color: THEME.high, dash: null, text: fmtHz(value), state: 'clock' };
-  const on = width > 1 ? value !== 0 : value === 1;
-  const text = width > 1 ? '0x' + (value >>> 0).toString(16).toUpperCase() : String(value);
+  // (krystaly jsou v MHz; menší číslo na jednobitovém pinu je hodnota sběrnice ze spínače, ne kmitočet)
+  if (width === 1 && value >= 1e6) return { color: THEME.high, dash: null, text: fmtHz(value), state: 'clock' };
+  const bus = width > 1 || value > 1;
+  const on = bus ? value !== 0 : value === 1;
+  const text = bus ? '0x' + (value >>> 0).toString(16).toUpperCase() : String(value);
   return { color: on ? THEME.high : `rgb(${lowRgb})`, dash: null, text, state: on ? 'high' : 'low' };
 }
 

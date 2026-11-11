@@ -75,12 +75,19 @@ describe('NV1 board netlist', () => {
 });
 
 describe('NV1 board in operation', () => {
-  it('PCI enumeration: config space answers 104A:0008, class 03 00 00, BIOS ROM starts with 55 AA', () => {
+  it('PCI enumeration: two functions (VGA 104A:0008 class 03 00 00, NV 104A:0009 class 04 80 00), 32 MB BAR, BIOS ROM 55 AA', () => {
     const e = board();
     const host = e.components.get('host');
     assert.ok(runUntil(e, () => host.status.romSignature !== undefined, 200_000), host.log.join('\n'));
     assert.equal(host.status.configId, ((PCI_IDS.device << 16) | PCI_IDS.vendor) >>> 0);
     assert.ok(host.log.some((l) => l.includes('class 0x030000')));
+    // STG2000 datasheet, appendix A: multi-function header, function 1 = NV, functions 2-7 do not answer
+    assert.equal(host.status.headerType, 0x80);
+    assert.equal(host.status.nvId, 0x0009104A);
+    assert.ok(host.log.some((l) => l.includes('class 0x048000')));
+    assert.deepEqual(host.status.functions, [0, 1]);
+    assert.equal(host.status.bar0Size, 32 * 1024 * 1024);
+    assert.equal(host.status.vgaBar0, 0, 'the VGA function has no base address registers');
     assert.equal(host.status.romSignature, 0xAA55);
     const rom = e.components.get('bios_rom').rom;
     assert.equal(rom.reduce((a, b) => (a + b) & 0xFF, 0), 0, 'option ROM checksum must be 0');

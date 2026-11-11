@@ -31,9 +31,13 @@ export const hex = (v, n = 8) => (num(v) ? '0x' + (v >>> 0).toString(16).toUpper
 
 // ---------------------------------------------------------------------------------------------------------
 // Address map used by the host driver and decoded by NV1 (BAR values are what the BIOS/OS would assign)
-export const PCI_IDS = { vendor: 0x104A, device: 0x0008 }; // SGS-Thomson, STG 2000X (pci.ids)
-export const BAR0_BASE = 0xE0000000; // 16 MB: 0x000000-0x1FFFFF frame buffer (2 MB DRAM), 0x800000+ registers
-export const ROM_BASE = 0xC0000000; // 32 KB expansion ROM (video BIOS EPROM)
+// STG2000 datasheet, appendix A: one chip, two PCI functions. Device ID = chip number 1 in bits 15:3 + function number.
+//   function 0 = VGA emulation (104A:0008, class 0x030000, no BARs), function 1 = NV (104A:0009, class 0x048000,
+//   one prefetchable 32 MB memory BAR, bus master). Functions 2-7 do not answer.
+export const PCI_IDS = { vendor: 0x104A, device: 0x0008, deviceNv: 0x0009 };
+export const BAR0_BASE = 0xE0000000; // 32 MB block of the NV function; inside it (our own map): 0x000000-0x1FFFFF frame buffer, 0x800000+ registers
+export const ROM_BASE = 0xC0000000; // expansion ROM on a 4 MB boundary, the 32 KB video BIOS sits at its bottom
+const FN = (fn, reg) => (fn << 8) | reg; // type 0 configuration address: AD[10:8] function, AD[7:2] register
 export const REG = {
   HTOTAL: 0x800000, HDISP: 0x800004, HSYNC_START: 0x800008, HSYNC_END: 0x80000C,
   VTOTAL: 0x800010, VDISP: 0x800014, VSYNC_START: 0x800018, VSYNC_END: 0x80001C,
@@ -61,12 +65,31 @@ function* hostDriver(comp) {
     st.phase = 'no card';
     return;
   }
-  log(`CFG 00h = ${hex(id)} (vendor ${hex(id & 0xFFFF, 4)}, device ${hex(id >>> 16, 4)})`);
+  log(`F0 CFG 00h = ${hex(id)} (vendor ${hex(id & 0xFFFF, 4)}, device ${hex(id >>> 16, 4)})`);
   const cls = yield { cmd: CMD.CFG_READ, addr: 0x08 };
-  log(`CFG 08h = ${hex(cls)} (class ${hex(cls >>> 8, 6)} = VGA display controller)`);
-  yield { cmd: CMD.CFG_WRITE, addr: 0x10, data: [BAR0_BASE] };
-  yield { cmd: CMD.CFG_WRITE, addr: 0x30, data: [ROM_BASE | 1] };
-  yield { cmd: CMD.CFG_WRITE, addr: 0x04, data: [0x0006] }; // memory space + bus master
+  log(`F0 CFG 08h = ${hex(cls)} (class ${hex(cls >>> 8, 6)} = VGA display controller)`);
+  st.headerType = ((yield { cmd: CMD.CFG_READ, addr: 0x0C }) >>> 16) & 0xFF;
+  // multi-function device: the BIOS looks at all 8 functions; the ones that are not there end in a master abort
+  st.functions = [0];
+  for (let fn = 1; fn < (st.headerType & 0x80 ? 8 : 1); fn++) {
+    const fid = yield { cmd: CMD.CFG_READ, addr: FN(fn, 0x00), probe: true };
+    if (fid !== 0xFFFFFFFF && num(fid)) { st.functions.push(fn); if (fn === 1) st.nvId = fid; }
+  }
+  log(`header ${hex(st.headerType, 2)}: functions ${st.functions.join(', ')}`);
+  const cls1 = yield { cmd: CMD.CFG_READ, addr: FN(1, 0x08) };
+  log(`F1 CFG 00h = ${hex(st.nvId)}, 08h = ${hex(cls1)} (class ${hex(cls1 >>> 8, 6)} = multimedia, NV function)`);
+  // size the base address registers the way a BIOS does: write all ones, read back the hardwired zeros
+  yield { cmd: CMD.CFG_WRITE, addr: 0x10, data: [0xFFFFFFFF] };
+  st.vgaBar0 = yield { cmd: CMD.CFG_READ, addr: 0x10 };
+  yield { cmd: CMD.CFG_WRITE, addr: FN(1, 0x10), data: [0xFFFFFFFF] };
+  const probe = yield { cmd: CMD.CFG_READ, addr: FN(1, 0x10) };
+  st.bar0Size = (~(probe & 0xFFFFFFF0) + 1) >>> 0;
+  log(`F1 BAR0 probe = ${hex(probe)} -> ${st.bar0Size >>> 20} MB, prefetchable`);
+  yield { cmd: CMD.CFG_WRITE, addr: FN(1, 0x10), data: [BAR0_BASE] };
+  yield { cmd: CMD.CFG_WRITE, addr: FN(1, 0x30), data: [ROM_BASE | 1] };
+  yield { cmd: CMD.CFG_WRITE, addr: FN(1, 0x3C), data: [0x0B] }; // interrupt line: IRQ11
+  yield { cmd: CMD.CFG_WRITE, addr: 0x04, data: [0x0003] }; // VGA function: I/O + memory space
+  yield { cmd: CMD.CFG_WRITE, addr: FN(1, 0x04), data: [0x0006] }; // NV function: memory space + bus master
   log(`BAR0 = ${hex(BAR0_BASE)}, ROM = ${hex(ROM_BASE)}`);
 
   st.phase = 'BIOS ROM';
@@ -184,7 +207,7 @@ function hostRising(comp) {
       if (inp.devsel_n !== 0) {
         if (++h.cnt > 5) { // nobody claimed the cycle: master abort
           out.frame_n = 1; out.irdy_n = 1; out.ad = Z; out.cbe_n = Z;
-          comp.status.aborts++;
+          if (!c.probe) comp.status.aborts++; // an empty function during enumeration is expected
           finish(0xFFFFFFFF);
         }
         break;
@@ -214,11 +237,21 @@ function hostRising(comp) {
 // NV1: PCI target, register file, write FIFO, DRAM controller, CRTC/scan-out, wavetable audio, game port
 function nv1State(comp) {
   if (comp._s) return comp._s;
-  const cfg = new Uint32Array(64);
-  cfg[0] = (PCI_IDS.device << 16) | PCI_IDS.vendor;
-  cfg[1] = 0x02000000; // status: DEVSEL# medium timing
-  cfg[2] = 0x03000001; // class 03 00 00 (VGA compatible), revision 01
-  cfg[15] = 0x00000100; // interrupt pin INTA#
+  // configuration space of both functions (STG2000 datasheet appendix A); cfg[fn][register >> 2]
+  const vga = new Uint32Array(64);
+  vga[0] = (PCI_IDS.device << 16) | PCI_IDS.vendor;
+  vga[1] = 0x02000000; // status: DEVSEL# medium
+  vga[2] = 0x03000001; // class 03 00 00 (VGA compatible), revision 01 = Rev B
+  vga[3] = 0x00800000; // header type 0x80: multi-function device
+  vga[15] = 0x000001FF; // INTA#, interrupt line 0xFF = not connected
+  const nv = new Uint32Array(64);
+  nv[0] = (PCI_IDS.deviceNv << 16) | PCI_IDS.vendor;
+  nv[1] = 0x00000000; // status: DEVSEL# fast
+  nv[2] = 0x04800001; // class 04 80 00 (multimedia), revision 01
+  nv[3] = 0x00800000;
+  nv[4] = 0x00000008; // BAR0: memory, 32 bit, prefetchable
+  nv[15] = 0x010301FF; // MAX_LAT 1, MIN_GNT 3, INTA#, interrupt line 0xFF
+  const cfg = [vga, nv];
   comp._s = {
     cfg,
     crtc: { htotal: 800, hdisp: 640, hss: 656, hse: 752, vtotal: 525, vdisp: 480, vss: 490, vse: 492, ctrl: 0, fbStart: 0, pitch: 1280 },
@@ -252,7 +285,8 @@ function nv1Reset(comp, s) {
   out.hsync = 1; out.vsync = 1; out.blank_n = 0; out.pix = 0;
   out.rom_ce_n = 1; out.rom_oe_n = 1;
   out.aud_d = Z; out.aud_wr_n = 1; out.aud_dack_n = 1;
-  s.cfg[1] &= 0xFFFF0000; s.cfg[4] = 0; s.cfg[12] = 0;
+  for (const f of s.cfg) { f[1] &= 0xFFFF0000; f[12] = 0; f[15] |= 0xFF; }
+  s.cfg[1][3] = 0x00800000; s.cfg[1][4] = 0x00000008;
   s.crtc.ctrl = 0; s.audioCtrl = 0;
   s.pci = { st: 'idle', prevFrame: 1, cur: null };
   s.wfifo = []; s.readReq = null;
@@ -295,12 +329,20 @@ function regWrite(s, off, v) {
   }
 }
 
-function cfgWrite(s, reg, v, be) {
+// Writable bits per function (everything else is hardwired): VGA = I/O space, memory space, palette snoop;
+// NV = I/O (reference only), memory, bus master, MWI, bits 7:5, SERR enable; latency timer; BAR0 on a 32 MB boundary.
+// The expansion ROM register (4 MB boundary) is aliased between both functions.
+const CFG_WRITABLE = [
+  { 1: 0x00000023, 12: 0xFFC00001, 15: 0x000000FF },
+  { 1: 0x000001F7, 3: 0x0000F800, 4: 0xFE000000, 12: 0xFFC00001, 15: 0x000000FF },
+];
+function cfgWrite(s, fn, reg, v, be) {
   const mask = (be & 1 ? 0 : 0xFF) | (be & 2 ? 0 : 0xFF00) | (be & 4 ? 0 : 0xFF0000) | (be & 8 ? 0 : 0xFF000000);
-  const writable = { 1: 0x00000006, 4: 0xFF000000, 12: 0xFFFF8001, 15: 0x000000FF }[reg];
+  const writable = CFG_WRITABLE[fn][reg];
   if (!writable) return;
   const m = (mask & writable) >>> 0;
-  s.cfg[reg] = ((s.cfg[reg] & ~m) | (v & m)) >>> 0;
+  s.cfg[fn][reg] = ((s.cfg[fn][reg] & ~m) | (v & m)) >>> 0;
+  if (reg === 12) s.cfg[1 - fn][12] = s.cfg[fn][12];
 }
 
 // PCI target state machine, PCI clock domain
@@ -308,24 +350,26 @@ function nv1Pci(comp, s) {
   const inp = comp.inputs;
   const out = comp.outputs;
   const p = s.pci;
-  const memOn = (s.cfg[1] & 2) !== 0;
-  const bar0 = s.cfg[4] >>> 0;
-  const romOn = (s.cfg[12] & 1) !== 0;
-  const romBase = (s.cfg[12] & 0xFFFF8000) >>> 0;
+  const memOn = (s.cfg[1][1] & 2) !== 0; // MEMORY_SPACE of the NV function
+  const bar0 = (s.cfg[1][4] & 0xFE000000) >>> 0;
+  const romOn = (s.cfg[1][12] & 1) !== 0 && ((s.cfg[0][1] | s.cfg[1][1]) & 2) !== 0; // ROM_DECODE and MEMORY_SPACE
+  const romBase = (s.cfg[1][12] & 0xFFC00000) >>> 0;
 
   if (p.st === 'idle') {
     if (inp.frame_n === 0 && p.prevFrame !== 0 && num(inp.cbe_n) && num(inp.ad)) {
       const cmd = inp.cbe_n;
       const ad = inp.ad >>> 0;
       let hit = null;
-      if ((cmd === CMD.CFG_READ || cmd === CMD.CFG_WRITE) && inp.idsel === 1 && (ad & 3) === 0) hit = { kind: 'cfg', off: ad & 0xFC };
-      else if ((cmd === CMD.MEM_READ || cmd === CMD.MEM_WRITE || cmd === 0xC || cmd === 0xE || cmd === 0xF) && memOn && bar0 && ((ad & 0xFF000000) >>> 0) === bar0) {
-        hit = { kind: (ad & 0xFFFFFF) < 0x800000 ? 'fb' : 'reg', off: ad & 0xFFFFFF };
-      } else if (cmd === CMD.MEM_READ && memOn && romOn && ((ad & 0xFFFF8000) >>> 0) === romBase) hit = { kind: 'rom', off: ad & 0x7FFC };
+      if ((cmd === CMD.CFG_READ || cmd === CMD.CFG_WRITE) && inp.idsel === 1 && (ad & 3) === 0) {
+        const fn = (ad >> 8) & 7;
+        if (fn < 2) hit = { kind: 'cfg', fn, off: ad & 0xFC }; // functions 2-7: no DEVSEL#
+      } else if ((cmd === CMD.MEM_READ || cmd === CMD.MEM_WRITE || cmd === 0xC || cmd === 0xE || cmd === 0xF) && memOn && bar0 && ((ad & 0xFE000000) >>> 0) === bar0) {
+        hit = { kind: (ad & 0x1FFFFFF) < 0x800000 ? 'fb' : 'reg', off: ad & 0x1FFFFFF };
+      } else if (cmd === CMD.MEM_READ && romOn && romBase && ((ad & 0xFFC00000) >>> 0) === romBase) hit = { kind: 'rom', off: ad & 0x7FFC };
       if (hit) {
         p.cur = { ...hit, write: (cmd & 1) === 1, pending: null };
         p.st = 'data';
-        out.devsel_n = 0; // medium decode: DEVSEL# in the 2nd clock
+        out.devsel_n = 0; // fast decode: DEVSEL# is driven in the clock after the address phase
         out.trdy_n = 1;
         out.ad = Z;
       }
@@ -361,7 +405,7 @@ function nv1Pci(comp, s) {
 function nv1Write(s, c, ad, be) {
   if (!num(ad)) return;
   be = num(be) ? be : 0;
-  if (c.kind === 'cfg') cfgWrite(s, c.off >> 2, ad >>> 0, be);
+  if (c.kind === 'cfg') cfgWrite(s, c.fn, c.off >> 2, ad >>> 0, be);
   else if (c.kind === 'reg') regWrite(s, c.off, ad >>> 0);
   else if (c.kind === 'fb') {
     const off = c.off & 0x1FFFFC;
@@ -379,7 +423,7 @@ function nv1Write(s, c, ad, be) {
 
 // Returns the dword for a read data phase, or null while the data is not there yet (wait state)
 function nv1Read(comp, s, c) {
-  if (c.kind === 'cfg') return s.cfg[(c.off >> 2) & 63];
+  if (c.kind === 'cfg') return s.cfg[c.fn][(c.off >> 2) & 63];
   if (c.kind === 'reg') return regRead(s, c.off);
   if (c.kind === 'fb') {
     if (c.pending && c.pending.done) return c.pending.value;

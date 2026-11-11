@@ -27,7 +27,8 @@ až k atomům křemíku, ve 2D (schéma, plošný spoj) i ve 3D.
 Mimo kartu: hostitelské PC, VGA monitor, reproduktory a Sega Saturn pad.
 
 Co se děje po spuštění (RUN, rychlost MAX):
-1. Počítač posílá skutečné PCI transakce: čte config space (`104A:0008`, třída VGA), nastaví BAR, přečte BIOS ROM
+1. Počítač posílá skutečné PCI transakce: projde obě funkce čipu (funkce 0 VGA `104A:0008`, funkce 1 NV `104A:0009`,
+   funkce 2–7 neodpoví), změří a nastaví 32MB BAR funkce NV, přečte BIOS ROM
    (`55 AA`), naprogramuje CRTC na 640×480 @ 60 Hz a zapíše obraz do framebufferu.
 2. NV1 zapisuje do DRAM cykly RAS#/CAS# ve fast page mode a každých 776 taktů MCLK (15,52 µs) dělá refresh.
 3. NV1 čte obraz zpátky do scan-out FIFO a posílá pixely RGB555 do RAMDACu. RAMDAC z nich dělá analogové
@@ -101,8 +102,7 @@ Kde se model od datasheetu **vědomě liší** (zatím nepředěláno, v aplikac
   a dvě prokládané banky po 1 MB; 64 bitů má až pixelový port Palette-DAC.
 - **Pixely:** model je posílá po `P[14:0]`. Čip je do Palette-DAC nahrává přímo z `MD` (signály `LOADCLK`, `BLANK#`).
 - **BIOS ROM:** model má vlastní piny. Čip čte ROM přes `MD[7:0]` (adresa na `MD[30:16]`, výběr `ROMCS#`).
-- **PCI:** model je jedno zařízení `104A:0008`. Čip je dvoufunkční: funkce 0 VGA (`0008`, třída 0x030000, bez BAR),
-  funkce 1 NV (`0009`, třída 0x048000, BAR0 32 MB, bus master).
+
 - **Kodek:** model používá DRQ/DACK#. Karta je nepoužívá, má jen strobe `AUR#`/`AUW#` a 2 bity adresy.
 - **Game port:** model má jednu cestu k Saturn padu. Na kartě jsou dva headery 2×5 (J5/J6) na zvláštní Sega bracket
   přes čip SEGA rozhraní za Palette-DAC; modulární zásuvka na bracketu je PC joystick/MIDI port.

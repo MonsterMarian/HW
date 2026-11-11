@@ -42,8 +42,8 @@ const STAGES = [
       const rom = part(e, 'bios_rom').rom;
       const sum = rom.reduce((a, b) => (a + b) & 0xFF, 0);
       return {
-        passed: id === want && cls && st.romSignature === 0xAA55 && sum === 0 && st.aborts === 0,
-        detail: `ID ${hex(id & 0xFFFF)}:${hex(id >>> 16)} (čekáno ${hex(PCI_IDS.vendor)}:${hex(PCI_IDS.device)}) · třída ${cls ? '030000' : '?'} · podpis ROM ${hex(st.romSignature ?? 0)} · součet ROM ${sum} · master abort ${st.aborts}`,
+        passed: id === want && cls && st.headerType === 0x80 && (st.nvId >>> 16) === PCI_IDS.deviceNv && st.bar0Size === 32 * 1024 * 1024 && st.romSignature === 0xAA55 && sum === 0 && st.aborts === 0,
+        detail: `funkce 0 (VGA) ${hex(id & 0xFFFF)}:${hex(id >>> 16)} (čekáno ${hex(PCI_IDS.vendor)}:${hex(PCI_IDS.device)}) · třída ${cls ? '030000' : '?'} · funkce 1 (NV) ${hex((st.nvId ?? 0) >>> 16)} · BAR0 ${(st.bar0Size ?? 0) >>> 20} MB · podpis ROM ${hex(st.romSignature ?? 0)} · součet ROM ${sum} · master abort ${st.aborts}`,
       };
     },
   },

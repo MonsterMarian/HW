@@ -462,6 +462,64 @@ def('nvlink_hub', {
   drills: { hub: 'cell_arbiter', l0: 'cell_parity', l1: 'cell_parity', l2: 'cell_parity', l3: 'cell_parity' },
 });
 
+// ================================================================ podjednotky jader x86 (Skylake / Coffee Lake i Haswell), L4,5
+// Zdroj: Intel 64 and IA-32 Architectures Optimization Reference Manual 248966 (kap. 2.2 Skylake, 2.4 Haswell).
+def('x86_frontend', {
+  level: 4.5,
+  name: 'Front-end jádra x86 — načtení a dekódování instrukcí',
+  subtitle: 'Optimization Manual 248966: prediktor skoků určuje, odkud číst; z L1I (32 KB, 8 cest) jde 16 B za takt do předdekodéru, který najde hranice instrukcí (x86 má 1–15 B), pak fronta instrukcí a dekodéry na µop (Haswell 4 dekodéry = 1 složitý + 3 jednoduché, Skylake až 5 µop/takt). Už dekódované µop drží µop cache (DSB, 1536 µop; Haswell 4 / Skylake 6 µop za takt); instrukce s víc než 4 µop dodá mikrokódová ROM (MSROM). Vše míří do fronty IDQ.',
+  components: [
+    blk('bpu', 'PREDIKTOR SKOKŮ (BPU)', 50, 50, [], ['ADRESA'], 'BTB, HISTORIE, NÁVRATY', 210, 80),
+    blk('itlb', 'ITLB', 50, 170, [], [], 'PŘEKLAD ADRES KÓDU', 210, 60),
+    blk('l1i', 'L1I CACHE 32 KB · 8 CEST', 320, 50, ['ADRESA'], ['BAJTY'], '16 B ZA TAKT', 200, 80),
+    blk('pd', 'PŘEDDEKODÉR (DÉLKY INSTRUKCÍ)', 320, 170, ['BAJTY'], ['INSTRUKCE'], '1–15 B NA INSTRUKCI', 200, 80),
+    blk('iq', 'FRONTA INSTRUKCÍ', 320, 290, ['INSTRUKCE'], [], '', 200, 60),
+    blk('dec', 'DEKODÉRY x86 → µOP', 580, 50, ['INSTRUKCE'], ['µOP'], '1 SLOŽITÝ + JEDNODUCHÉ', 210, 80),
+    blk('dsb', 'µOP CACHE (DSB) 1536 µOP', 580, 170, [], ['µOP'], 'OBEJDE DEKODÉRY', 210, 70),
+    blk('msrom', 'MIKROKÓD (MSROM)', 580, 280, [], [], 'INSTRUKCE > 4 µOP', 210, 60),
+    blk('idq', 'FRONTA µOP (IDQ)', 820, 110, ['µOP'], [], 'HASWELL 56 · SKYLAKE 64', 130, 90),
+  ],
+  wires: [w('bpu.ADRESA', 'l1i.ADRESA'), w('l1i.BAJTY', 'pd.BAJTY'), w('pd.INSTRUKCE', 'iq.INSTRUKCE'), w('pd.INSTRUKCE', 'dec.INSTRUKCE'), w('dec.µOP', 'idq.µOP'), w('dsb.µOP', 'idq.µOP')],
+  drills: { bpu: 'cell_match', itlb: 'cell_match', l1i: 'cell_sram', pd: 'cell_decoder', iq: 'cell_sram', dec: 'cell_decoder', dsb: 'cell_match', msrom: 'cell_decoder', idq: 'cell_sram' },
+});
+
+def('x86_ooo', {
+  level: 4.5,
+  name: 'Out-of-order jádro x86 — přejmenování, plánovač, ROB',
+  subtitle: 'Optimization Manual 248966: 4 µop za takt projde přejmenováním (tabulka RAT mapuje registry x86 na fyzické; přesuny a nulování „mov eliminace / zero idiom“ se vyřeší bez výpočtu), alokuje se místo v ROB (Haswell 192, Skylake 224) a v plánovači (Haswell 60, Skylake 97). Plánovač pošle µop na port, jakmile má operandy; ROB je pak vyřazuje ve správném pořadí (4 za takt), takže výjimky a chybné predikce jdou vrátit.',
+  components: [
+    blk('rat', 'PŘEJMENOVÁNÍ (RAT)', 50, 50, [], ['µOP'], 'REGISTRY x86 → FYZICKÉ', 210, 80),
+    blk('elim', 'MOV ELIMINACE + ZERO IDIOM', 50, 170, [], [], 'BEZ PORTU', 210, 70),
+    blk('alloc', 'ALOKACE (ROB, RS, LB/SB)', 320, 50, ['µOP'], ['ZÁZNAM'], '4 µOP ZA TAKT', 210, 80),
+    blk('rs', 'PLÁNOVAČ (RS)', 320, 170, ['ZÁZNAM'], ['PORTY'], 'HASWELL 60 · SKYLAKE 97', 210, 80),
+    blk('wake', 'PROBUZENÍ ZÁVISLÝCH µOP', 320, 290, [], [], 'POROVNÁNÍ TAGŮ VÝSLEDKŮ', 210, 70),
+    blk('rob', 'ROB (POŘADÍ)', 600, 50, ['ZÁZNAM'], [], 'HASWELL 192 · SKYLAKE 224', 210, 80),
+    blk('ret', 'VYŘAZENÍ (RETIRE) 4 / TAKT', 600, 170, [], [], 'ZÁPIS ARCHITEKTURNÍHO STAVU', 210, 70),
+    blk('flush', 'OBNOVA PO CHYBNÉ PREDIKCI', 600, 280, [], [], 'ZAHOZENÍ MLADŠÍCH µOP', 210, 70),
+  ],
+  wires: [w('rat.µOP', 'alloc.µOP'), w('alloc.ZÁZNAM', 'rs.ZÁZNAM'), w('alloc.ZÁZNAM', 'rob.ZÁZNAM')],
+  drills: { rat: 'cell_sram', elim: 'cell_match', alloc: 'FULL_ADDER', rs: 'cell_arbiter', wake: 'cell_match', rob: 'cell_sram', ret: 'cell_arbiter', flush: 'cell_lt' },
+});
+
+def('x86_memsub', {
+  level: 4.5,
+  name: 'Paměťový subsystém jádra x86 — L1D, TLB, L2',
+  subtitle: 'Optimization Manual 248966: L1D 32 KB, 8 cest, řádek 64 B, za takt 2 čtení + 1 zápis po 32 B. DTLB 64 záznamů (4 KB stránky), sdílená STLB (Haswell 1024, Skylake 1536) a průchod tabulkami stránek při minutí. Load buffer 72, store buffer (Haswell 42, Skylake 56) s přeposíláním zápisů do čtení. Výpadky L1 drží fill buffery, L2 256 KB na jádro, prefetchery L1 i L2.',
+  components: [
+    blk('agu', 'ADRESY (Z PORTŮ 2/3/7)', 50, 50, [], ['ADRESA'], '', 200, 70),
+    blk('dtlb', 'DTLB + STLB', 50, 160, ['ADRESA'], ['FYZ. ADRESA'], 'PŘEKLAD VIRTUÁLNÍ → FYZICKÁ', 200, 80),
+    blk('pmh', 'PRŮCHOD TABULEK STRÁNEK', 50, 280, [], [], 'PŘI MINUTÍ TLB', 200, 70),
+    blk('lb', 'LOAD BUFFER 72', 310, 50, [], [], '', 200, 60),
+    blk('sb', 'STORE BUFFER + PŘEPOSÍLÁNÍ', 310, 140, [], [], 'ZÁPIS → ČTENÍ BEZ CACHE', 200, 70),
+    blk('l1d', 'L1D 32 KB · 8 CEST', 570, 50, ['FYZ. ADRESA'], ['VÝPADEK'], '2 ČTENÍ + 1 ZÁPIS ZA TAKT', 210, 80),
+    blk('fb', 'FILL BUFFERY (VÝPADKY)', 570, 170, ['VÝPADEK'], ['L2'], '', 210, 60),
+    blk('l2', 'L2 256 KB NA JÁDRO', 570, 260, ['L2'], [], 'DÁL KRUH → LLC', 210, 70),
+    blk('pf', 'PREFETCHERY L1 + L2', 310, 240, [], [], 'PROUDY A SOUSEDNÍ ŘÁDKY', 200, 70),
+  ],
+  wires: [w('agu.ADRESA', 'dtlb.ADRESA'), w('dtlb.FYZ. ADRESA', 'l1d.FYZ. ADRESA'), w('l1d.VÝPADEK', 'fb.VÝPADEK'), w('fb.L2', 'l2.L2')],
+  drills: { agu: 'FULL_ADDER', dtlb: 'cell_match', pmh: 'FULL_ADDER', lb: 'cell_sram', sb: 'cell_match', l1d: 'cell_sram', fb: 'cell_sram', l2: 'cell_sram', pf: 'cell_lt' },
+});
+
 // dvojkliky bloků jednotek → buňky L5
 for (const sub of Object.values(UNIT_SUBCIRCUITS)) {
   for (const comp of sub.components) if (sub.drills?.[comp.id]) comp.drill = sub.drills[comp.id];

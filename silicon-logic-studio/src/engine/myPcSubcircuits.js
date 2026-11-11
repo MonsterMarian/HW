@@ -644,7 +644,7 @@ const DRILLS = {
   mypc_board: { sio: 'nct6796d', fan: 'cell_lt', vrm: 'cell_buck', dimma: 'ddr4_8g_x8', dimmb: 'ddr4_8g_x8', x16: 'pcie3_ctrl', disp: 'gen9_display', lan: 'rtl8111h', pci: 'pci_target', sata: 'pch_ahci', usb: 'pch_xhci', m2: 'phoenix_ctl', slots: 'pcie3_ctrl', audio: 'alc887', bios: 'cell_eeprom' },
   b360_pch: { dmi: 'pcie3_ctrl', hsio: 'pch_hsio', pcie: 'pcie3_ctrl', sata: 'pch_ahci', usb3: 'pch_xhci', usb2: 'pch_xhci', hda: 'pch_hda', spi: 'pch_spi', smb: 'pch_smbus', me: 'csme12', cnvi: SERDES, clk: 'pch_icc' },
   cfl_die: { ring: 'cfl_ring', gt: 'gen9_gt2', pcu: 'cfl_pcu', sa: 'cfl_sa', imc: 'cfl_imc', peg: 'pcie3_ctrl', dmi: 'pcie3_ctrl', disp: 'gen9_display' },
-  cfl_core: { fe: 'cell_decoder', ooo: 'cell_match', prf: 'cell_sram', p0: 'FULL_ADDER', p1: 'FULL_ADDER', p5: 'MUX', p6: 'MUX', p23: 'FULL_ADDER', p4: 'cell_sram', p7: 'FULL_ADDER', l1d: 'cell_sram' },
+  cfl_core: { fe: 'x86_frontend', ooo: 'x86_ooo', prf: 'cell_sram', p0: 'FULL_ADDER', p1: 'FULL_ADDER', p5: 'MUX', p6: 'MUX', p23: 'FULL_ADDER', p4: 'cell_sram', p7: 'FULL_ADDER', l1d: 'x86_memsub' },
   mypc_gpu_board: { edge: 'pcie3_ctrl', vrm: 'cell_buck', mvdd: 'cell_buck', m0: 'gddr6x_chip', m1: 'gddr6x_chip', out: 'nv_display', fan: 'cell_lt' },
   ga104_die: { host: 'pcie3_ctrl', gt: 'cell_arbiter', media: 'ampere_nvenc', disp: 'nv_display', l2: 'nv_l2', ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [`mc${i}`, 'gddr6x_ctrl'])) },
   ampere_sm: { ic: 'cell_sram', pb0: 'cell_arbiter', pb1: 'cell_arbiter', pb2: 'cell_arbiter', pb3: 'cell_arbiter', rf: 'cell_sram', fp32: 'FULL_ADDER', fpint: 'FULL_ADDER', tc: 'ampere_tensor', ldst: 'FULL_ADDER', sfu: 'cell_decoder', rt: 'rt_core2', l1: 'cell_sram', tex: 'cell_mac' },

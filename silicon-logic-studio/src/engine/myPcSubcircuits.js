@@ -641,12 +641,12 @@ def('mypc_mic', 2, {
 const SERDES = 'cell_serdes';
 const DRILLS = {
   nct6796d: { lpc: SERDES, acpi: 'cell_pwrbtn', hwm: 'cell_lt', temp: 'cell_lt', fanctl: 'cell_lt', tach: 'cell_toggle', kbc: SERDES, uart: SERDES, gpio: 'REGISTER_8BIT' },
-  mypc_board: { sio: 'nct6796d', fan: 'cell_lt', vrm: 'cell_buck', dimma: 'ddr4_8g_x8', dimmb: 'ddr4_8g_x8', x16: SERDES, disp: 'ramdac_datapath', lan: SERDES, pci: 'pci_target', sata: SERDES, usb: SERDES, m2: 'phoenix_ctl', slots: SERDES, audio: 'sigma_delta', bios: 'cell_eeprom' },
-  b360_pch: { dmi: SERDES, hsio: 'MUX', pcie: SERDES, sata: SERDES, usb3: SERDES, usb2: SERDES, hda: SERDES, spi: SERDES, smb: SERDES, me: 'ADDER_8BIT', cnvi: SERDES, clk: 'cell_toggle' },
-  cfl_die: { ring: 'REGISTER_8BIT', gt: 'ADDER_8BIT', pcu: 'COMPARATOR_8BIT', sa: 'cell_arbiter', imc: 'COMPARATOR_8BIT', peg: SERDES, dmi: SERDES, disp: SERDES },
+  mypc_board: { sio: 'nct6796d', fan: 'cell_lt', vrm: 'cell_buck', dimma: 'ddr4_8g_x8', dimmb: 'ddr4_8g_x8', x16: 'pcie3_ctrl', disp: 'gen9_display', lan: SERDES, pci: 'pci_target', sata: SERDES, usb: SERDES, m2: 'phoenix_ctl', slots: 'pcie3_ctrl', audio: 'sigma_delta', bios: 'cell_eeprom' },
+  b360_pch: { dmi: 'pcie3_ctrl', hsio: 'MUX', pcie: 'pcie3_ctrl', sata: SERDES, usb3: SERDES, usb2: SERDES, hda: SERDES, spi: SERDES, smb: SERDES, me: 'ADDER_8BIT', cnvi: SERDES, clk: 'cell_toggle' },
+  cfl_die: { ring: 'cfl_ring', gt: 'gen9_gt2', pcu: 'cfl_pcu', sa: 'cfl_sa', imc: 'cfl_imc', peg: 'pcie3_ctrl', dmi: 'pcie3_ctrl', disp: 'gen9_display' },
   cfl_core: { fe: 'cell_decoder', ooo: 'cell_match', prf: 'cell_sram', p0: 'FULL_ADDER', p1: 'FULL_ADDER', p5: 'MUX', p6: 'MUX', p23: 'FULL_ADDER', p4: 'cell_sram', p7: 'FULL_ADDER', l1d: 'cell_sram' },
-  mypc_gpu_board: { edge: SERDES, vrm: 'cell_buck', mvdd: 'cell_buck', m0: 'ddr4_cells', m1: 'ddr4_cells', out: SERDES, fan: 'cell_lt' },
-  ga104_die: { host: SERDES, gt: 'cell_arbiter', media: 'ADDER_8BIT', disp: SERDES, l2: 'RAM', ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [`mc${i}`, SERDES])) },
+  mypc_gpu_board: { edge: 'pcie3_ctrl', vrm: 'cell_buck', mvdd: 'cell_buck', m0: 'ddr4_cells', m1: 'ddr4_cells', out: SERDES, fan: 'cell_lt' },
+  ga104_die: { host: 'pcie3_ctrl', gt: 'cell_arbiter', media: 'ADDER_8BIT', disp: SERDES, l2: 'RAM', ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [`mc${i}`, SERDES])) },
   ampere_sm: { ic: 'cell_sram', pb0: 'cell_arbiter', pb1: 'cell_arbiter', pb2: 'cell_arbiter', pb3: 'cell_arbiter', rf: 'cell_sram', fp32: 'FULL_ADDER', fpint: 'FULL_ADDER', tc: 'cell_mac', ldst: 'FULL_ADDER', sfu: 'cell_decoder', rt: 'cell_lt', l1: 'cell_sram', tex: 'cell_mac' },
   va249_inside: { hdmi: SERDES, vga: 'sigma_delta', edid: 'cell_eeprom', psu: 'cell_buck', scaler: 'crtc', panel: 'cell_tft', led: 'cell_lt' },
   pwm_fan_inside: { drv: 'cell_buck', note: 'cell_lt' },

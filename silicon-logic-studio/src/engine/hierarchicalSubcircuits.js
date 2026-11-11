@@ -1,6 +1,7 @@
 import { PC_SUBCIRCUITS } from './pcSubcircuits.js';
 import { PC_DEEP_SUBCIRCUITS, derivePcSubcircuits } from './pcDeepSubcircuits.js';
 import { MY_PC_SUBCIRCUITS } from './myPcSubcircuits.js';
+import { UNIT_SUBCIRCUITS } from './unitSubcircuits.js';
 import { PARTICLE_SUBCIRCUITS } from './particleSubcircuits.js';
 import { PROCESS_SUBCIRCUITS } from './processSubcircuits.js';
 import { applyAiPcDepth } from './aiPcDepth.js';
@@ -1643,7 +1644,7 @@ H.adder_pipe = H.FULL_ADDER; // used by components/Nv1DiagnosticModal.jsx
 
 // Parts with nothing (simulable) inside: I/O, sources, wiring, connectors, off-board equipment, layers, atoms
 // AI PC: díly napájení (pcSubcircuits.js)
-Object.assign(H, PC_SUBCIRCUITS, PC_DEEP_SUBCIRCUITS, derivePcSubcircuits(H), MY_PC_SUBCIRCUITS, PARTICLE_SUBCIRCUITS, PROCESS_SUBCIRCUITS);
+Object.assign(H, PC_SUBCIRCUITS, PC_DEEP_SUBCIRCUITS, derivePcSubcircuits(H), MY_PC_SUBCIRCUITS, UNIT_SUBCIRCUITS, PARTICLE_SUBCIRCUITS, PROCESS_SUBCIRCUITS);
 applyAiPcDepth(H); // AI PC: bloky až dolů, procesy čipů, druhy 3D scén
 // měď: konektory, kabely, vodiče, vinutí a relé vedou na krystal mědi → atom Cu → jádro → kvarky
 const COPPER_TYPES = new Set(['CONN_PCIE8', 'CONN_EPS8', 'CONN_SATA', 'CONN_ATX24', 'CONN_FAN4', 'RELAY']);

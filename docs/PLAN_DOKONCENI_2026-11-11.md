@@ -1,5 +1,8 @@
 # Plán dokončení a kontext práce z 11. 11. 2026
 
+> **Navazuje [`PLAN_VERNOST_NV1_2026-11-11.md`](PLAN_VERNOST_NV1_2026-11-11.md).** Kapitola 3.1 níže obsahuje omyl:
+> zásobník pixelů v Palette-DAC nemá „128 bitů celkem“, ale slova po 128 bitech (datasheet STG1732/64 s. 12).
+
 > **Stav 11. 11. 2026 17:20 – kapitola 3 je HOTOVÁ.** Přestavba paměťové sběrnice karty je v kódu podle návrhu 3.1,
 > všechny body 3.3 jsou udělané (deska, rozměry, záslepka, 3D, hierarchie, kusovník a nabídky, ANATOMY, testy,
 > diagnostika, README, změřená rychlost). Skript `docs/rozpracovano/rebuild_nv1.mjs` byl použit a smazán.

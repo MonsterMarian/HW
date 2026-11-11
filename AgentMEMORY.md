@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-11 18:26
+Aktualizováno: 2026-11-11 19:02
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -159,7 +159,7 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - Zdroje: datasheet STG2000 (září 1996) https://geforcewww.vgamuseum.info/images/doc/st/stg2000_sep96.pdf (text přes pypdf),
   datasheet STG1732/64, XFree86 3.3.6 `nv1driver.c`, envytools pdac, PCI 2.1; fotka karty
   https://www.vgamuseum.info/images/palcal/diamond/588_diamond_edge_3d_2120_top_hq.jpg. Odkazy a ověřená fakta jsou
-  v `docs/PLAN_DOKONCENI_2026-11-11.md` (kap. 4); kap. 3 toho plánu je HOTOVÁ, skript `docs/rozpracovano` je smazaný.
+  v `docs/PLAN_DOKONCENI_2026-11-11.md` (kap. 4); kap. 3 toho plánu je HOTOVÁ (její 3.1 má omyl o FIFO, platí nový plán), skript `docs/rozpracovano` je smazaný.
 - Model (`nv1Card.js`): NV1 běží na `mclkx2` (100,07 MHz, 1 tik = 10 ns), 32bit MD jako dva 16bit řezy `md_lo`/`md_hi`,
   banka 0 (dram0/1 = U19/U20) na MD, banka 1 (dram2/3 = U23/U24) na SDB za `BUS_SWITCH_32` (4× PI5C3245Q jako jedna součástka,
   `en64` = 1 jen při načítání pixelů). Pozdní zápis DRAM (WE# padá při CAS# dole). Pořadí obsluhy: pixely → refresh →
@@ -177,32 +177,17 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   Nesimuluje se zachycení MD[7:0] při RST#. Označení U1/U2 a pořadí jacků nemají spolehlivý zdroj (kodek je U6 – čitelné na zvětšené fotce).
 - Kusovník: nové položky `busswitch`, `nvsgp`, `hdr2x5`, `xtal_12` (`xtal_14` zrušen).
 
-## DALŠÍ KROK: karta NV1 věrně podle zdrojů (zjištěno 2026-11-11 večer, zatím NEUDĚLÁNO)
-Uživatel chce věrnost realitě. Když jsem po dokončení přestavby četl datasheety celé, vyšlo najevo, že návrh z plánu
-(kap. 3.1) stojí v pixelové cestě na špatném čtení a že model má vlastní mapu registrů, i když skutečná je zčásti známá.
-Texty zdrojů si znovu vytáhni: `python -I` + pypdf na oba PDF (odkazy výše), envytools `hw/display/nv1/pdac.html`, `pfb.html`.
-- FIFO v STG1764 NENÍ „128 bitů celkem“. Datasheet STG1732/64 s. 12: slovo jádra FIFO má 128 bitů (2 načtení po 64 b),
-  zápis je zpožděný – po posledním úplném slově jsou potřeba 2 LOADCLK navíc (64bit port; 32bit: 3, 16bit: 5); FIFO je
-  „deep“, hloubka neuvedena; čte se pod řízením BLANK# po 32bit slovech (délka řádku násobek 2 pixelů při 16 bpp a VCLK 1:1).
-  Model dnes: kapacita jedno slovo jádra (8 pixelů), zápis hned, načítání po jednom slově. Skutečný čip plní FIFO dávkami.
-- Zpoždění: (3 × VCLK) + (15 × bodový takt) + 7 ns při 16/32 bpp, měřeno od hrany VCLK se vzorkovaným BLANK# = 1 (s. 18).
-  HSYNC/VSYNC jdou z NV1 rovnou na konektor, takže skutečný čip musí zpoždění DAC srovnat sám (jak, zdroj neříká).
-- VCLK = bodový takt / 1, 2, 4, 8 nebo 16 „podle režimu“; PFB CONFIG bity 24–26 = PCLK_VCLK_RATIO (kódování neznámé).
-  Model má pevně /4. Zjistit z ovladače XFree86 3.3.6 `nv1driver.c` (odkaz v plánu kap. 4) – tam bude i programování časování.
-- Skutečné registry (envytools, offsety v MMIO): PFB 0x600000 VRAM_CONFIG, 0x6000C0 POWER_SYNC, 0x600200 CONFIG (bit 0 VBLANK,
-  8–9 BPP: 2 = 16 bpp), 0x600400 START, 0x600500/510/520/530 HOR_FRONT_PORCH / SYNC_WIDTH / BACK_PORCH / DISP_WIDTH,
-  0x600540–570 totéž svisle (jednotky nepopsané); PDAC 0x609000 PAL_WRITE, +4 PAL_DATA, +8 PAL_MASK, +C PAL_READ, +10 INDEX_LOW,
-  +14 INDEX_HIGH, +18 DATA, +1C GAME_PORT. Vnitřní registry DAC: 0/1/2 ID (0x44, 0x64, revize 0xB2), 4/5 CONFIG, 0x10+4i PLL
-  M/N/O/P (0 paměť, 1 audio, 2 video), 0x300+2i data a 0x301+2i režim Saturn portu i (bity 0–3 DATA, 4 SENSE, 5 SELECT[1],
-  6 SELECT[0]; 0 = výstup). Kde v BAR0 leží framebuffer (asi +0x1000000), je potřeba ověřit (envytools `hw/mmio`).
-- Saturn porty jsou GPIO, které čte OVLADAČ přes PDAC; model je skenuje sám v NV1 (`nv1Mem`, `s.sat`, `REG.GAMEPORT`).
-- Paměti: datasheet s. 19 – s EDO DRAM plní čip STG1764 v hyper page mode 400 MB/s (CAS# 0,5 T), s obyčejnými FPM 200 MB/s
-  (2 MB do 64bit portu). Na fotce jsou Hyundai HY514260B (podle značení FPM, neověřeno datasheetem) → dnešní FPM cyklus 2 T sedí.
-- EEPROM: U29 na fotce má potisk NVCAA = předprogramovaná ST93C46A (NVCAATR, datasheet s. 32), Microwire EECS/EESD/EESCLK,
-  perioda 50 T, čte se po zapnutí. Stabilizátor U18 = LM2941CT. OZ: 3× LF353, 1× LF347. CD audio J4 (Mitsumi), J12 (Panasonic).
-- Navržený postup: (1) skutečná mapa PFB/PDAC místo vlastních registrů + ovladač hosta, který ji používá, (2) FIFO se slovy
-  128 b, zpožděným zápisem a dávkovým plněním, (3) skutečné zpoždění DAC + srovnání syncu, (4) EEPROM. Co zdroje neříkají
-  (hloubka FIFO, arbitráž sběrnice, vnitřek nvSGP), zůstane modelem a musí to být u dílů napsané.
+## DALŠÍ KROK – ZAČNI TADY: `docs/PLAN_VERNOST_NV1_2026-11-11.md`
+Uživatel 11. 11. potvrdil („jo, zapiš to do plánu a na další session“), že příští session má kartu NV1 předělat věrně
+podle zdrojů. Plán obsahuje: odkazy na zdroje a jak z nich dostat text, ověřená fakta po stránkách (oba datasheety,
+envytools, fotka), tabulku „model vs. skutečnost“, 8 kroků s kritériem hotovo a seznam toho, co zdroje neříkají.
+- Jádro věci: FIFO v STG1764 má slova po 128 bitech se zpožděným zápisem a plní se dávkami (ne „128 bitů celkem“, jak
+  stálo ve starém plánu a jak je to dnes v modelu); zpoždění DAC je 3 VCLK + 15 bodů + 7 ns; skutečné registry jsou PFB
+  (0x600000) a PDAC (0x609000), model má vlastní; Saturn pad čte ve skutečnosti ovladač přes GPIO v DAC.
+- Krok 0 plánu (NEUDĚLÁNO): přečíst ovladač XFree86 3.3.6 `nv1driver.c` – jednotky registrů, dělič VCLK, srovnání syncu,
+  poloha framebufferu v BAR0. Bez toho kroky 1–4 nezačínat.
+- Texty zdrojů jsem měl jen ve scratchpadu session (do repa nepatří) – stáhnout znovu, návod je v plánu.
+- PAST: `[IO.File]::ReadAllText` bere relativní cestu od adresáře procesu, ne od `Set-Location` → dávat absolutní cesty.
 ## Review ostatních projektů (2026-11-11)
 - Rozhodnutí: bitové chyby z přehřátí, RC zpoždění, WebGPU/JIT/Monaco a skutečný AI copilot se NEDĚLAJÍ (důvody v plánu).
 - AI PC: Seasonic Core GX-650 ATX 3 má JEDEN PCIe kabel (2× 6+2) + 12V-2x6; BFB1012VH 1,5 A (datasheet); PB-08248
@@ -272,3 +257,4 @@ Texty zdrojů si znovu vytáhni: `python -I` + pypdf na oba PDF (odkazy výše),
 - 2026-11-11 17:59 — „u step je jedno, jak dlouho to trvá, hlavní je správně simulovat realitu“ → vráceno slučování sestupných hran hodin v `step()`, test na viditelnost každé hrany MCLKx2; 281/281 testů.
 - 2026-11-11 18:06 — po pokynu „věrnost před rychlostí“ přečteny celé datasheety STG2000 a STG1732/64 + envytools → opraveny bity Saturn portu a popisy; rozdíly modelu proti skutečnému čipu sepsány v sekci „DALŠÍ KROK“ (FIFO, zpoždění DAC, skutečné registry PFB/PDAC).
 - 2026-11-11 18:26 — nezávislá kontrola obou commitů → opraveno 5 nálezů (monitor 640×480, čtení ROM při obraze, klid PCI, sdílený objekt dvou karet, kurzory analyzátoru), 3 nové testy; 284/284 testů, diagnostika v aplikaci 7/7.
+- 2026-11-11 19:02 — „zapiš to do plánu na další session a pushni“ → `docs/PLAN_VERNOST_NV1_2026-11-11.md` (fakta ze zdrojů, model vs. skutečnost, 8 kroků), odkaz v paměti, README a starém plánu.

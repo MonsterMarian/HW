@@ -159,4 +159,6 @@ npm run desktop   # Electron okno
 ```
 
 ## Deník práce
+Co se má dělat dál (karta NV1 věrně podle datasheetů a envytools): [`docs/PLAN_VERNOST_NV1_2026-11-11.md`](docs/PLAN_VERNOST_NV1_2026-11-11.md).
+
 Podrobný záznam práce z 10. 11. 2026 (zadání, postup, zdroje, chyby, otevřené body): [`docs/PRACOVNI_DENIK_2026-11-10.md`](docs/PRACOVNI_DENIK_2026-11-10.md).

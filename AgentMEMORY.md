@@ -266,3 +266,12 @@ envytools, fotka), tabulku „model vs. skutečnost“, 8 kroků s kritériem ho
   pohledy; ověřeno: monitor VA249HE (HDMI), Super I/O NCT6796D, Vcore 1,2 V (LibreHardwareMonitor + PawnIO, obojí
   pak odinstalováno); drobečky ve SCHEMATIC zkracované jako ve 3D; výřez v čele skříně pro P100; rebase na 091d0b4.
   Podrobně v `PLAN_POKRACOVANI.md`.
+- 2026-11-11 (paralelní session) — „commitni a pushni po každém kroku (pravidlo v CLAUDE.md), pak schémata do největšího
+  detailu až k atomům“ → `engine/unitSubcircuits.js`: 68 konkrétních jednotek místo obecných buněk (UHD 630 + EU, ring/LLC,
+  IMC, PCU, System Agent, display, PCIe 3.0/2.0, celý PCH B360 i C612, CSME, RTL8111H, ALC887, USB, Cortex-M0, GPU L2,
+  GDDR6X, NVENC, HBM2, NVLink, GPC, SM podjednotky, Tensor/RT Core, x86 front-end/OoO/L1D, Haswell-EP, RCD, MKX, NVMe,
+  FTL, NAND, V-NAND, VRM, DRAM banka, SPI flash, BLDC, Super I/O části, PSU řadiče, SPD). Mezistupně úrovní: **L3,5**
+  (GPC) a **L4,5** (podjednotky uvnitř L4: Tensor Core, plánovač warpů, x86 front-end …) – dvojklik musí jít vždy
+  hlouběji; test hierarchie povoluje násobky 0,5, UI píše „4,5“. Atomy: nové L8 mřížky (krystal kanálu, SiGe, W, BEOL
+  W/Cu/SiCOH, kondenzátor DRAM ZrO₂/Al₂O₃, blokovací vrstva V-NAND) a L9/L10 atomy W, Ge, C, Al, Zr. MŮJ PC 87 → 153
+  podobvodů, AI PC 70 → 118. Projekt NV1 jsem nechal (paralelně ho dělá jiná session podle datasheetu).

@@ -16,10 +16,10 @@ const DRILLS = {
   gp100_sm: { ic: 'cell_sram', pb0: 'warp_scheduler', pb1: 'warp_scheduler', rf: 'gpu_regfile', fp32: 'FULL_ADDER', fp64: 'FULL_ADDER', ldst: 'FULL_ADDER', sfu: 'gpu_sfu', smem: 'gpu_l1_smem', tex: 'gpu_tex' },
   xeon_die: { ring: 'hswep_ring', imc: 'xeon_imc', pcie: 'pcie3_ctrl', dmi: 'pcie2_ctrl', pcu: 'hsw_pcu' },
   haswell_core: { fe: 'x86_frontend', ooo: 'x86_ooo', prf: 'cell_sram', p0: 'FULL_ADDER', p1: 'FULL_ADDER', p5: 'MUX', p6: 'MUX', p23: 'FULL_ADDER', p4: 'cell_sram', p7: 'FULL_ADDER', l1d: 'x86_memsub' },
-  rdimm_module: { rcd: 'ddr4_rcd', spd: 'cell_eeprom' },
+  rdimm_module: { rcd: 'ddr4_rcd', spd: 'spd_ee1004' },
   ddr4_chip: { cmd: 'cell_decoder', mr: 'cell_sram', ref: 'FULL_ADDER', rmux: 'MUX', rdec: 'cell_decoder', bg: 'cell_decoder', cdec: 'cell_decoder', sa: 'NOT', iog: 'cell_sram', io: 'D_FF', dll: 'D_FF' },
   sata_ssd: { sata: SER, ctl: 'samsung_mkx', dram: 'ddr4_cells', nand: 'cell_nand', pwr: 'cell_buck' },
-  k620_board: { edge: 'pcie2_ctrl', gpu: 'gm107_die', mem: 'ddr4_cells', out: SER, vrm: 'cell_buck', fan: 'cell_lt' },
+  k620_board: { edge: 'pcie2_ctrl', gpu: 'gm107_die', mem: 'dram_bank', out: SER, vrm: 'cell_buck', fan: 'cell_lt' },
 };
 
 /** GM107 (Quadro K620) – čip podle datasheetu 75509 a recenzí Maxwellu; SMM a cache vedou na buňky L5. */

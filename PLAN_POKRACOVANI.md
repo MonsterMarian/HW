@@ -51,6 +51,12 @@ Jen díly, které v projektech opravdu jsou. Vyžaduje ruční stažení uživat
 
 Napojení: `views/economic/realModels.js` (`SOURCES`, `fit` pro obecné modely), soubory do `src/assets/models/`.
 
+## 4b. Detail schémat – HOTOVO 11. 11. 2026
+
+Bloky čipů vedou přes konkrétní jednotky (`engine/unitSubcircuits.js`, 68 jednotek, mezistupně L3,5 a L4,5) a vrstvy
+tranzistorů na atomové mřížky všech použitých materiálů (Si, SiGe, HfO₂, TiN, W, Cu, SiCOH, ZrO₂, Al₂O₃, SiN …) až ke
+kvarkům. Zbývá jen to, co nejde bez údajů: zdroj mého PC (podle štítku), MCU myši a mikrofonu (podle nápisu).
+
 ## 5. Údržba
 
 - Nabídky v `offers.js` (dohledány 10. 11. 2026) přerešeršovat zhruba po měsíci; po přestavbě komponent z bodu 2

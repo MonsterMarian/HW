@@ -864,6 +864,21 @@ def('flyback_ctl', {
   drills: { start: 'cell_buck', osc: 'D_FF', fet: 'cell_buck', fb: 'cell_lt', prot: 'cell_lt' },
 });
 
+// ================================================================ SPD EEPROM modulů DDR4 (JEDEC EE1004 / TSE2004av)
+def('spd_ee1004', {
+  name: 'SPD EEPROM modulu DDR4 (JEDEC EE1004)',
+  subtitle: 'JEDEC EE1004: 512 B EEPROM ve 2 stránkách po 256 B, stránka se volí příkazy SPA0 / SPA1 na sběrnici I²C/SMBus; zápis jde chránit po blocích 128 B. Obsah: typ paměti, organizace, časování (u Fury JEDEC 2666 i profil XMP 2.0), výrobce modulu a čipů, sériové číslo. RDIMM v Dellu mají TSE2004av = totéž + teplotní čidlo. Výrobce SPD čipů neověřen.',
+  components: [
+    blk('i2c', 'ROZHRANÍ I²C (SCL / SDA)', 50, 50, [], ['BAJTY'], 'ADRESA 0x50–0x57 PODLE SLOTU', 220, 80),
+    blk('page', 'VÝBĚR STRÁNKY SPA0 / SPA1', 330, 50, ['BAJTY'], ['ADRESA'], '2 × 256 B', 220, 70),
+    blk('arr', 'EEPROM 512 B', 600, 50, ['ADRESA'], [], 'PLOVOUCÍ HRADLO', 210, 80),
+    blk('wp', 'OCHRANA ZÁPISU (4 BLOKY)', 330, 160, [], [], 'PŘÍKAZY SWP / CWP', 220, 70),
+    blk('ts', 'TEPLOTNÍ ČIDLO (JEN TSE2004 / RDIMM)', 600, 170, [], [], 'FURY UDIMM HO NEMÁ (OBVYKLE)', 210, 80),
+  ],
+  wires: [w('i2c.BAJTY', 'page.BAJTY'), w('page.ADRESA', 'arr.ADRESA')],
+  drills: { i2c: 'cell_decoder', page: 'D_FF', arr: 'cell_eeprom', wp: 'cell_sram', ts: 'cell_lt' },
+});
+
 // ================================================================ podjednotky jader x86 (Skylake / Coffee Lake i Haswell), L4,5
 // Zdroj: Intel 64 and IA-32 Architectures Optimization Reference Manual 248966 (kap. 2.2 Skylake, 2.4 Haswell).
 def('x86_frontend', {

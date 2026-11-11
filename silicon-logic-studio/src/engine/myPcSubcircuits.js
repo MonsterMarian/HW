@@ -655,7 +655,7 @@ const DRILLS = {
   mypc_psu: { pfc: 'cell_buck', main: 'cell_buck', r12: 'cell_buck', dcdc: 'cell_buck', sb: 'cell_buck', sup: 'cell_lt', fan: 'cell_lt' },
   evo_plus_ssd: { pwr: 'cell_buck', dram: 'ddr4_cells', nand: 'vnand_die', tw: 'cell_nand', therm: 'cell_lt' },
   phoenix_ctl: { host: 'nvme_host', cores: 'ADDER_8BIT', ftl: 'ssd_ftl', ecc: 'cell_parity', dramc: 'lpddr4_ctrl', ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [`ch${i}`, 'nand_channel'])) },
-  fury_module: { spd: 'cell_eeprom' },
+  fury_module: { spd: 'spd_ee1004' },
   ddr4_8g_x8: { arr: 'dram_bank', cmd: 'cell_decoder', mr: 'REGISTER_8BIT', ref: 'ADDER_8BIT', rmux: 'MUX', rdec: 'cell_decoder', bg: 'cell_decoder', cdec: 'cell_decoder', sa: 'NOT', iog: 'REGISTER_8BIT', io: SERDES, dll: 'D_FF' },
   mypc_mic: { cap: 'nmos_transistor', pre: 'NOT', codec: 'sigma_delta', usb: 'usb_fs_device' },
 };

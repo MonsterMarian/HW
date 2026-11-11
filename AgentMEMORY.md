@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-10 19:56
+Aktualizováno: 2026-11-11 13:05
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -9,7 +9,7 @@ až k atomům (8 úrovní) ve 2D (schéma, PCB) i 3D. Uživatel chce: vzhled jak
 vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zařízení (ne jen schéma).
 
 ## Stav a jak spustit
-- `cd silicon-logic-studio && npm install && npm test` (node --test, ~115 testů), `npm run build`.
+- `cd silicon-logic-studio && npm install && npm test` (node --test, ~260 testů), `npm run build`.
 - Vývoj: `npx vite --port 5287 --strictPort` (port 5199 bývá obsazený portfoliem!).
 - Vizuální kontrola bez okna: `SHOT_URL=http://localhost:5287/ npx electron tools/shot.cjs <steps.json> <outdir>`
   (okno `show:false`, `SHOT_SIZE=1280x800`; helpery `__view('SCHEMATIC'|'PCB'|'DIE 3D')`, `__dbl(x,y)`, `__crumb()`,
@@ -25,9 +25,9 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   v simulovaném čase (ns), `wireValue/wireWidth/wireLabel/pinValue`, `setFrequency(Infinity)` = MAX.
 - Modely součástek `src/engine/devices/nv1Card.js` (+ registry `devices/index.js`): host PC posílá skutečné PCI
   transakce (config 104A:0008, BAR0, ROM 55AA s kontrolním součtem), NV1 = PCI target + FIFO + řadič FPM DRAM
-  (RAS/CAS, page mode, CBR refresh 15,6 µs) + CRTC/scan-out + 32hlasá syntéza → AD1845 + Saturn TH/TR scan;
-  4× KM416C256, STG1764X (PLL z 14,31818 MHz → VCLK 25,165 / MCLK 50,1 MHz, RGB555 → 0–0,7 V), AD1845 (48 kHz
-  z 24,576 MHz), EPROM, konektory, monitor skládá obraz jen z napětí a časování syncu.
+  (RAS/CAS, page mode, CBR refresh každých 776 MCLK = 15,52 µs) + CRTC/scan-out + 32hlasá syntéza → AD1845 + Saturn TH/TR scan;
+  4× KM416C256, STG1764X (3 PLL z jediného krystalu → VCLK 25,165 / MCLK 50,1 / ACLK 24,576 MHz, RGB555 → 0–0,7 V), AD1845 (48 kHz
+  z ACLK, vlastní krystal nemá), EPROM, konektory, monitor skládá obraz jen z napětí a časování syncu.
 - Preset `src/engine/presets/nv1Board.js` (x/y = PCB 3,7 px/mm, sx/sy = schéma). Rozměry pouzder a obrys karty
   v `boardLayout.js`. 5V klíč PCI je na kontaktech 50/51 (pin 1 u bracketu).
 - Hierarchie `hierarchicalSubcircuits.js` L2–L8 přepsaná: L2 DIE_BLOCK (popisné), L3+ simulované RTL → hradla →
@@ -41,8 +41,7 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 
 ## Projekty + ECONOMIC view (2026-11-10)
 - `src/engine/projects.js`: po startu 2 projekty (karty v titulní liště, `data-project`), otevře se 1. = NV1.
-  2. = AI PC z `PCYoutubeborce.md` (Dell T5810 + 2× Tesla P100) – jen kusovník (`circuit: null`, `views: ['economic']`),
-  ostatní pohledy jsou v liště zakázané. Přepnutí projektu ukládá stav enginu + hierarchii + pohled (App `savedProjects`).
+  2. = AI PC z `PCYoutubeborce.md` (Dell T5810 + 2× Tesla P100) – dnes všechny pohledy (viz sekce níže). Přepnutí projektu ukládá stav enginu + hierarchii + pohled (App `savedProjects`).
 - ECONOMIC view (`views/EconomicView.jsx`): díly z kusovníku `engine/economic/catalog.js` (`dims` mm + `dimsSrc`
   ověřeno/odhad); ceny se počítají JEN ze skutečných nabídek v `engine/economic/offers.js` (rešerše 10. 11. 2026,
   přímé URL produktů/inzerátů, `verified` fetched/snippet, kurz ČNB 9. 11.; `alt` = jen alternativa, nepočítá se).
@@ -59,11 +58,11 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   Výkres `src/views/anatomy/figures.js` (čistý, testy `tests/anatomy.test.js`), UI `views/AnatomyView.jsx`.
   3D režim (výchozí): `anatomy/scene3d.js` + `Anatomy3D.jsx` – modely z economic/models.js, `orient` u dílu =
   kam míří osy modelu (X, Y, Z) v osách sestavy; sestava (x, y, z↑) → three (X = x, Y = z, Z = -y).
-- PC sestava: polohy uvnitř T5810 jsou odhad (sloty po 21,5 mm, deska, vestavěný zdroj, chladič); limit 312 mm a
+- PC sestava: polohy uvnitř T5810 jsou odhad (sloty po 20,32 mm, deska, vestavěný zdroj, chladič); limit 312 mm a
   kolize krytu+9733 s držákem karet jsou zvýrazněné červeně. Kamera kitu: divák na +x +y, z nahoru.
 - Fakta z rešerše videa (popis + storyboard): autor používá "ducted fan shroud", 2. zdroj mimo skříň, teploty 61/53 °C;
   přesný ventilátor ani zavřená skříň nejsou ověřené. Konektory ventilátorů T5810 jsou proprietární → ventilátory
-  napájí SATA PWM regulátor ModDIY TD404 (60 W), ne deska ani Y-rozbočovač (2× BFB1012VH = 3,6 A).
+  napájí SATA PWM regulátor ModDIY TD404 (60 W), ne deska ani Y-rozbočovač (2× BFB1012VH = 3,0 A podle datasheetu Delta, 3,6 A podle štítků).
 
 ## Schémata AI PC (2026-11-10)
 - L1 `engine/presets/pcPower.js` (projekt 2 má teď `circuit` = PC_POWER, pohled SCHEMATIC), modely
@@ -123,11 +122,56 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - PAST: v PowerShellu `'a' + $x + 'b', 'c'` – čárka váže víc než + → rozbité JSON kroků pro shot.cjs (Electron pak visí).
 - PAST: PowerShell `Get-Content -Raw` čte UTF-8 bez BOM jako cp1250 → rozbije diakritiku. Používat [IO.File]::ReadAllText.
 
+## PLAN_PROJEKTU.md – co je a není hotové (2026-11-11)
+- Plán je vize (Tauri/Rust/WebGPU), ne seznam úkolů. ROZHODNUTO: stack zůstává React + Electron + JS engine; z plánu se
+  doplňuje jen funkce. `core/` (Rust SoA) je mrtvý prototyp, aplikace ho nepoužívá.
+- Doplněno 11. 11.: primitiva `MULTIPLIER_8BIT`, `BARREL_SHIFTER_8BIT`, `FPU_HALF` (binary16 přes Float16Array),
+  `MMIO_DECODER` (0xF000–0xFFFF), `IRQ_CONTROLLER`, `DMA_CONTROLLER`; `VIRTUAL_SCREEN` má `cols/rows/colorMode`
+  (MONO / INDEXED8 / RGB565) a výstupy hsync/vsync (skener = 1 pixel na takt); kreslí ho `views/canvas/screen.js`
+  (2D i 3D). Sonda: klik přepíná DEC/HEX/BIN/ASCII (`comp.format`). Tab = SCHEMATIC ↔ DIE 3D. Lišta: ½ STEP a CYCLE.
+  Testy `tests/plan_blocks.test.js`.
+- Z plánu NENÍ: RC zpoždění hran, 2D difuze tepla + bitové chyby z přehřátí, WebGPU/SDF dráty, JIT/bit-slicing,
+  Monaco, editace RAM za běhu, měření zpoždění ve waveformu, skutečný AI copilot (aiCopilot.js = klíčová slova → presety).
+- Past: Bash nástroj tu startuje 30–120 s → používat PowerShell. Skripty, které přepisují soubory, musí zachovat CRLF
+  (Toolbar.jsx, boardLayout.js, LogicCanvas.jsx jsou CRLF).
+
+## Review přesnosti (2026-11-11) – co je opraveno a co ZBÝVÁ
+- Zdroj č. 1 pro kartu: datasheet SGS-Thomson STG2000, září 1996, 81 stran:
+  https://geforcewww.vgamuseum.info/images/doc/st/stg2000_sep96.pdf (text jde vytáhnout přes pypdf). Fotka karty:
+  https://www.vgamuseum.info/images/palcal/diamond/588_diamond_edge_3d_2120_top_hq.jpg
+- OPRAVENO: kodek taktuje ACLK z RAMDACu (Y2 24,576 MHz na kartě není → odstraněn i z kusovníku a nabídek), refresh
+  776 MCLK, PCI 2.0, 2120 = 1 MB + 2 patice (model = rozšířená na 2 MB), popisy u dílů říkají, kde se model liší.
+- ZBÝVÁ PŘEDĚLAT v `nv1Card.js` + `nv1Board.js` + L2 v `hierarchicalSubcircuits.js` (velké, každé mění zapojení i testy):
+  1. Paměť: 32bit `MD[31:0]`, `MA02[8:0]`/`MA13[8:0]`, `CAS02[3:0]#`/`CAS13[3:0]#`, `WE03#`/`WE12#`, `OE0–3#`, 1× `RAS#`,
+     dvě prokládané banky (datasheet s. 6, 19–22); 64 bit má jen pixelový port DAC přes „silicon switch“ (`EN64`).
+  2. Pixely: z `MD` rovnou do Palette-DAC (`LOADCLK`, `BLANK#`, `DACCS#`); registry DAC po `MD[15:8]`. Zrušit `P[14:0]`.
+  3. BIOS ROM na `MD[7:0]`, adresa `MD[30:16]`, `ROMCS#` 13·T_MCLK − 5 ns (s. 7, 30–31). Zrušit piny `rom_*`.
+  4. PCI: header 0x80; funkce 0 VGA `104A:0008` třída 0x030000 bez BAR; funkce 1 `104A:0009` třída 0x048000, BAR0 32 MB
+     prefetch (maska 0xFE000000), bus master; ROM BAR maska 0xFFC00001; INTERRUPT_LINE po resetu 0xFF (příloha A).
+     Pozor: envytools uvádí 0008/0009 obráceně – řídit se datasheetem.
+  5. Kodek: `AUD[7:0]`, `AUA[1:0]`, `AUW#`, `AUR#`, bez DRQ/DACK (s. 37, obr. 30).
+  6. Game port: přes Palette-DAC + čip „SEGA interface ASIC“ (nVSGP), headery J5/J6 2×5, zvláštní bracket; modulární
+     zásuvka na bracketu = PC joystick/MIDI (RJ-45 vs RJ-50 se zdroje liší).
+  7. Časování DRAM podle tab. 3: tRCD 2T−5, tRAC 3T−2, tPC 2T−2, tRP 2,5T−2, tRC 6T−5 (model čte za 2 takty).
+  8. Do čipu jde `MCLKx2` (100 MHz), ne 50 MHz.
+- NEOVĚŘENO, stojí jen na fotce jednoho kusu: krystal 12,096 MHz, STG1764X 28 × 28 mm (rozteč 0,8), pořadí konektorů
+  na bracketu (zásuvka nahoře, pak DE-15, pak 3 jacky), délka jazýčku PCI 78,74 mm (model 85), potisk U19/U20/U23/U24.
+  Chybí na desce: SEGA ASIC, EEPROM 93C46, stabilizátor 3,3 V, 2× OZ, CD audio J4/J12.
+- AI PC: Seasonic Core GX-650 ATX 3 má JEDEN PCIe kabel (2× 6+2) + 12V-2x6; BFB1012VH 1,5 A (datasheet); PB-08248
+  tab. 8 chce 6pin kabely na 120 W; Add2PSU originál = Molex (Dell má SATA → redukce). Neověřeno dál: tloušťka P100,
+  štítek RDIMM (RC1 odvozeno z raw card C), DMI2 x4, počet vrstev NAND.
+- Knihovna: inspektor součástek (ComponentInspectorModal, ComponentSchematicCanvas, componentDetails.js) byl mrtvý kód
+  s chybami → smazán commitem f975c4c (vrátí ho `git revert f975c4c`). Konvence enginu: nikdy nezapojený vstup čte
+  výchozí hodnotu z PRIMITIVE_PINS, odpojený drát se na ni vrací, plovoucí síť (odpojený třístavový budič) = Z → hradla X.
+  Smazaná ROM čte 0xFF, VIRTUAL_SCREEN bere jen tolik bitů souřadnice, kolik potřebuje (64 → 6). `verifyCircuit`
+  v aiCopilot.js opravdu simuluje (ustálení + zkraty), funkci neověřuje. Assembler hlásí chyby rozsahu (LDI jen 0–3).
+- Nedořešeno z review knihovny: SR latch po zakázaném stavu skončí 1/1 místo X; DEMUX nemá drill-down;
+  primitivní FULL_ADDER je s X pesimističtější než hradlový model.
 ## Další kroky / známé vady
-- PC projekt nemá schéma/PCB/3D simulaci, jen ECONOMIC. Nabídky stárnou (inzeráty z Bazoše zmizí) – při další
+- Nabídky stárnou (inzeráty z Bazoše zmizí) – při další
   práci přerešeršovat. eBay/Alza/Heureka blokují stahování (403): jejich ceny jsou jen z výpisu vyhledávače.
   NV1 a STG1764X se dnes neprodávají (jen celé karty ~16–23 tis. Kč). Odhady rozměrů: čelo Dellu ±5 mm, IHS Xeonu,
-  poloha kontaktů PCIe od záslepky, MX-6, Axagon PCEM2-N, periferie NV1.
+  poloha kontaktů PCIe od záslepky, MX-6, periferie NV1, tloušťka P100 (37 mm).
 - Rychlost: ~3 µs na hranu; profil ukazuje režii v `_settle`/`step` + modely čipů. Vyzkoušeno bez efektu:
   rychlá cesta pro sestupné hrany, pole místo Set. Další nápad: Web Worker nebo jemnější sensitivity listy.
 - Breadcrumb/HUD ve 3D na hlubokých úrovních přetéká; na L2 schématu se překrývá blok PCI TARGET s pady.
@@ -137,9 +181,9 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 ## Rozhodnutí a poznámky
 - Co je model, ne kopie čipu: registrová mapa NV1 (CRTC/audio/gameport) je vlastní, skutečný NV1 měl
   nezdokumentované objektové rozhraní; 3D kvadratický engine NV1 se nesimuluje (obraz kreslí host CPU);
-  rozdělení 2 MB na 4× 256K×16, typ EPROM, PLL ve STG1764X, pouzdro NV1 PQFP-208, floorplan die, počet kovových
-  vrstev a parametry procesu jsou předpoklady (ověřené jsou jen: STG2000X, 0,5 µm, 1M tranzistorů, 90 mm²,
-  64bit paměť, STG1764X, AD1845, 2 MB 50 ns SEC DRAM, VGA + 3 jacky + RJ-45 game port).
+  frekvence krystalu, poměry PLL, pouzdro RAMDACu a floorplan die jsou předpoklady. Ověřeno datasheetem STG2000
+  (viz sekce Review přesnosti): 0,5 µm, 3 vrstvy kovu, 3,3 V, PQFP-208, PCI 2.0, 4× 256K×16, FPM, ROM 32K×8.
+  1M tranzistorů / 90 mm² / 75 MHz mají jen sekundární zdroje (Wikipedie, vgamuseum; J. Peddie píše ~250 tis.).
 - PCI pravidlo v modelu: čtení nesmí předběhnout zapsané (posted) zápisy → řadič nejdřív vyprázdní FIFO.
 - Tichá past enginu: při hromadné změně vstupů se zapojením tranzistorů záleží na pořadí (závod) – testy dělají
   kroky postupně.
@@ -172,3 +216,6 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   L1 simulované schéma PC + 20 podobvodů L2–L4 navázaných na hradla/tranzistory/atomy; 179/179 testů.
 - 2026-11-10 — „pokračuj, ještě to není až úplně dolů“ → 15 simulovaných buněk, každý funkční blok mého PC vede až na atomy
   (test prochází celý strom); 195/195 testů.
+- 2026-11-11 10:08 — „pokračuj podle plánu, pak review všech projektů a součástek“ → bloky z plánu §4.3–4.4 (násobička, rotátor, FPU, MMIO, IRQ, DMA, režimy monitoru + sync), formáty sondy, Tab, CYCLE; pryč falešná animace „NV1 60 FPS“.
+- 2026-11-11 12:25 — review (3 nezávislé kontroly se zdroji) → opravy knihovny, AI PC a karty NV1 podle datasheetu STG2000; mrtvý inspektor smazán; velké přestavby karty sepsané v sekci Review přesnosti.
+- 2026-11-11 13:05 — „vyřeš konflikt a dej to do mainu“ → rebase na 8f1587a (MŮJ PC, L1–L11), konflikty aiCopilot.js / models.js / AgentMEMORY vyřešeny, 257/257 testů.

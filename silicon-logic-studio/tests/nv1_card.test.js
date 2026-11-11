@@ -118,8 +118,7 @@ describe('NV1 board in operation', () => {
     runUntil(e, () => false, 100_000);
     const perUs = (drams[0]._d.refreshes - r0) / 100;
     assert.ok(perUs >= 1 / 15.6 - 0.01, `refresh rate ${perUs.toFixed(3)} per us`);
-    // ...and no faster than every 776 periods of the memory clock: NV1 counts every MCLKx2 edge exactly once,
-    // although the engine does not spend a step on clock edges nobody reacts to
+    // ...and no faster than every 776 periods of the memory clock: NV1 counts every MCLKx2 edge exactly once
     assert.ok(perUs <= 1 / 15.5 + 0.011, `refresh rate ${perUs.toFixed(3)} per us`);
     assert.ok(drams.every((d) => d._d.refreshes === drams[0]._d.refreshes), 'all chips refreshed together');
   });
@@ -180,6 +179,22 @@ describe('NV1 board in operation', () => {
     assert.equal(host.status.pad & (1 << 6), 0);
     assert.equal(host.status.pad | (1 << 6), 0xFFFF, 'no other button pressed');
   });
+  it('every edge of the 100 MHz memory clock is visible when stepping: the net toggles exactly every half period', () => {
+    const e = board();
+    const half = 1e9 / ((12.096e6 * 91) / 11) / 2;
+    runUntil(e, () => e.pinValue('nv1_core', 'mclkx2') === 1, 10_000);
+    let prev = 1; let last = e.simTime; let toggles = 0; let wrong = 0;
+    for (let i = 0; i < 3000; i++) {
+      e.step();
+      const v = e.pinValue('nv1_core', 'mclkx2');
+      if (v === prev) continue;
+      if (Math.abs(e.simTime - last - half) > 1e-6) wrong++;
+      prev = v; last = e.simTime; toggles++;
+    }
+    assert.ok(toggles > 1500, `toggles ${toggles}`);
+    assert.equal(wrong, 0, 'a falling edge must not be merged with the next rising one');
+  });
+
   it('memory bus: EN64 splits the banks only for pixel loads, DRAM timing keeps table 3 of the STG2000 datasheet', () => {
     const e = board();
     const host = e.components.get('host');

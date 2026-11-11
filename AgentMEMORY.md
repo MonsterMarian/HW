@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-11 17:33
+Aktualizováno: 2026-11-11 17:59
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -15,14 +15,15 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   (okno `show:false`, `SHOT_SIZE=1280x800`; helpery `__view('SCHEMATIC'|'PCB'|'DIE 3D')`, `__dbl(x,y)`, `__crumb()`,
   `__active()`, `window.__errs`; v DEV i `window.__engine`, `window.__three`, `window.__slsCanvas`).
   Uživatel NECHCE, aby se mu aplikace otevírala – nikdy `npm run desktop` ani viditelný prohlížeč.
-- Rychlost simulace karty (měřeno 11. 11.): 159 kroků na µs simulovaného času, ~1,1 ms reálného času na µs → jeden snímek
-  640×480 (16,7 ms) trvá ~19 s (stejně jako starý model). Testy proto používají malý video režim `TINY` + `monitor.modes`.
-  `TINY` = htotal 64, hdisp 32, hss 44, hse 52: přední zatemnění MUSÍ být delší než zpoždění Palette-DAC (8 bodů),
-  jinak HSYNC usekne konec řádku (starý TINY s hss 36 už nejde). Stejné konstanty jsou v testu i v `Nv1DiagnosticModal.jsx`.
-- Engine `step()`: sestupná hrana hodin, na kterou nikdo nereaguje (`s.idleFall`), nemá vlastní krok, bere se s další
-  událostí (stav po kroku je stejný, kroků je polovina). `clocks()` může vrátit `silent: true` = výstup hodin, na který
-  sama součástka nereaguje (MCLKx2 z DAC). Bez toho byl nový model karty 2,4× pomalejší (100MHz takt).
-
+- Rychlost simulace karty (měřeno 11. 11.): 317 kroků na µs simulovaného času (z toho 200 jsou hrany MCLKx2 100 MHz),
+  ~2,5 ms reálného času na µs → jeden snímek 640×480 (16,7 ms) trvá ~42 s. Testy proto používají malý video režim `TINY`
+  + `monitor.modes`. `TINY` = htotal 64, hdisp 32, hss 44, hse 52: přední zatemnění MUSÍ být delší než zpoždění
+  Palette-DAC (8 bodů), jinak HSYNC usekne konec řádku. Stejné konstanty jsou v testu i v `Nv1DiagnosticModal.jsx`.
+- ROZHODNUTÍ UŽIVATELE (11. 11.): věrnost před rychlostí – „je jedno, jak dlouho to bude trvat, hlavní je, aby to
+  opravdu a správně simulovalo realitu“. Každá hrana hodin (i sestupná, na kterou nikdo nereaguje) má v `step()` vlastní
+  krok. Zkoušel jsem je slučovat s další událostí (snímek za 19 s), ale 100MHz takt pak při krokování a v analyzátoru
+  vypadal jako trvale v jedničce → vráceno, hlídá to test „every edge of the 100 MHz memory clock is visible“.
+  Zůstalo jen `silent: true` u `clocks()` (součástka se nevyhodnocuje na vlastním výstupu hodin, kde nic nedělá).
 ## Hotovo (2026-11-10)
 - Nové jádro `src/engine/logicEngine.js`: dráty = vodivé sítě (union-find), obousměrné piny, tri-state,
   zkrat = 'X', plovoucí = 'Z' (NE 2/3 – stará chyba: sběrnicová hodnota 2 se brala jako Z), pull-upy,
@@ -234,3 +235,4 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - 2026-11-11 13:03 — „dořeš zbytky“, pak „zastav a sepiš plán“ → review MŮJ PC + L7–L11, PCI dvě funkce, kodek PIO, schémata bloků z plánu, ukázka DMA/IRQ; přestavba paměťové sběrnice karty zastavena ve fázi návrhu → docs/PLAN_DOKONCENI_2026-11-11.md; 274/274 testů.
 - 2026-11-11 17:19 — „pokračuj s modelováním a dalšími věcmi z plánu“ → přestavba karty NV1 podle datasheetu hotová (sběrnice MD, dvě banky, spínač EN64, pixely do DAC, ROM a registry DAC na MD, game port přes DAC + nvSGP, krystal 12,096 MHz), rozmístění z fotky, 2D/3D/hierarchie/kusovník, engine bez prázdných kroků; 278/278 testů.
 - 2026-11-11 17:33 — pokračování téhož zadání → nabídky nových dílů karty (rešerše), kodek = U6, popisy zapnutí MŮJ PC (PCH → SLP_S3# → PS_ON#), z původního plánu editor paměti RAM/ROM a měření v logickém analyzátoru; 280/280 testů.
+- 2026-11-11 17:59 — „u step je jedno, jak dlouho to trvá, hlavní je správně simulovat realitu“ → vráceno slučování sestupných hran hodin v `step()`, test na viditelnost každé hrany MCLKx2; 281/281 testů.

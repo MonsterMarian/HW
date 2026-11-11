@@ -598,12 +598,13 @@ export class LogicEngine {
     const sources = this._clockSources();
     this.tickCount++;
     if (!sources.length) { this._settle(); return; }
-    // A falling edge nobody reacts to (s.idleFall) is not worth a step of its own: it is taken together with the next
-    // edge that somebody does react to, so the state after every step is the same, there are just fewer steps.
+    // Every clock edge, rising or falling, is a step of its own, also when no part reacts to it: the clock net really is
+    // low for half a period and stepping / the logic analyzer have to show it (fidelity goes before speed here).
     let tNext = Infinity;
-    for (const s of sources) { const due = s.level && s.idleFall ? s.next + s.half : s.next; if (due < tNext) tNext = due; }
+    for (const s of sources) if (s.next < tNext) tNext = s.next;
     this.simTime = tNext;
-    for (const s of sources) while (s.next <= tNext + 1e-6) {
+    for (const s of sources) {
+      if (s.next > tNext + 1e-6) continue;
       s.level ^= 1;
       s.next += s.half;
       const comp = s.comp;
@@ -618,7 +619,6 @@ export class LogicEngine {
           const net = s.netIdx === undefined ? null : t.nets[s.netIdx];
           s.fastFall = !!net && !!DEVICES[comp.type]?.risingOnlyClocks && net.drivers.length === 1
             && net.pull === undefined && net.readers.every((r) => r.risingOnly || isPassive(r.comp));
-          s.idleFall = s.fastFall;
         }
         if (!s.level && s.fastFall) {
           // the net goes low, nobody evaluates: update values and edge memories in place
@@ -632,7 +632,7 @@ export class LogicEngine {
           continue;
         }
         if (s.netIdx !== undefined) this._dirtyNets.add(s.netIdx);
-      } else s.idleFall = !!DEVICES[comp.type]?.risingOnlyClocks; // internal clock of a part that only counts rising edges
+      }
       if (!s.level && DEVICES[comp.type]?.risingOnlyClocks) continue; // nothing to do on its own falling edge
       if (s.silent) continue; // clock output the part itself does not react to (a PLL output for another chip)
       (comp._edges = comp._edges || []).push(s.level ? s.riseEvt : s.fallEvt);

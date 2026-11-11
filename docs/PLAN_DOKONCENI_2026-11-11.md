@@ -4,8 +4,8 @@
 > všechny body 3.3 jsou udělané (deska, rozměry, záslepka, 3D, hierarchie, kusovník a nabídky, ANATOMY, testy,
 > diagnostika, README, změřená rychlost). Skript `docs/rozpracovano/rebuild_nv1.mjs` byl použit a smazán.
 > Proti návrhu se změnilo: testovací video režim má htotal 64 a hss 44 (přední zatemnění musí být delší než zpoždění
-> DAC), rozmístění součástek je nově odměřené z fotografie karty (ne polohy navržené v 3.3 bod 1) a engine nedělá
-> samostatný krok pro sestupné hrany hodin, na které nikdo nereaguje. Kapitoly 4 (fakta a zdroje) a 5 (zbytky) platí dál;
+> DAC) a rozmístění součástek je nově odměřené z fotografie karty (ne polohy navržené v 3.3 bod 1). Rychlost: 317 kroků
+> na µs, snímek 640×480 za ~42 s (dřív ~19 s); zrychlení slučováním hran hodin uživatel odmítl, věrnost má přednost. Kapitoly 4 (fakta a zdroje) a 5 (zbytky) platí dál;
 > co na kartě ještě chybí, je v `AgentMEMORY.md` v sekci „Karta NV1 podle datasheetu“.
 
 Stav k 11. 11. 2026 13:03. Větev `main`, poslední commit s kódem `09f3319`, 274/274 testů, lint čistý, build prošel.

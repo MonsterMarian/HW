@@ -39,7 +39,7 @@ def('gp100_die', 3, {
     blk('host', 'PCIe 3.0 HOST INTERFACE', 50, 50, [], ['ÚLOHY'], 'x16 Gen3', 200, 80),
     blk('gt', 'GIGATHREAD ENGINE', 300, 50, ['ÚLOHY'], ['GPC'], 'ROZDĚLUJE BLOKY VLÁKEN', 200, 80),
     blk('hub', 'HSHUB + 4× NVLINK', 300, 170, [], [], 'NA PCIe KARTĚ NEVYVEDENO', 200, 70),
-    ...[0, 1, 2, 3, 4, 5].map((i) => blk(`gpc${i}`, `GPC ${i} · 10 SM`, 560 + (i % 3) * 130, 50 + Math.floor(i / 3) * 95, ['GPC'], ['L2'], 'DVOJKLIK → SM', 120, 75, { drill: 'gp100_sm' })),
+    ...[0, 1, 2, 3, 4, 5].map((i) => blk(`gpc${i}`, `GPC ${i} · 10 SM`, 560 + (i % 3) * 130, 50 + Math.floor(i / 3) * 95, ['GPC'], ['L2'], 'DVOJKLIK → GPC', 120, 75, { drill: 'pascal_gpc' })),
     blk('l2', 'L2 CACHE 4096 KB (8 × 512 KB)', 560, 250, ['L2'], ['MC'], 'SDÍLENÁ VŠEMI SM', 380, 70),
     ...[0, 1, 2, 3].map((i) => blk(`mc${i}`, `2× ŘADIČ 512 BIT`, 50 + i * 230, 380, ['MC'], ['HBM2'], `→ HBM2 STACK ${i} (4 GB, 1024 BIT)`, 210, 80)),
   ],

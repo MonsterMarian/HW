@@ -955,6 +955,49 @@ def('gen9_eu', {
   drills: { thr: 'cell_sram', grf: 'cell_sram', arb: 'cell_arbiter', fpu0: 'cell_mac', fpu1: 'FULL_ADDER', br: 'cell_lt', send: 'cell_decoder' },
 });
 
+// ================================================================ GPC grafických čipů (L3,5 – mezi die a SM) a ROP
+def('ampere_gpc', {
+  level: 3.5,
+  name: 'GPC Ampere (GA104) — rasterizér, 4 TPC, 16 ROP',
+  subtitle: 'GA102 whitepaper (platí i pro GA104): každý GPC má vlastní rasterizér, TPC po 2 SM s jednotkou PolyMorph (načtení vrcholů, teselace, transformace) a 2 oddíly ROP po 8 jednotkách. GA104 má 6 GPC po 4 TPC = 48 SM; RTX 3060 Ti 38 SM a 80 ROP → nejspíš 5 aktivních GPC (odvozeno).',
+  components: [
+    blk('raster', 'RASTERIZÉR', 50, 50, [], ['FRAGMENTY'], 'TROJÚHELNÍK → PIXELY', 200, 70),
+    ...[0, 1, 2, 3].map((i) => blk(`tpc${i}`, `TPC ${i}: 2 SM`, 320 + (i % 2) * 230, 50 + Math.floor(i / 2) * 110, ['FRAGMENTY'], ['BARVY'], 'DVOJKLIK → SM', 210, 90)),
+    blk('pme', 'POLYMORPH ENGINE (V KAŽDÉM TPC)', 50, 170, [], [], 'VRCHOLY, TESELACE', 200, 80),
+    blk('rop0', 'ROP ODDÍL 0 · 8 ROP', 50, 300, ['BARVY'], [], 'Z-TEST, BLENDING', 200, 70),
+    blk('rop1', 'ROP ODDÍL 1 · 8 ROP', 320, 300, ['BARVY'], [], 'Z-TEST, BLENDING', 210, 70),
+  ],
+  wires: [...[0, 1, 2, 3].map((i) => w('raster.FRAGMENTY', `tpc${i}.FRAGMENTY`)), w('tpc0.BARVY', 'rop0.BARVY'), w('tpc1.BARVY', 'rop1.BARVY')],
+  drills: { raster: 'cell_lt', tpc0: 'ampere_sm', tpc1: 'ampere_sm', tpc2: 'ampere_sm', tpc3: 'ampere_sm', pme: 'cell_mac', rop0: 'gpu_rop', rop1: 'gpu_rop' },
+});
+
+def('pascal_gpc', {
+  level: 3.5,
+  name: 'GPC Pascal (GP100) — 5 TPC po 2 SM',
+  subtitle: 'Pascal GP100 whitepaper: 6 GPC, každý 5 TPC po 2 SM = 10 SM (P100 PCIe má aktivních 56 SM z 60; které jsou vypnuté, neověřeno). TPC sdílí jednotku PolyMorph; grafické jednotky (rasterizér) Tesla pro výpočty nepoužívá.',
+  components: [
+    ...[0, 1, 2, 3, 4].map((i) => blk(`tpc${i}`, `TPC ${i}: 2 SM`, 50 + (i % 3) * 240, 50 + Math.floor(i / 3) * 120, ['PRÁCE'], [], 'DVOJKLIK → SM', 220, 90)),
+    blk('gd', 'ROZDĚLENÍ PRÁCE V GPC', 530, 170, [], ['PRÁCE'], 'BLOKY VLÁKEN NA SM', 220, 90),
+    blk('raster', 'RASTERIZÉR', 50, 300, [], [], 'NA TESLE NEVYUŽITÝ', 220, 70),
+  ],
+  wires: [0, 1, 2, 3, 4].map((i) => w('gd.PRÁCE', `tpc${i}.PRÁCE`)),
+  drills: { tpc0: 'gp100_sm', tpc1: 'gp100_sm', tpc2: 'gp100_sm', tpc3: 'gp100_sm', tpc4: 'gp100_sm', gd: 'cell_arbiter', raster: 'cell_lt' },
+});
+
+def('gpu_rop', {
+  level: 4.5,
+  name: 'ROP — zápis pixelů: Z-test, blending, MSAA',
+  subtitle: 'Obecná stavba ROP (Raster Operations) podle whitepaperů NVIDIA: pro každý fragment porovná hloubku se Z-bufferem (zahodí zakryté), smíchá barvu s tou v paměti (alfa blending), u MSAA zpracuje vzorky a výsledek komprimovaně zapíše přes L2 do paměti. Atomické operace nad framebufferem.',
+  components: [
+    blk('z', 'Z / STENCIL TEST', 50, 50, [], ['PROŠLO'], 'POROVNÁNÍ HLOUBKY', 200, 70),
+    blk('blend', 'BLENDING BAREV', 320, 50, ['PROŠLO'], ['BARVA'], 'ALFA, ADITIVNÍ…', 200, 70),
+    blk('msaa', 'MSAA VZORKY', 320, 160, [], [], 'VÍC VZORKŮ NA PIXEL', 200, 70),
+    blk('comp', 'KOMPRESE + ZÁPIS DO L2', 580, 50, ['BARVA'], [], 'BEZZTRÁTOVÁ', 220, 70),
+  ],
+  wires: [w('z.PROŠLO', 'blend.PROŠLO'), w('blend.BARVA', 'comp.BARVA')],
+  drills: { z: 'cell_lt', blend: 'cell_mac', msaa: 'cell_sram', comp: 'cell_decoder' },
+});
+
 // dvojkliky bloků jednotek → buňky L5
 for (const sub of Object.values(UNIT_SUBCIRCUITS)) {
   for (const comp of sub.components) if (sub.drills?.[comp.id]) comp.drill = sub.drills[comp.id];

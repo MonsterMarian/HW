@@ -394,7 +394,7 @@ def('ga104_die', 3, {
   components: [
     blk('host', 'PCIe 4.0 x16 HOST', 50, 50, [], ['ÚLOHY'], 'V B360: 3.0 x16', 180, 70),
     blk('gt', 'GIGATHREAD ENGINE', 50, 140, ['ÚLOHY'], ['GPC'], 'ROZDĚLUJE BLOKY VLÁKEN', 180, 70),
-    ...[0, 1, 2, 3, 4, 5].map((i) => blk(`gpc${i}`, `GPC ${i} · 4 TPC / 8 SM`, 270 + (i % 3) * 150, 50 + Math.floor(i / 3) * 100, ['GPC'], ['L2'], i === 5 ? 'U 3060 Ti NEJSPÍŠ VYPNUTÉ' : 'DVOJKLIK → SM', 140, 85, { drill: 'ampere_sm' })),
+    ...[0, 1, 2, 3, 4, 5].map((i) => blk(`gpc${i}`, `GPC ${i} · 4 TPC / 8 SM`, 270 + (i % 3) * 150, 50 + Math.floor(i / 3) * 100, ['GPC'], ['L2'], i === 5 ? 'U 3060 Ti NEJSPÍŠ VYPNUTÉ' : 'DVOJKLIK → GPC', 140, 85, { drill: 'ampere_gpc' })),
     blk('media', 'NVENC 7. GEN · NVDEC 5. GEN', 740, 50, [], [], 'AV1 DEKÓDOVÁNÍ', 200, 70),
     blk('disp', 'DISPLAY ENGINE', 740, 140, [], ['HDMI/DP'], 'HDMI 2.1, DP 1.4a, DSC 1.2a', 200, 70),
     blk('l2', 'L2 CACHE 4 MB (8 × 512 KB)', 270, 260, ['L2'], ['MC'], 'SDÍLENÁ VŠEMI SM', 440, 60),

@@ -204,8 +204,8 @@ test('tranzistory podle skutečného procesu: i7 → Intel 14 nm FinFET, GA104 �
   const cpu = down(['cpu', 'core0', 'ex_fa', 'fa_xor1']);
   const n = H[cpu.at(-1).key].components.find((x) => x.type === 'NMOS');
   assert.equal(findSubcircuit(n, cpu).key, 'NMOS_intel14');
-  // GA104 → SM → registr (D_FF) → NAND → PMOS = Samsung 8N
-  const gpu = down(['gpu', 'gpu', 'gpc0', 'ex_ff', 'm_s']);
+  // GA104 → GPC → TPC/SM → registr (D_FF) → NAND → PMOS = Samsung 8N
+  const gpu = down(['gpu', 'gpu', 'gpc0', 'tpc0', 'ex_ff', 'm_s']);
   const p = H[gpu.at(-1).key].components.find((x) => x.type === 'PMOS');
   assert.equal(findSubcircuit(p, gpu).key, 'PMOS_samsung8n');
   // deska → vícefázový VRM → fáze → horní MOSFET = výkonový trench

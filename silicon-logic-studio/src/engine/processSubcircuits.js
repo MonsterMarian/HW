@@ -40,13 +40,13 @@ for (const type of ['NMOS', 'PMOS']) {
     name: `${type} – Intel 14 nm++ FinFET (i7-9700, B360)`,
     subtitle: `IEDM 2014: 2. generace FinFET (tri-gate), žebra rozteč 42 nm, šířka 8 nm, výška 42 nm, Lg ≈ 20 nm, kovy M0/M1/M2 56/70/52 nm, 13 vrstev Cu s low-k a 2 vrstvami air gap, W kontakty, HKMG 4. generace. 14++ (Coffee Lake): CPP 84 nm (14 nm: 70 nm), o ~24 % vyšší proud. Chipworks (Broadwell): high-k na bázi Hf ~1 nm, ${p ? 'PMOS kov TiN' : 'NMOS kov TiAl/TiAlN + TiN'}. Tloušťka IL SiOx a Lg u 14++ neověřeny. Hradlo obepíná žebro ze 3 stran.`,
     layers: [
-      ['ŽEBRA Si: ROZTEČ 42, ŠÍŘKA 8, VÝŠKA 42 nm'],
+      ['ŽEBRA Si: ROZTEČ 42, ŠÍŘKA 8, VÝŠKA 42 nm', 'si_channel_lattice'],
       ['HRADLO: Lg ≈ 20 nm, CPP 84 nm (14++)'],
       ['HIGH-k Hf ~1 nm + IL SiOx (neověřeno)', 'hkmg_lattice'],
-      [p ? 'KOVOVÉ HRADLO: TiN, VÝPLŇ W' : 'KOVOVÉ HRADLO: TiAl/TiAlN + TiN, VÝPLŇ W'],
-      [p ? 'S/D: EPITAXE SiGe (TLAK)' : 'S/D: EPITAXE (Si:P – neověřeno)'],
-      ['KONTAKTY W · 13× Cu + low-k + AIR GAP'],
-      ['STI – OXID MEZI ŽEBRY'],
+      [p ? 'KOVOVÉ HRADLO: TiN, VÝPLŇ W' : 'KOVOVÉ HRADLO: TiAl/TiAlN + TiN, VÝPLŇ W', 'w_lattice'],
+      [p ? 'S/D: EPITAXE SiGe (TLAK)' : 'S/D: EPITAXE (Si:P – neověřeno)', p ? 'sige_lattice' : 'si_channel_lattice'],
+      ['KONTAKTY W · 13× Cu + low-k + AIR GAP', 'beol_lattice'],
+      ['STI – OXID MEZI ŽEBRY', 'sio2_gate_lattice'],
     ],
   });
 }
@@ -59,12 +59,12 @@ for (const type of ['NMOS', 'PMOS']) {
     name: `${type} – Samsung 8N (8LPP) FinFET (GA104)`,
     subtitle: 'VLSI 2018 (Samsung): 8LPP = rozšíření 10LPP bez EUV, rozteč žeber 42 nm, CPP 64 nm (10LPP 68), M1/Mx 44 nm, single diffusion break, UHD knihovna 61,2 MTr/mm². GA104 reálně 17,4 mld. / 392 mm² ≈ 44 MTr/mm². „8N“ je varianta pro NVIDIA. Hradlo HKMG gate-last na bázi Hf – výška a šířka žeber, Lg a tloušťky vrstev neověřeny (zdroje za paywallem).',
     layers: [
-      ['ŽEBRA: ROZTEČ 42 nm (VÝŠKA NEOVĚŘENA)'],
-      ['CPP 64 nm · M1 44 nm · BEZ EUV'],
+      ['ŽEBRA: ROZTEČ 42 nm (VÝŠKA NEOVĚŘENA)', 'si_channel_lattice'],
+      ['CPP 64 nm · M1 44 nm · BEZ EUV', 'beol_lattice'],
       ['HKMG GATE-LAST, Hf (NEOVĚŘENO)', 'hkmg_lattice'],
       ['SINGLE DIFFUSION BREAK'],
       ['GA104 ≈ 44 MTr/mm² (17,4 mld. / 392 mm²)'],
-      ['S/D EPITAXE (DETAIL NEOVĚŘEN)'],
+      ['S/D EPITAXE (DETAIL NEOVĚŘEN)', type === 'PMOS' ? 'sige_lattice' : 'si_channel_lattice'],
     ],
   });
 }
@@ -77,11 +77,11 @@ for (const type of ['NMOS', 'PMOS']) {
     name: `${type} – Intel 22 nm tri-gate (Xeon E5-1650 v3, Haswell-EP)`,
     subtitle: 'Auth et al., VLSI 2012: první FinFET (tri-gate) v sériové výrobě, plně vyčerpaný kanál. Rozteč žeber 60 nm, výška 34 nm, šířka 8 nm, CPP 90 nm, Lg 30 nm (HP), 3. generace HKMG gate-last, 5. generace strain, 9 vrstev Cu + W M0 (M1 90, M2/M3 80 nm). Čísla z výňatků paperu; materiály kovového hradla neověřeny. Die Haswell-EP LCC 354 mm², 2,6 mld. tranzistorů.',
     layers: [
-      ['ŽEBRA Si: ROZTEČ 60, VÝŠKA 34, ŠÍŘKA 8 nm'],
+      ['ŽEBRA Si: ROZTEČ 60, VÝŠKA 34, ŠÍŘKA 8 nm', 'si_channel_lattice'],
       ['HRADLO: Lg ≈ 30 nm, CPP 90 nm'],
       ['HKMG 3. GEN, GATE-LAST (MATERIÁLY NEOVĚŘENY)', 'hkmg_lattice'],
-      ['9× Cu + W M0 · M1 90 nm'],
-      [type === 'PMOS' ? 'S/D: EPITAXE SiGe (5. GEN. STRAIN)' : 'S/D: EPITAXE (5. GEN. STRAIN)'],
+      ['9× Cu + W M0 · M1 90 nm', 'beol_lattice'],
+      [type === 'PMOS' ? 'S/D: EPITAXE SiGe (5. GEN. STRAIN)' : 'S/D: EPITAXE (5. GEN. STRAIN)', type === 'PMOS' ? 'sige_lattice' : 'si_channel_lattice'],
       ['SRAM HD 0,092 µm²'],
     ],
   });
@@ -95,11 +95,11 @@ for (const type of ['NMOS', 'PMOS']) {
     name: `${type} – TSMC 16FF+ FinFET (GP100, Tesla P100)`,
     subtitle: 'Chipworks (IEDM 2014): rozteč žeber 48 nm, CPP 90 nm, M1 64 nm (pravděpodobně SADP), ostatní kovy 80/90 nm, HKMG gate-last s dvojím oxidem, dvojí epitaxní zvýšené S/D, W lokální propojení, low-k. GP100: 610 mm², 15,3 mld. tranzistorů. Výška žeber, Lg a SRAM buňka neověřeny.',
     layers: [
-      ['ŽEBRA: ROZTEČ 48 nm, VÝŠKA ~37 nm'],
+      ['ŽEBRA: ROZTEČ 48 nm, VÝŠKA ~37 nm', 'si_channel_lattice'],
       ['CPP 90 nm · M1 64 nm'],
       ['HKMG GATE-LAST, DVOJÍ OXID', 'hkmg_lattice'],
-      ['DVOJÍ EPITAXNÍ ZVÝŠENÉ S/D'],
-      ['W LOKÁLNÍ PROPOJENÍ · low-k'],
+      ['DVOJÍ EPITAXNÍ ZVÝŠENÉ S/D', type === 'PMOS' ? 'sige_lattice' : 'si_channel_lattice'],
+      ['W LOKÁLNÍ PROPOJENÍ · low-k', 'beol_lattice'],
     ],
   });
 }
@@ -111,10 +111,10 @@ for (const type of ['NMOS', 'PMOS']) {
     name: `${type} – TSMC 28 nm HP planární HKMG (GM107, Quadro K620)`,
     subtitle: 'TechInsights (28 HP, Radeon HD 7970): planární tranzistor, HKMG gate-last (náhrada poly): high-k na bázi HfO₂ na ~1,2 nm SiO₂, PMOS kov TiN, NMOS TiAlN, PMOS S/D z eSiGe, CPP ~117–120 nm, 12 vrstev kovu, SRAM 0,16 µm². GM107: 148 mm², 1,87 mld. tranzistorů. Zda 28HP nebo 28HPM, neověřeno.',
     layers: [
-      ['CPP ≈ 117–120 nm, 12 VRSTEV KOVU'],
+      ['CPP ≈ 117–120 nm, 12 VRSTEV KOVU', 'beol_lattice'],
       ['HfO₂ NA ~1,2 nm SiO₂', 'hkmg_lattice'],
-      [type === 'PMOS' ? 'KOV TiN, S/D eSiGe' : 'KOV TiAlN'],
-      ['PLANÁRNÍ – KANÁL JEN POD HRADLEM'],
+      [type === 'PMOS' ? 'KOV TiN, S/D eSiGe' : 'KOV TiAlN', type === 'PMOS' ? 'sige_lattice' : 'hkmg_lattice'],
+      ['PLANÁRNÍ – KANÁL JEN POD HRADLEM', 'si_channel_lattice'],
     ],
   });
 }
@@ -143,7 +143,7 @@ fet('NMOS_vnand', {
     ['TUNELOVÝ OXID SiO₂', 'ono_lattice'],
     ['ZACHYCOVACÍ VRSTVA SiN', 'ono_lattice'],
     ['BLOKOVACÍ OXID SiO₂ + Al₂O₃ (HIGH-k), BARIÉRA TiN'],
-    ['WORDLINE W – VRSTVY STOHU'],
+    ['WORDLINE W – VRSTVY STOHU', 'w_lattice'],
     ['V5 92 / V6 128 AKTIVNÍCH VRSTEV'],
   ],
 });
@@ -159,9 +159,9 @@ fet('NMOS_power', {
     ['OXID HRADLA SiO₂ (TLOUŠŤKA NEOVĚŘENA)', 'sio2_gate_lattice'],
     ['STÍNICÍ ELEKTRODA (SHIELD) = SOURCE'],
     ['P-BODY: KANÁL PODÉL STĚNY ZÁKOPU'],
-    ['N− DRIFT: NESE NAPĚTÍ'],
+    ['N− DRIFT: NESE NAPĚTÍ', 'si_channel_lattice'],
     ['SOURCE: N+ NAHOŘE + KOV'],
-    ['DRAIN: N+ SUBSTRÁT DOLE'],
+    ['DRAIN: N+ SUBSTRÁT DOLE', 'si_channel_lattice'],
   ],
 });
 
@@ -174,7 +174,7 @@ for (const type of ['NMOS', 'PMOS']) {
     layers: [
       ['HRADLO (MATERIÁL NEZNÁMÝ)'],
       ['DIELEKTRIKUM HRADLA (NEZNÁMÉ)', 'sio2_gate_lattice'],
-      ['SOURCE / DRAIN'],
+      ['SOURCE / DRAIN', 'si_channel_lattice'],
       ['PROCES NEZVEŘEJNĚN – ILUSTRATIVNÍ'],
     ],
   });
@@ -241,5 +241,45 @@ def('asi_sinx_lattice', 8, {
   scene: 'lattice',
   stack: [{ name: 'SiNₓ izolant (výřez)', kind: 'sinx', thick: 12 }, { name: 'a-Si:H kanál (výřez)', kind: 'asi', thick: 12 }],
   components: [atom('el_si', 'Si – a-Si:H A SiNₓ', 60, 60, 'atom_si'), atom('el_n', 'N – SiNₓ', 60, 200, 'atom_n'), atom('el_h', 'H – PASIVACE VAZEB', 60, 340, 'atom_h'), atom('i_asi', 'a-Si:H: BEZ KRYSTALU, Eg ≈ 1,7 eV', 400, 200)],
+  wires: [],
+});
+
+// ---------------------------------------------------------------- L8: materiály žeber, S/D, kontaktů a propojů (BEOL)
+// Zdroje: CODATA (Si), Dismukes 1964 / Vegardovo pravidlo (SiGe), CRC Handbook (W, Cu), Grill et al., „Progress in the
+// development and understanding of advanced low k and ultralow k dielectrics“ (Appl. Phys. Rev. 2014, SiCOH).
+def('si_channel_lattice', 8, {
+  name: 'Atomy kanálu: krystalický křemík (žebro FinFET / substrát)',
+  subtitle: 'Diamantová mřížka: každý atom Si má 4 sousedy ve vzdálenosti 2,352 Å pod úhlem 109,5°, mřížková konstanta 5,431 Å (CODATA). Žebro široké 8 nm (Intel 14 nm) je jen ~15 jednotkových buněk napříč – na každém boku žebra hradlo indukuje vodivý kanál. Příměsi (P, As pro NMOS, B pro PMOS) a jejich koncentrace nezobrazeny.',
+  scene: 'lattice',
+  stack: [{ name: 'Si krystal (výřez)', kind: 'si', thick: 16.3 }],
+  components: [atom('el_si', 'Si – KRYSTAL (DIAMANTOVÁ MŘÍŽKA)', 60, 120, 'atom_si'), atom('i_si', SI_INFO, 400, 120), atom('i_fin', 'ŽEBRO 8 nm ≈ 15 BUNĚK NAPŘÍČ', 400, 300)],
+  wires: [],
+});
+def('sige_lattice', 8, {
+  name: 'Atomy S/D PMOS: epitaxní SiGe (napětí kanálu)',
+  subtitle: 'Source a drain PMOS se vyrostou epitaxí ze SiGe: Ge má větší atom (Ge–Ge 2,45 Å), mřížka SiGe je podle Vegardova pravidla větší než u Si a stlačí sousední křemíkový kanál – díry pak mají vyšší pohyblivost a tranzistor víc proudu. Podíl Ge v konkrétních procesech výrobci nezveřejňují (výřez kreslí 30 % Ge, ilustrativně).',
+  scene: 'lattice',
+  stack: [{ name: 'Si kanál', kind: 'si', thick: 10.9 }, { name: 'SiGe S/D (30 % Ge, ilustrativně)', kind: 'sige', ge: 0.3, thick: 11 }],
+  components: [atom('el_si', 'Si – KANÁL A SiGe', 60, 60, 'atom_si'), atom('el_ge', 'Ge – VĚTŠÍ ATOM V SiGe', 60, 200, 'atom_ge'), atom('i_veg', 'a(SiGe) ≈ 5,431 + 0,227·x Å (VEGARD)', 400, 60), atom('i_strain', 'TLAK NA KANÁL → VYŠŠÍ POHYBLIVOST DĚR', 400, 200)],
+  wires: [],
+});
+def('w_lattice', 8, {
+  name: 'Atomy wolframu — kontakty, výplň hradla, wordline V-NAND',
+  subtitle: 'Wolfram: kubická prostorově centrovaná mřížka (BCC), a = 3,165 Å, nejbližší soused 2,741 Å, rezistivita ~5,3 µΩ·cm (objemově; v úzkých kontaktech víc). Plní kontakty na source/drain a hradlo, výplň kovového hradla (Intel 14 nm) a vrstvy wordline ve stohu V-NAND – snese vysoké teploty výroby a nedifunduje do křemíku jako měď.',
+  scene: 'lattice',
+  stack: [{ name: 'W (BCC, a = 3,165 Å)', kind: 'w', thick: 12.7 }],
+  components: [atom('el_w', 'W – ATOMY MŘÍŽKY BCC', 60, 120, 'atom_w'), atom('i_bcc', 'BCC: a = 3,165 Å, W–W 2,741 Å', 400, 120), atom('i_rho', 'ρ ≈ 5,3 µΩ·cm (OBJEMOVĚ)', 400, 300)],
+  wires: [],
+});
+def('beol_lattice', 8, {
+  name: 'Atomy propojů (BEOL): kontakt W, vodič Cu, izolant low-k SiCOH',
+  subtitle: 'Nad tranzistory je 9–13 vrstev kovů: dole wolframové kontakty, výš měděné vodiče (FCC, a = 3,615 Å; od Cu ho dělí tenká bariéra TaN/Ta, nezobrazená) a mezi nimi izolant low-k SiCOH – síť Si–O, kde skupiny –CH₃ a póry snižují permitivitu z 3,9 (SiO₂) na ~2,5–3, takže sousední vodiče méně ruší a zpomalují signál (Grill 2014). Intel 14 nm má navíc ve 2 vrstvách vzduchové mezery.',
+  scene: 'lattice',
+  stack: [{ name: 'W kontakt (výřez)', kind: 'w', thick: 6.3 }, { name: 'Cu vodič (výřez)', kind: 'cu', thick: 10.8 }, { name: 'low-k SiCOH (výřez)', kind: 'sicoh', thick: 12 }],
+  components: [
+    atom('el_w', 'W – KONTAKT', 60, 60, 'atom_w'), atom('el_cu', 'Cu – VODIČ', 60, 200, 'atom_cu'), atom('el_si', 'Si – SÍŤ SiCOH', 60, 340, 'atom_si'),
+    atom('el_o', 'O – SÍŤ SiCOH', 360, 60, 'atom_o'), atom('el_c', 'C – SKUPINY –CH₃', 360, 200, 'atom_c'), atom('el_h', 'H – SKUPINY –CH₃', 360, 340, 'atom_h'),
+    atom('i_k', 'k ≈ 2,5–3 (SiO₂ 3,9)', 660, 120), atom('i_bar', 'BARIÉRA TaN/Ta NEZOBRAZENA', 660, 300),
+  ],
   wires: [],
 });

@@ -16,10 +16,15 @@ const ATOMS = {
   n: { Z: 7, sym: 'N', name: 'dusík', A: 14, abund: '99,6 %', shells: [['K', '1s²', 2], ['L', '2s² 2p³', 5]], r: 'kovalentní poloměr 71 pm', role: 'V TiN A V SiNₓ (IZOLANT HRADLA TFT)', valence: 5 },
   cu: { Z: 29, sym: 'Cu', name: 'měď', A: 63, abund: '69,2 %', shells: [['K', '1s²', 2], ['L', '2s² 2p⁶', 8], ['M', '3s² 3p⁶ 3d¹⁰', 18], ['N', '4s¹', 1]], r: 'kovalentní poloměr 132 pm', role: 'V KOVU: 4s ELEKTRON VOLNÝ – VEDE PROUD', valence: 1 },
   h: { Z: 1, sym: 'H', name: 'vodík', A: 1, abund: '99,99 %', shells: [['K', '1s¹', 1]], r: 'kovalentní poloměr 31 pm', role: 'V a-Si:H PASIVUJE VOLNÉ VAZBY Si', valence: 1 },
+  w: { Z: 74, sym: 'W', name: 'wolfram', A: 184, abund: '30,6 %', shells: [['K', '1s²', 2], ['L', '2s² 2p⁶', 8], ['M', '3s² 3p⁶ 3d¹⁰', 18], ['N', '4s² 4p⁶ 4d¹⁰ 4f¹⁴', 32], ['O', '5s² 5p⁶ 5d⁴', 12], ['P', '6s²', 2]], r: 'kovalentní poloměr 162 pm', role: 'KONTAKTY A VÝPLŇ HRADLA: KOV BCC, a = 3,165 Å', valence: 6 },
+  ge: { Z: 32, sym: 'Ge', name: 'germanium', A: 74, abund: '36,5 %', shells: [['K', '1s²', 2], ['L', '2s² 2p⁶', 8], ['M', '3s² 3p⁶ 3d¹⁰', 18], ['N', '4s² 4p²', 4]], r: 'kovalentní poloměr 120 pm', role: 'V SiGe S/D: VĚTŠÍ ATOM → TLAK NA KANÁL PMOS', valence: 4 },
+  c: { Z: 6, sym: 'C', name: 'uhlík', A: 12, abund: '98,9 %', shells: [['K', '1s²', 2], ['L', '2s² 2p²', 4]], r: 'kovalentní poloměr 76 pm', role: 'V LOW-k SiCOH: SKUPINY –CH₃ SNIŽUJÍ PERMITIVITU', valence: 4 },
 };
 
+// vazebná energie na nukleon nejčastějšího izotopu (AME2020)
 const NUCLEI = {
   si: { BA: 8.448 }, o: { BA: 7.976 }, hf: { BA: 8.035 }, ti: { BA: 8.723 }, n: { BA: 7.476 }, cu: { BA: 8.752 },
+  w: { BA: 8.005 }, ge: { BA: 8.725 }, c: { BA: 7.680 },
 };
 const fm = (A) => (1.2 * Math.cbrt(A)).toFixed(2).replace('.', ',');
 

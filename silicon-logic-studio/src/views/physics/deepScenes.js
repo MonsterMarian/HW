@@ -263,6 +263,12 @@ export function buildVnandScene(ctx) {
 // ================================================================ L8 vrstvy atomů (Å)
 const EL = {
   Cu: [0xc77a3a, 0.55], Si: [0x9aa0a8, 0.5], O: [0xe9e6df, 0.34], Hf: [0x6a8cb0, 0.62], Ti: [0xb0b4ba, 0.55], N: [0x5b7fd6, 0.32], H: [0xf6f6f6, 0.2],
+  W: [0x7d8590, 0.58], Ge: [0x8f9a6b, 0.54], C: [0x3a3d42, 0.36],
+};
+// mřížky krystalů: [prvek, mřížková konstanta Å, nejbližší soused Å, báze v jednotkové buňce]
+const FCC = [[0, 0, 0], [0, 0.5, 0.5], [0.5, 0, 0.5], [0.5, 0.5, 0]];
+const CRYSTAL = {
+  w: { a: 3.165, nn: 2.741, basis: [[0, 0, 0], [0.5, 0.5, 0.5]] }, // BCC wolfram
 };
 export function buildLatticeScene(ctx) {
   const { group } = ctx;
@@ -275,14 +281,23 @@ export function buildLatticeScene(ctx) {
   const layerLabels = [];
   for (const layer of stack) {
     const y0 = y, y1 = y + layer.thick;
-    if (layer.kind === 'si') { // diamantová mřížka (001)
-      const A = 5.431, fcc = [[0, 0, 0], [0, 0.5, 0.5], [0.5, 0, 0.5], [0.5, 0.5, 0]];
+    if (layer.kind === 'si' || layer.kind === 'sige') { // diamantová mřížka (001); SiGe: část míst Ge, mřížka podle Vegardova pravidla
+      const ge = layer.kind === 'sige' ? (layer.ge ?? 0.3) : 0;
+      const A = 5.431 + (5.658 - 5.431) * ge, fcc = FCC;
       const pts = [];
       for (let i = -2; i < 2; i++) for (let j = 0; j < Math.round(layer.thick / A); j++) for (let k = -1; k < 1; k++) for (const off of [0, 0.25]) for (const [bx, by, bz] of fcc) {
         pts.push(new THREE.Vector3((i + bx + off) * A, y0 + (j + by + off) * A, (k + bz + off) * A));
       }
-      for (const p of pts) atoms.push({ el: 'Si', p });
-      for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) if (Math.abs(pts[i].distanceTo(pts[j]) - 2.352) < 0.05) bonds.push([pts[i], pts[j]]);
+      for (const p of pts) atoms.push({ el: r() < ge ? 'Ge' : 'Si', p });
+      const nn = A * Math.sqrt(3) / 4;
+      for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) if (Math.abs(pts[i].distanceTo(pts[j]) - nn) < 0.05) bonds.push([pts[i], pts[j]]);
+    } else if (CRYSTAL[layer.kind]) { // kov s jednoduchou kubickou bází (BCC wolfram)
+      const { a, nn, basis } = CRYSTAL[layer.kind], el = layer.kind === 'w' ? 'W' : layer.kind, pts = [];
+      for (let i = -3; i < 3; i++) for (let j = 0; j < Math.max(1, Math.round(layer.thick / a)); j++) for (let k = -2; k < 2; k++) for (const [bx, by, bz] of basis) {
+        pts.push(new THREE.Vector3((i + bx) * a, y0 + (j + by) * a, (k + bz) * a));
+      }
+      for (const p of pts) atoms.push({ el, p });
+      for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) if (Math.abs(pts[i].distanceTo(pts[j]) - nn) < 0.05) bonds.push([pts[i], pts[j]]);
     } else if (layer.kind === 'cu') { // FCC měď: a = 3,615 Å, nejbližší soused 2,556 Å
       const a = 3.615, pts = [];
       for (let i = -3; i < 3; i++) for (let j = 0; j < Math.round(layer.thick / a); j++) for (let k = -2; k < 2; k++) for (const [bx, by, bz] of [[0, 0, 0], [0, 0.5, 0.5], [0.5, 0, 0.5], [0.5, 0.5, 0]]) {
@@ -301,7 +316,7 @@ export function buildLatticeScene(ctx) {
       }
     } else { // amorfní vrstva: náhodná síť kationtů, aniont (O, N) jako můstek mezi blízkými kationty, délka vazby z literatury
       // [kation, aniont, vzdálenost kation–kation, vazba kation–aniont, max. sousedů kationtu]
-      const [cat, an, dcc, bond, cn] = { sio2: ['Si', 'O', 3.06, 1.61, 4], hfo2: ['Hf', 'O', 3.5, 2.1, 7], sinx: ['Si', 'N', 3.0, 1.74, 4], asi: ['Si', 'H', 2.35, 1.48, 4] }[layer.kind];
+      const [cat, an, dcc, bond, cn] = { sio2: ['Si', 'O', 3.06, 1.61, 4], sicoh: ['Si', 'O', 3.06, 1.61, 3], hfo2: ['Hf', 'O', 3.5, 2.1, 7], sinx: ['Si', 'N', 3.0, 1.74, 4], asi: ['Si', 'H', 2.35, 1.48, 4] }[layer.kind];
       const cats = [];
       for (let t = 0; t < 4000; t++) {
         const p = new THREE.Vector3((r() - 0.5) * W * 2, y0 + 0.6 + r() * Math.max(0.1, layer.thick - 1.2), (r() - 0.5) * D * 2);
@@ -319,6 +334,17 @@ export function buildLatticeScene(ctx) {
         const o = mid.addScaledVector(perp, Math.sqrt(Math.max(0, bond * bond - (d / 2) ** 2)));
         atoms.push({ el: an, p: o });
         bonds.push([a.p, o], [o, b.p]);
+      }
+      if (layer.kind === 'sicoh') for (const c of cats) if (c.n < 4 && r() < 0.6) { // low-k: na volné vazbě Si skupina –CH₃ (Si–C 1,87 Å, C–H 1,09 Å)
+        const dir = new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize();
+        const cc = c.p.clone().addScaledVector(dir, 1.87);
+        atoms.push({ el: 'C', p: cc });
+        bonds.push([c.p, cc]);
+        for (let h = 0; h < 3; h++) {
+          const hp = cc.clone().addScaledVector(dir.clone().add(new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5)).normalize(), 1.09);
+          atoms.push({ el: 'H', p: hp });
+          bonds.push([cc, hp]);
+        }
       }
       if (layer.kind === 'asi') for (const c of cats) if (c.n < 4 && r() < 0.35) { // vodík na volné vazbě
         const h = c.p.clone().addScaledVector(new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize(), bond);

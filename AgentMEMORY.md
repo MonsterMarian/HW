@@ -1,6 +1,6 @@
 # AgentMEMORY — HW (Silicon Logic Studio)
 
-Aktualizováno: 2026-11-11 17:59
+Aktualizováno: 2026-11-11 18:26
 
 ## Cíl repa
 Desktopový simulátor hardwaru (React 19 + Vite + three.js, Electron) v `silicon-logic-studio/`. Hlavní obvod je
@@ -15,7 +15,7 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   (okno `show:false`, `SHOT_SIZE=1280x800`; helpery `__view('SCHEMATIC'|'PCB'|'DIE 3D')`, `__dbl(x,y)`, `__crumb()`,
   `__active()`, `window.__errs`; v DEV i `window.__engine`, `window.__three`, `window.__slsCanvas`).
   Uživatel NECHCE, aby se mu aplikace otevírala – nikdy `npm run desktop` ani viditelný prohlížeč.
-- Rychlost simulace karty (měřeno 11. 11.): 317 kroků na µs simulovaného času (z toho 200 jsou hrany MCLKx2 100 MHz),
+- Rychlost simulace karty (měřeno 11. 11., kolísá podle zátěže stroje): 317 kroků na µs simulovaného času (z toho 200 jsou hrany MCLKx2 100 MHz),
   ~2,5 ms reálného času na µs → jeden snímek 640×480 (16,7 ms) trvá ~42 s. Testy proto používají malý video režim `TINY`
   + `monitor.modes`. `TINY` = htotal 64, hdisp 32, hss 44, hse 52: přední zatemnění MUSÍ být delší než zpoždění
   Palette-DAC (8 bodů), jinak HSYNC usekne konec řádku. Stejné konstanty jsou v testu i v `Nv1DiagnosticModal.jsx`.
@@ -23,7 +23,15 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   opravdu a správně simulovalo realitu“. Každá hrana hodin (i sestupná, na kterou nikdo nereaguje) má v `step()` vlastní
   krok. Zkoušel jsem je slučovat s další událostí (snímek za 19 s), ale 100MHz takt pak při krokování a v analyzátoru
   vypadal jako trvale v jedničce → vráceno, hlídá to test „every edge of the 100 MHz memory clock is visible“.
-  Zůstalo jen `silent: true` u `clocks()` (součástka se nevyhodnocuje na vlastním výstupu hodin, kde nic nedělá).
+  Žádné zkratky v `step()` nezůstaly (příznak `silent` jsem zase odstranil – DAC potřebuje hrany MCLK pro časování čtení registrů).
+- Opravy z nezávislé kontroly (11. 11.): monitor počítá bod jako 1/`hTotal` změřené periody řádku (ne z `pclk` – karta
+  vysílá 25,2 MHz, tabulka VESA má 25,175 → ve 640×480 byla pravá část obrazu o bod vedle; režimy monitoru mají `hTotal`);
+  cíl PCI pozná klid sběrnice (FRAME# i IRDY# nahoře) a transakci zahodí; ROM se při obraze čte jen když do konce
+  zatemnění zbývá aspoň půl řádku; požadavek na pixely je objekt té karty (dřív sdílený mezi dvěma kartami);
+  DAC při čtení registru zapne výstupy podle času (2 hrany MCLK po DACCS#), ne podle „plovoucí“ sběrnice.
+- ZNÁMÉ OMEZENÍ: `BUS_SWITCH_32` pozná směr podle toho, že strana není buzená (Z). Když je v obvodu s kartou jakýkoli
+  tranzistor NMOS/PMOS, engine přejde na spínačové řešení sítí, kde nebuzená síť drží náboj a nikdy není Z → spínač
+  (čtení banky 1) nefunguje. Správné řešení = skutečný průchozí spínač v enginu (zařízení deklaruje spojení sítí), neuděláno.
 ## Hotovo (2026-11-10)
 - Nové jádro `src/engine/logicEngine.js`: dráty = vodivé sítě (union-find), obousměrné piny, tri-state,
   zkrat = 'X', plovoucí = 'Z' (NE 2/3 – stará chyba: sběrnicová hodnota 2 se brala jako Z), pull-upy,
@@ -159,7 +167,7 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - Palette-DAC: krystal 12,096 MHz, `pll` = { dot 12/100/4, mclkx2 11/91/1, aclk 8/65/4 }, f = fref × N / (M × P), `pllHz()`;
   VCLK = dot / 4 si dělá sám; zásobník 2 slova (8 pixelů), nuluje ho 0-1-0 na BLANK# (NV1 ho posílá na začátku vertikálního
   zatemnění, `vid.sync` = DAC už je prázdný, smí se načítat); slovo odebírá 2 VCLK po BLANK# → monitor `hpos = -8`.
-  Registry: přímé 4/5 = index, 6 = data s autoinkrementem; 0x300 port GP (bity 6:5 výběr ven, 3:0 data), 0x301 směr (NV1 píše 0x9F).
+  Registry: přímé 4/5 = index, 6 = data s autoinkrementem; 0x300 Saturn port A (bit 6 SELECT[0] = TH, bit 5 SELECT[1] = TR, 3:0 data), 0x301 režim (NV1 píše 0x1F).
 - Game port: `ramdac.gp_sel` → `SEGA_ASIC` (nvSGP, průchozí, terminál hierarchie) → `SEGA_HEADER` J5 → pad; J6 a zásuvka P1 nezapojené.
 - Rozmístění na desce je odměřené z fotky: model_x = 88 + foto_x × 0,4273, model_y = 32,4 + foto_y × 0,4273 (foto 1600 px,
   horní okraj fotky je oříznutý o ~3 mm). DRAM leží vodorovně, BIOS (U12) stojí svisle, RAMDAC 31,2 × 31,2 mm.
@@ -169,6 +177,32 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
   Nesimuluje se zachycení MD[7:0] při RST#. Označení U1/U2 a pořadí jacků nemají spolehlivý zdroj (kodek je U6 – čitelné na zvětšené fotce).
 - Kusovník: nové položky `busswitch`, `nvsgp`, `hdr2x5`, `xtal_12` (`xtal_14` zrušen).
 
+## DALŠÍ KROK: karta NV1 věrně podle zdrojů (zjištěno 2026-11-11 večer, zatím NEUDĚLÁNO)
+Uživatel chce věrnost realitě. Když jsem po dokončení přestavby četl datasheety celé, vyšlo najevo, že návrh z plánu
+(kap. 3.1) stojí v pixelové cestě na špatném čtení a že model má vlastní mapu registrů, i když skutečná je zčásti známá.
+Texty zdrojů si znovu vytáhni: `python -I` + pypdf na oba PDF (odkazy výše), envytools `hw/display/nv1/pdac.html`, `pfb.html`.
+- FIFO v STG1764 NENÍ „128 bitů celkem“. Datasheet STG1732/64 s. 12: slovo jádra FIFO má 128 bitů (2 načtení po 64 b),
+  zápis je zpožděný – po posledním úplném slově jsou potřeba 2 LOADCLK navíc (64bit port; 32bit: 3, 16bit: 5); FIFO je
+  „deep“, hloubka neuvedena; čte se pod řízením BLANK# po 32bit slovech (délka řádku násobek 2 pixelů při 16 bpp a VCLK 1:1).
+  Model dnes: kapacita jedno slovo jádra (8 pixelů), zápis hned, načítání po jednom slově. Skutečný čip plní FIFO dávkami.
+- Zpoždění: (3 × VCLK) + (15 × bodový takt) + 7 ns při 16/32 bpp, měřeno od hrany VCLK se vzorkovaným BLANK# = 1 (s. 18).
+  HSYNC/VSYNC jdou z NV1 rovnou na konektor, takže skutečný čip musí zpoždění DAC srovnat sám (jak, zdroj neříká).
+- VCLK = bodový takt / 1, 2, 4, 8 nebo 16 „podle režimu“; PFB CONFIG bity 24–26 = PCLK_VCLK_RATIO (kódování neznámé).
+  Model má pevně /4. Zjistit z ovladače XFree86 3.3.6 `nv1driver.c` (odkaz v plánu kap. 4) – tam bude i programování časování.
+- Skutečné registry (envytools, offsety v MMIO): PFB 0x600000 VRAM_CONFIG, 0x6000C0 POWER_SYNC, 0x600200 CONFIG (bit 0 VBLANK,
+  8–9 BPP: 2 = 16 bpp), 0x600400 START, 0x600500/510/520/530 HOR_FRONT_PORCH / SYNC_WIDTH / BACK_PORCH / DISP_WIDTH,
+  0x600540–570 totéž svisle (jednotky nepopsané); PDAC 0x609000 PAL_WRITE, +4 PAL_DATA, +8 PAL_MASK, +C PAL_READ, +10 INDEX_LOW,
+  +14 INDEX_HIGH, +18 DATA, +1C GAME_PORT. Vnitřní registry DAC: 0/1/2 ID (0x44, 0x64, revize 0xB2), 4/5 CONFIG, 0x10+4i PLL
+  M/N/O/P (0 paměť, 1 audio, 2 video), 0x300+2i data a 0x301+2i režim Saturn portu i (bity 0–3 DATA, 4 SENSE, 5 SELECT[1],
+  6 SELECT[0]; 0 = výstup). Kde v BAR0 leží framebuffer (asi +0x1000000), je potřeba ověřit (envytools `hw/mmio`).
+- Saturn porty jsou GPIO, které čte OVLADAČ přes PDAC; model je skenuje sám v NV1 (`nv1Mem`, `s.sat`, `REG.GAMEPORT`).
+- Paměti: datasheet s. 19 – s EDO DRAM plní čip STG1764 v hyper page mode 400 MB/s (CAS# 0,5 T), s obyčejnými FPM 200 MB/s
+  (2 MB do 64bit portu). Na fotce jsou Hyundai HY514260B (podle značení FPM, neověřeno datasheetem) → dnešní FPM cyklus 2 T sedí.
+- EEPROM: U29 na fotce má potisk NVCAA = předprogramovaná ST93C46A (NVCAATR, datasheet s. 32), Microwire EECS/EESD/EESCLK,
+  perioda 50 T, čte se po zapnutí. Stabilizátor U18 = LM2941CT. OZ: 3× LF353, 1× LF347. CD audio J4 (Mitsumi), J12 (Panasonic).
+- Navržený postup: (1) skutečná mapa PFB/PDAC místo vlastních registrů + ovladač hosta, který ji používá, (2) FIFO se slovy
+  128 b, zpožděným zápisem a dávkovým plněním, (3) skutečné zpoždění DAC + srovnání syncu, (4) EEPROM. Co zdroje neříkají
+  (hloubka FIFO, arbitráž sběrnice, vnitřek nvSGP), zůstane modelem a musí to být u dílů napsané.
 ## Review ostatních projektů (2026-11-11)
 - Rozhodnutí: bitové chyby z přehřátí, RC zpoždění, WebGPU/JIT/Monaco a skutečný AI copilot se NEDĚLAJÍ (důvody v plánu).
 - AI PC: Seasonic Core GX-650 ATX 3 má JEDEN PCIe kabel (2× 6+2) + 12V-2x6; BFB1012VH 1,5 A (datasheet); PB-08248
@@ -236,3 +270,5 @@ vizualizace co nejpřesněji podle skutečného HW, spoje jako reálné zaříze
 - 2026-11-11 17:19 — „pokračuj s modelováním a dalšími věcmi z plánu“ → přestavba karty NV1 podle datasheetu hotová (sběrnice MD, dvě banky, spínač EN64, pixely do DAC, ROM a registry DAC na MD, game port přes DAC + nvSGP, krystal 12,096 MHz), rozmístění z fotky, 2D/3D/hierarchie/kusovník, engine bez prázdných kroků; 278/278 testů.
 - 2026-11-11 17:33 — pokračování téhož zadání → nabídky nových dílů karty (rešerše), kodek = U6, popisy zapnutí MŮJ PC (PCH → SLP_S3# → PS_ON#), z původního plánu editor paměti RAM/ROM a měření v logickém analyzátoru; 280/280 testů.
 - 2026-11-11 17:59 — „u step je jedno, jak dlouho to trvá, hlavní je správně simulovat realitu“ → vráceno slučování sestupných hran hodin v `step()`, test na viditelnost každé hrany MCLKx2; 281/281 testů.
+- 2026-11-11 18:06 — po pokynu „věrnost před rychlostí“ přečteny celé datasheety STG2000 a STG1732/64 + envytools → opraveny bity Saturn portu a popisy; rozdíly modelu proti skutečnému čipu sepsány v sekci „DALŠÍ KROK“ (FIFO, zpoždění DAC, skutečné registry PFB/PDAC).
+- 2026-11-11 18:26 — nezávislá kontrola obou commitů → opraveno 5 nálezů (monitor 640×480, čtení ROM při obraze, klid PCI, sdílený objekt dvou karet, kurzory analyzátoru), 3 nové testy; 284/284 testů, diagnostika v aplikaci 7/7.

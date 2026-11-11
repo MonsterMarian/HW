@@ -44,6 +44,9 @@ export function WaveformViewer({ engine, onClose }) {
 
       const { rowHeight, step } = geometryOf(engine, canvas);
       const c = cursors.current;
+      // po načtení jiného obvodu se vzorky číslují znovu od nuly: staré kurzory zahodit
+      if (c.a !== null && c.a >= engine.waveformCount) c.a = null;
+      if (c.b !== null && c.b >= engine.waveformCount) c.b = null;
 
       // Draw timeline grid
       ctx.strokeStyle = '#121519';

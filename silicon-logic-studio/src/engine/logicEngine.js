@@ -569,7 +569,7 @@ export class LogicEngine {
         list.push({ comp, pin: 'out', hz: comp.freqHz || uiHz, level: comp.outputs.out === 1 ? 1 : 0 });
       } else {
         const dev = DEVICES[comp.type];
-        for (const c of dev?.clocks?.(comp, this) || []) list.push({ comp, pin: c.pin || null, name: c.name || c.pin, hz: c.hz, level: 0, silent: !!c.silent });
+        for (const c of dev?.clocks?.(comp, this) || []) list.push({ comp, pin: c.pin || null, name: c.name || c.pin, hz: c.hz, level: 0 });
       }
     }
     for (const s of list) {
@@ -634,7 +634,6 @@ export class LogicEngine {
         if (s.netIdx !== undefined) this._dirtyNets.add(s.netIdx);
       }
       if (!s.level && DEVICES[comp.type]?.risingOnlyClocks) continue; // nothing to do on its own falling edge
-      if (s.silent) continue; // clock output the part itself does not react to (a PLL output for another chip)
       (comp._edges = comp._edges || []).push(s.level ? s.riseEvt : s.fallEvt);
       this._dirtyComps.add(comp);
     }

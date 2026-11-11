@@ -384,6 +384,16 @@ function nv1Pci(comp, s) {
     }
   } else if (p.st === 'data') {
     const c = p.cur;
+    if (inp.frame_n !== 0 && inp.irdy_n !== 0) {
+      // the bus is idle: the master gave up waiting. Drop the transaction and what it was waiting for, so that a late
+      // answer cannot be taken for the data of the next one
+      if (s.readReq === c.pending) s.readReq = null;
+      if (s.rom.req === c.pending) s.rom.req = null;
+      out.trdy_n = 1; out.devsel_n = 1; out.ad = Z;
+      p.st = 'release';
+      p.prevFrame = inp.frame_n;
+      return;
+    }
     if (out.trdy_n === 0 && inp.irdy_n === 0) {
       // a data phase completed on this edge
       if (c.write) nv1Write(s, c, inp.ad, inp.cbe_n);
@@ -517,11 +527,13 @@ function nv1Audio(comp, s) {
 // store is full; the longest other cycle + a load with a row change (27 ticks) fits into the 31.7 ticks that two words last.
 const MT = { REFRESH: 776 * 2, TRP: 5, TRAS: 7, TCP: 2, PAGE_IDLE: 800, DAC_FIFO: 2, GAMEPORT: 192 };
 // Palette-DAC registers (envytools pdac): direct 4 / 5 = index low / high, 6 = data at the index, which then steps by one.
-// Index 0x300 = game port A (bits 3:0 pad data in, bits 6:5 group select out), 0x301 = its direction (1 = input).
-// That the number of a direct register equals the RS[3:0] code on MD[11:8] is an assumption from the MMIO offsets.
+// Index 0x300 = Saturn port A data, 0x301 = its mode (1 = input); bits: 3:0 DATA[3:0], 4 SENSE, 5 SELECT[1], 6 SELECT[0].
+// That the number of a direct register equals the RS[3:0] code on MD[11:8] is an assumption from the MMIO offsets
+// (envytools: INDEX_LOW 0x10, INDEX_HIGH 0x14, DATA 0x18), and so is SELECT[0] = TH, SELECT[1] = TR of the pad.
+// On the real card the pads are plain GPIO that the driver scans through these registers; here NV1 scans by itself.
+const padSelect = (sel) => ((sel & 1) << 6) | ((sel & 2) << 4); // TH -> bit 6, TR -> bit 5
 const DAC_REG = { INDEX_LO: 4, INDEX_HI: 5, DATA: 6 };
 const dacOp = (rs, data, pad = false) => ({ kind: 'dac', rs, write: data !== null, data: data ?? 0, pad });
-const SCAN = { kind: 'scan', cell: 0 };
 const REFRESH = { kind: 'refresh' };
 const ROMBYTE = { kind: 'rom' };
 
@@ -538,8 +550,8 @@ function nv1Mem(comp, s) {
   const g = s.sat;
   if (++g.cnt >= MT.GAMEPORT && !g.busy) {
     g.cnt = 0; g.busy = true;
-    if (!g.inited) { g.inited = true; s.busq.push(dacOp(DAC_REG.INDEX_HI, 0x03), dacOp(DAC_REG.INDEX_LO, 0x01), dacOp(DAC_REG.DATA, 0x9F)); } // bits 6:5 out
-    s.busq.push(dacOp(DAC_REG.INDEX_LO, 0x00), dacOp(DAC_REG.DATA, g.sel << 5), dacOp(DAC_REG.INDEX_LO, 0x00), dacOp(DAC_REG.DATA, null, true));
+    if (!g.inited) { g.inited = true; s.busq.push(dacOp(DAC_REG.INDEX_HI, 0x03), dacOp(DAC_REG.INDEX_LO, 0x01), dacOp(DAC_REG.DATA, 0x1F)); } // SELECT[1:0] out, DATA and SENSE in
+    s.busq.push(dacOp(DAC_REG.INDEX_LO, 0x00), dacOp(DAC_REG.DATA, padSelect(g.sel)), dacOp(DAC_REG.INDEX_LO, 0x00), dacOp(DAC_REG.DATA, null, true));
   }
   if (m.wait > 0) { m.wait--; return; }
   const closeRow = () => { out.ras_n = 1; m.rasLow = false; m.highFor = 0; m.row = -1; };
@@ -557,12 +569,12 @@ function nv1Mem(comp, s) {
       if (video && v.sync && v.loaded < total && v.loaded - v.consumed < MT.DAC_FIFO) {
         const perLine = c.hdisp >> 2;
         const y = Math.floor(v.loaded / perLine);
-        SCAN.cell = (c.fbStart + y * c.pitch + (v.loaded - y * perLine) * 8) >> 3;
-        req = SCAN;
+        req = { kind: 'scan', cell: (c.fbStart + y * c.pitch + (v.loaded - y * perLine) * 8) >> 3 };
       } else if (m.refreshDue > 0) req = REFRESH;
       else if (s.busq.length) req = s.busq.shift();
-      // a ROM byte holds the bus for 300 ns, longer than the pixel store lasts: only with the picture off or in vertical blanking
-      else if (s.rom.req && !s.rom.req.done && (!video || (v.v >= c.vdisp && v.v < c.vtotal - 1))) req = ROMBYTE;
+      // a ROM byte holds the bus for 300 ns, longer than the pixel store lasts: only with the picture off or in vertical
+      // blanking, and there only while at least half a line is left before the picture starts again
+      else if (s.rom.req && !s.rom.req.done && (!video || (v.v >= c.vdisp && (c.vtotal - v.v) * c.htotal - v.h >= c.htotal / 2))) req = ROMBYTE;
       // PCI ordering: a read must not pass posted writes, so the write FIFO drains first
       else if (s.readReq && !s.readReq.done && !s.wfifo.length) req = s.readReq;
       else if (s.wfifo.length) req = s.wfifo.shift();
@@ -750,11 +762,11 @@ function dacRegister(c, gp, write, data) {
   if (c.rs !== DAC_REG.DATA) return 0xFF;
   const idx = c.index;
   c.index = (c.index + 1) & 0xFFFF;
-  if (idx === 0x300) { // game port A: outputs read back the latch, inputs the pins (the model wires only GP[3:0])
-    if (write) c.port = data;
-    return (c.port & ~c.dir & 0xFF) | (((num(gp) ? gp & 0xF : 0xF) | 0xF0) & c.dir);
+  if (idx === 0x300) { // Saturn port A: outputs read back the latch, inputs the pins (the model wires only DATA[3:0])
+    if (write) c.port = data & 0x7F;
+    return (c.port & ~c.dir & 0x7F) | (((num(gp) ? gp & 0xF : 0xF) | 0x70) & c.dir);
   }
-  if (idx === 0x301) { if (write) c.dir = data; return c.dir; }
+  if (idx === 0x301) { if (write) c.dir = data & 0x7F; return c.dir; }
   return idx === 0 ? 0x44 : idx === 1 ? 0x64 : 0; // company and device ID
 }
 
@@ -891,13 +903,13 @@ export const NV1_DEVICES = {
   },
 
   RAMDAC_STG1764: {
-    meta: { ref: 'U2', part: 'SGS-Thomson STG1764X-13 (Palette-DAC 135 MHz + 3× PLL)', pkg: 'PQFP-128', desc: '64bitový pixelový port: P[31:0] visí na sběrnici MD, P[63:32] na SDB za sběrnicovým spínačem. Náběžná hrana LOADCLK uloží 4 pixely RGB555 z obou bank do zásobníku na 128 bitů (dvě slova), DAC je bodovým taktem posílá ven jako RGB 0–0,7 V; sekvence 0-1-0 na BLANK# zásobník vynuluje. Tři PLL z krystalu 12,096 MHz (f = 12,096 × N / (M × P)): MCLKx2 pro NV1, bodový takt (VCLK = bodový takt / 4) a ACLK pro kodek. Registry se čtou a zapisují po MD[15:8] s DACCS#; přes port GP jde i game port. Model vynechává zpoždění 3 VCLK + 15 bodů (má 2 VCLK) a paletu (jen režim RGB555).' },
+    meta: { ref: 'U2', part: 'SGS-Thomson STG1764X-13 (Palette-DAC 135 MHz + 3× PLL)', pkg: 'PQFP-128', desc: '64bitový pixelový port: P[31:0] visí na sběrnici MD, P[63:32] na SDB za sběrnicovým spínačem. Náběžná hrana LOADCLK uloží 4 pixely RGB555 z obou bank do FIFO, DAC je bodovým taktem posílá ven jako RGB 0–0,7 V; sekvence 0-1-0 na BLANK# ukazatele FIFO vynuluje. Skutečné FIFO má slova po 128 bitech, zápis se zpožděním 2 LOADCLK a hloubku datasheet neuvádí; model drží jen jedno takové slovo (dvě načtení) a zapisuje hned. Tři PLL z krystalu 12,096 MHz (f = 12,096 × N / (M × P)): MCLKx2 pro NV1, bodový takt (VCLK = bodový takt / 4) a ACLK pro kodek. Registry se čtou a zapisují po MD[15:8] s DACCS#; přes port GP jde i game port. Model má zpoždění 2 VCLK místo skutečných 3 VCLK + 15 bodů + 7 ns, VCLK pevně jako čtvrtinu bodového taktu (skutečný dělič 1–16 podle režimu) a nemá paletu (jen RGB555 s obejitím LUT).' },
     pins: {
       inputs: { xtal: Z, p_lo0: Z, p_hi0: Z, p_lo1: Z, p_hi1: Z, loadclk: 0, blank_n: 0, daccs_n: 1, gp_d: 0xF },
       outputs: { vclk: 0, mclkx2: 0, aclk: Z, r: 0, g: 0, b: 0, p_lo0: Z, gp_sel: Z },
     },
     widths: { p_lo0: 16, p_hi0: 16, p_lo1: 16, p_hi1: 16, gp_d: 4, gp_sel: 2 },
-    netNames: { vclk: 'VCLK 6.3 MHz', mclkx2: 'MCLKx2 100.07 MHz', aclk: 'ACLK 24.57 MHz', r: 'RED (analog)', g: 'GREEN (analog)', b: 'BLUE (analog)', gp_sel: 'GP[6:5] SELECT', gp_d: 'GP[3:0] DATA' },
+    netNames: { vclk: 'VCLK 6.3 MHz', mclkx2: 'MCLKx2 100.07 MHz', aclk: 'ACLK 24.57 MHz', r: 'RED (analog)', g: 'GREEN (analog)', b: 'BLUE (analog)', gp_sel: 'SATURN SELECT[1:0]', gp_d: 'SATURN DATA[3:0]' },
     // PLL: f = fref * N / (M * P) (STG1732/64 datasheet; XFree86 nv1 driver: reference 12.096 MHz).
     // dot = pixel clock of the DAC, mclkx2 = twice the internal memory clock of NV1, aclk = clock of the codec
     risingOnlyClocks: true,
@@ -908,10 +920,10 @@ export const NV1_DEVICES = {
       const f = comp.inputs.xtal;
       const { pll, pllHz, xtalHz } = NV1_DEVICES.RAMDAC_STG1764;
       if (!num(f) || Math.abs(f - xtalHz) > 0.2e6) return [];
-      return [{ name: 'dot', hz: pllHz(f, pll.dot) }, { pin: 'mclkx2', hz: pllHz(f, pll.mclkx2), silent: true }];
+      return [{ name: 'dot', hz: pllHz(f, pll.dot) }, { pin: 'mclkx2', hz: pllHz(f, pll.mclkx2) }];
     },
     eval(comp, eng) {
-      const c = (comp._c = comp._c || { fifo: [], word: [0, 0, 0, 0], k: 3, b0: 0, b1: 0, b2: 0, active: false, rs: 0, read: 0, driving: false, index: 0, dir: 0xFF, port: 0, underflows: 0, overflows: 0, resets: 0 });
+      const c = (comp._c = comp._c || { fifo: [], word: [0, 0, 0, 0], k: 3, b0: 0, b1: 0, b2: 0, active: false, rs: 0, read: 0, driving: false, turnOn: 0, index: 0, dir: 0x7F, port: 0, underflows: 0, overflows: 0, resets: 0 });
       const i = comp.inputs;
       const o = comp.outputs;
       const dev = NV1_DEVICES.RAMDAC_STG1764;
@@ -930,9 +942,11 @@ export const NV1_DEVICES = {
       const de = edge(comp, 'daccs_n');
       if (de === 'f') {
         const bus = num(i.p_lo0) ? i.p_lo0 : 0;
-        c.rs = (bus >> 8) & 0xF; c.read = (bus >> 15) & 1; c.driving = false;
+        c.rs = (bus >> 8) & 0xF; c.read = (bus >> 15) & 1; c.driving = false; c.turnOn = 0;
       }
-      if (i.daccs_n === 0 && c.read && !c.driving && i.p_lo0 === Z) { // the controller released the bus: answer
+      // read: the outputs turn on two MCLK edges (20 ns) after DACCS# fell; NV1 has left the bus 10 ns earlier (tSLAZ).
+      // Done by time and not by looking for a floating bus: a real bus keeps its charge and never reads as floating.
+      if (ownRising(comp, 'mclkx2') && i.daccs_n === 0 && c.read && !c.driving && ++c.turnOn >= 2) {
         c.driving = true;
         o.p_lo0 = dacRegister(c, i.gp_d, false, 0) << 8;
       }
@@ -940,7 +954,7 @@ export const NV1_DEVICES = {
         if (!c.read && num(i.p_lo0)) dacRegister(c, i.gp_d, true, (i.p_lo0 >> 8) & 0xFF);
         o.p_lo0 = Z; c.driving = false;
       }
-      o.gp_sel = c.dir & 0x60 ? Z : (c.port >> 5) & 3; // GP[6:5] drive the pad select lines once they are set as outputs
+      o.gp_sel = c.dir & 0x60 ? Z : ((c.port >> 6) & 1) | ((c.port >> 4) & 2); // SELECT[0] = TH, SELECT[1] = TR, once set as outputs
       if (!ownRising(comp, 'dot')) return;
       c.k = (c.k + 1) & 3;
       if (c.k === 0) {
@@ -1143,7 +1157,9 @@ export const NV1_DEVICES = {
     meta: { ref: 'CRT', part: '14" VGA CRT monitor', pkg: 'CRT', offBoard: true, desc: 'Analogový monitor: obraz skládá jen z napětí R/G/B a z časování HSYNC/VSYNC.' },
     pins: { inputs: { r: Z, g: Z, b: Z, hsync: Z, vsync: Z }, outputs: {} },
     // timing table the monitor uses to recognise a mode from the measured sync frequencies
-    modes: [{ name: '640×480 @ 60 Hz', hHz: 31469, vHz: 59.94, w: 640, h: 480, pclk: 25.175e6, hBack: 96 + 48, vBack: 2 + 33 }],
+    // hTotal = pixels per whole line: the beam sweeps evenly, so a pixel is 1 / hTotal of the measured line period
+    // (the monitor does not know the dot clock of the card: 25.2 MHz here, 25.175 MHz in the VESA table)
+    modes: [{ name: '640×480 @ 60 Hz', hHz: 31469, vHz: 59.94, w: 640, h: 480, hTotal: 800, hBack: 96 + 48, vBack: 2 + 33 }],
     hpos: -8, // factory H-position: compensates the pipeline of the Palette-DAC model (2 VCLK = 8 pixels; the real one has 3 VCLK + 15 dots)
     init(comp) { comp.status = 'NO SIGNAL'; comp.frames = 0; },
     eval(comp, eng) {
@@ -1154,7 +1170,7 @@ export const NV1_DEVICES = {
       const he = edge(comp, 'hsync');
       const ve = edge(comp, 'vsync');
       const dev = NV1_DEVICES.VGA_MONITOR;
-      const T = m.mode ? 1e9 / m.mode.pclk : 40;
+      const T = m.mode && m.hPeriod ? m.hPeriod / m.mode.hTotal : 40;
       const xOf = (time) => Math.round((time - m.tHs) / T - (m.mode ? m.mode.hBack : 0) + dev.hpos);
       const span = (x1) => {
         if (!m.mode) return;

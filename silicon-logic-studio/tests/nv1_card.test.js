@@ -12,7 +12,7 @@ import { testPixel, PCI_IDS } from '../src/engine/devices/nv1Card.js';
 // (12 pixels) has to be longer than the pipeline of the Palette-DAC (8 pixels), as it is in real modes (640x480: 16).
 const TINY = { htotal: 64, hdisp: 32, hss: 44, hse: 52, vtotal: 24, vdisp: 16, vss: 18, vse: 20 };
 const VCLK = (12.096e6 * 100) / 48; // dot clock of the Palette-DAC: 12.096 MHz x 100 / (12 x 4) = 25.2 MHz
-const TINY_MONITOR_MODE = { name: 'TEST 32×16', hHz: VCLK / 64, vHz: VCLK / 64 / 24, w: 32, h: 16, pclk: VCLK, hBack: 64 - 44, vBack: 24 - 18 };
+const TINY_MONITOR_MODE = { name: 'TEST 32×16', hHz: VCLK / 64, vHz: VCLK / 64 / 24, w: 32, h: 16, hTotal: 64, hBack: 64 - 44, vBack: 24 - 18 };
 
 function board({ tiny = true, edit } = {}) {
   const def = JSON.parse(JSON.stringify(NV1_BOARD));
@@ -195,6 +195,69 @@ describe('NV1 board in operation', () => {
     assert.equal(wrong, 0, 'a falling edge must not be merged with the next rising one');
   });
 
+  it('640 pixels per line with the real VGA line timing: every pixel up to the right edge lands in its place', () => {
+    // short frame (8 lines), but the real 800-pixel line; the monitor does not know the dot clock of the card
+    const WIDE = { htotal: 800, hdisp: 640, hss: 656, hse: 752, vtotal: 12, vdisp: 8, vss: 9, vse: 10 };
+    const e = board({ tiny: false });
+    e.components.get('host').driverMode = WIDE;
+    const mon = e.components.get('monitor');
+    mon.modes = [{ name: 'TEST 640×8', hHz: VCLK / 800, vHz: VCLK / 800 / 12, w: 640, h: 8, hTotal: 800, hBack: 800 - 656, vBack: 12 - 9 }];
+    const host = e.components.get('host');
+    assert.ok(runUntil(e, () => host.status.readBack !== undefined, 3_000_000), `phase ${host.status.phase}`);
+    const f0 = mon.frames;
+    assert.ok(runUntil(e, () => mon.frames >= f0 + 3, 3_000_000), mon.status);
+    const bad = [];
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 640; x++) {
+        const px = testPixel(x, y, 640, 8);
+        const o = (y * 640 + x) * 4;
+        const exp = [(px >> 10) & 31, (px >> 5) & 31, px & 31].map((c5) => Math.round((Math.round((c5 / 31) * 700) / 1000 / 0.7) * 255));
+        if (exp.some((v, k) => Math.abs(mon.image[o + k] - v) > 1)) bad.push(`${x},${y}`);
+      }
+    }
+    assert.deepEqual(bad.slice(0, 8), []);
+    assert.equal(e.components.get('nv1_core')._s.vid.underflows, 0);
+  });
+
+  it('BIOS ROM read while the picture is on: waits for vertical blanking, the pixel store never runs dry', () => {
+    for (const mode of [TINY, { ...TINY, vtotal: 17, vss: 16, vse: 17 }]) { // the second one has a single blanked line
+      const e = board();
+      const host = e.components.get('host');
+      host.driverMode = mode;
+      assert.ok(runUntil(e, () => host.status.phase === 'running', 3_000_000));
+      const nv = e.components.get('nv1_core')._s;
+      const req = { addr: 0, done: false, value: 0 };
+      nv.rom = { req, i: 0, bytes: [] };
+      assert.ok(runUntil(e, () => req.done, 600_000), `vtotal ${mode.vtotal}: ROM never read`);
+      assert.equal(req.value & 0xFFFF, 0xAA55);
+      runUntil(e, () => false, 150_000);
+      assert.equal(nv.vid.underflows, 0, `vtotal ${mode.vtotal}`);
+      assert.equal(e.components.get('ramdac')._c.underflows, 0);
+    }
+  });
+
+  it('two cards simulated side by side share no state (main circuit + diagnostics window)', () => {
+    const a = board();
+    const b = board();
+    b.components.get('host').driverMode = { ...TINY, htotal: 80, hss: 52, hse: 60 }; // different timing, so they drift apart
+    b.components.get('monitor').modes = [{ ...TINY_MONITOR_MODE, hHz: VCLK / 80, vHz: VCLK / 80 / 24, hTotal: 80, hBack: 80 - 52 }];
+    const done = (e) => e.components.get('host').status.readBack !== undefined && e.components.get('monitor').frames >= 4;
+    for (let i = 0; i < 4_000_000 && !(done(a) && done(b)); i++) { a.step(); b.step(); }
+    assert.ok(done(a) && done(b));
+    for (const e of [a, b]) {
+      const mon = e.components.get('monitor');
+      let bad = 0;
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 32; x++) {
+          const px = testPixel(x, y, 32, 16);
+          const o = (y * 640 + x) * 4;
+          const exp = [(px >> 10) & 31, (px >> 5) & 31, px & 31].map((c5) => Math.round((Math.round((c5 / 31) * 700) / 1000 / 0.7) * 255));
+          if (exp.some((v, k) => Math.abs(mon.image[o + k] - v) > 1)) bad++;
+        }
+      }
+      assert.equal(bad, 0);
+    }
+  });
   it('memory bus: EN64 splits the banks only for pixel loads, DRAM timing keeps table 3 of the STG2000 datasheet', () => {
     const e = board();
     const host = e.components.get('host');
@@ -231,7 +294,8 @@ describe('NV1 board in operation', () => {
     assert.ok(runUntil(e, () => host.status.phase === 'running' && host.status.pad !== 0xFFFF, 3_000_000));
     assert.equal(host.status.pad, 0xFFFF & ~(1 << 7), 'START is D3 of the second group');
     const dac = e.components.get('ramdac')._c;
-    assert.equal(dac.dir, 0x9F, 'GP[6:5] programmed as outputs (select), GP[3:0] as inputs');
+    assert.equal(dac.dir, 0x1F, 'SELECT[1:0] programmed as outputs, DATA[3:0] and SENSE as inputs');
+    assert.equal(dac.port & 0x1F, 0, 'only the two select bits (6 = SELECT[0], 5 = SELECT[1]) are ever written');
     assert.equal(e.pinValue('sega_asic', 'A TH/TR'), e.pinValue('ramdac', 'gp_sel'));
   });
 });

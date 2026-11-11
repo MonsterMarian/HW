@@ -13,7 +13,7 @@ import { fmtTime } from '../views/canvas/theme';
 // delší než zpoždění Palette-DAC (8 bodů), stejně jako ve skutečných režimech (640×480: 16).
 const TINY = { htotal: 64, hdisp: 32, hss: 44, hse: 52, vtotal: 24, vdisp: 16, vss: 18, vse: 20 };
 const VCLK = (12.096e6 * 100) / 48; // bodový takt Palette-DAC: 12,096 MHz × 100 / (12 × 4) = 25,2 MHz
-const TINY_MONITOR_MODE = { name: 'TEST 32×16', hHz: VCLK / 64, vHz: VCLK / 64 / 24, w: 32, h: 16, pclk: VCLK, hBack: 64 - 44, vBack: 24 - 18 };
+const TINY_MONITOR_MODE = { name: 'TEST 32×16', hHz: VCLK / 64, vHz: VCLK / 64 / 24, w: 32, h: 16, hTotal: 64, hBack: 64 - 44, vBack: 24 - 18 };
 
 const hex = (v, n = 4) => (v >>> 0).toString(16).toUpperCase().padStart(n, '0');
 

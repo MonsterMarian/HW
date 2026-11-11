@@ -114,9 +114,21 @@ XFree86: krystal 12,096 MHz, vzorec PLL, pouzdro 28 × 28 mm, zásobník pixelů
 0-1-0 na `BLANK#`.
 
 Kde se model od skutečné karty **vědomě liší** (v aplikaci je to u dílů napsané):
-- **Zpoždění Palette-DAC:** model má 2 VCLK (8 bodů), skutečný DAC 3 VCLK + 15 bodů. Paleta se nesimuluje (jen RGB555).
+- **Mapa registrů:** model má vlastní registry CRTC, zvuku a game portu. Skutečný čip má registry zobrazení v bloku
+  PFB (MMIO 0x600000: přední zatemnění, šířka syncu, zadní zatemnění, šířka obrazu, START, CONFIG) a registry DAC
+  zrcadlené v bloku PDAC (0x609000) – envytools je zná jen zčásti (jednotky a řada bitů nejsou popsané).
+- **FIFO v Palette-DAC:** skutečné má slova po 128 bitech, zápis zpožděný o 2 LOADCLK a hloubku datasheet neuvádí
+  („deep pixel input FIFO“, plní se dávkami z paměti). Model drží jediné takové slovo (dvě načtení po 64 bitech),
+  zapisuje hned a načítá po jednom slově, kdykoli je místo. Pořadí obsluhy sběrnice (pixely → refresh → registry DAC →
+  ROM → čtení → zápis) a pravidlo, že se ROM čte jen mimo obraz, jsou návrh modelu; datasheet rozhodování nepopisuje.
+- **Zpoždění Palette-DAC:** model má 2 VCLK (8 bodů), skutečný DAC 3 VCLK + 15 bodů + 7 ns (16 bpp). VCLK je v modelu
+  pevně čtvrtina bodového taktu; skutečný dělič (1–16) se volí podle režimu. Paleta se nesimuluje (jen RGB555).
 - **Registry DAC:** že číslo přímého registru (4/5/6) odpovídá kódu na `MD[11:8]`, je domněnka z offsetů MMIO.
-  Jak často čip čte game port, zdroj neuvádí.
+- **Saturn pad:** na skutečné kartě jsou porty obyčejné GPIO v DAC (registry 0x300–0x303) a čte je ovladač;
+  v modelu je skenuje sám čip NV1 a výsledek dává do vlastního registru. Port B a linka SENSE se nesimulují;
+  že SELECT[0] = TH a SELECT[1] = TR, je domněnka.
+- **Paměti:** model počítá s obyčejnými FPM DRAM (jako na fotografii karty); s EDO paměťmi umí čip plnit DAC
+  dvakrát rychleji (hyper page mode, 400 MB/s), to model nemá.
 - **Sběrnicový spínač:** čtyři čipy PI5C3245Q jsou v simulaci jedna součástka bez zpoždění a odporu.
 - **nvSGP:** vnitřek čipu není zveřejněný, model ho bere jako průchozí budič. Pad je v modelu připojený rovnou
   na header J5; na kartě vede plochý kabel na zvláštní záslepku „EDGE 3D SEGA“. Modulární zásuvka P1 (PC joystick)
@@ -124,7 +136,8 @@ Kde se model od skutečné karty **vědomě liší** (v aplikaci je to u dílů 
 - **Záslepka:** pořadí jacků (mic, line in, line out) má jediný zdroj; jacky jsou v modelu o 2–3 mm výš, protože
   roh desky u záslepky sahá níž než obrys modelu.
 - **Konfigurace po resetu** (zachycení `MD[7:0]` na hraně `RST#`) se nesimuluje.
-- Na kartě jsou navíc sériová EEPROM 93C46, stabilizátor napětí, operační zesilovače a vstupy CD audio.
+- Na kartě jsou navíc sériová EEPROM (U29, ST93C46A předprogramovaná jako NVCAATR), stabilizátor LM2941CT (U18),
+  operační zesilovače 3× LF353 a LF347 a vstupy CD audio J4 a J12. Jejich zapojení neznám, proto v modelu nejsou.
 
 ## Bloky z PLAN_PROJEKTU.md
 V paletě **GPU**: násobička 8×8, barrel shifter, FPU half-precision (IEEE 754 binary16), MMIO dekodér

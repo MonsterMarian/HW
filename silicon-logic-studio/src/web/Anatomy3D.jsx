@@ -373,7 +373,7 @@ export function Anatomy3D({ engine, hierarchyStack, onNavigateUp, onDrillDown, m
   return (
     <div className="hw3d">
       <aside className="hw3d-side">
-        {partId && (
+        {PARTS.some((x) => x.id === partId) && (
           <select className="hw3d-select" value={partId} onChange={(e) => onOpenPart?.(e.target.value)}>
             {PARTS.filter((x) => x.item || x.drill || x.root).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </select>

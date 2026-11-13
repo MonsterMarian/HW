@@ -86,3 +86,24 @@
 .rb-modal-in { width: min(1000px, 100%); max-height: 90vh; overflow: auto; background: var(--bg-card); border: 1px solid var(--line); padding: 20px; }
 @media (max-width: 900px) { .rb-top { gap: 12px; } .rb-groups a { padding: 6px 8px; font-size: 13px; } .rb-q { display: none; } .rb-rel { display: none; } }
 .hw3d-select { width: 100%; padding: 8px 10px; background: #0b0a09; border: 1px solid var(--line); color: var(--text-light); font-weight: 700; font-size: 13px; }
+
+/* Katalog jako strom (vlevo strom, vpravo náhled). */
+.ct { display: flex; flex-direction: column; min-height: 0; }
+.ct-head { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; padding: 14px 20px 10px; border-bottom: 1px solid var(--line); }
+.ct-head p { max-width: 760px; }
+.ct-search { display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--line); background: var(--bg-card); color: var(--text-muted); }
+.ct-search input { background: transparent; border: 0; outline: none; padding: 7px 0; width: 300px; color: var(--text-light); font-size: 13px; }
+.ct-fid { opacity: .55; } .ct-fid.is-on, .ct-fid:hover { opacity: 1; }
+.ct-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 380px; }
+.ct-tree { overflow: auto; padding: 6px 0 24px; border-right: 1px solid var(--line); }
+.ct-row { display: flex; align-items: center; gap: 8px; height: 30px; padding-right: 12px; cursor: pointer; font-size: 13px; border-left: 2px solid transparent; }
+.ct-row:hover { background: #16110d; }
+.ct-row.is-sel { background: #1d1610; border-left-color: #ffb52e; }
+.ct-arrow { width: 18px; flex: none; display: grid; place-items: center; color: var(--text-muted); }
+.ct-arrow:hover { color: #ffb52e; }
+.ct-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-group { font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
+.ct-kind { flex: none; font: 10px var(--font-mono); color: var(--text-muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-empty { padding: 4px 12px; font-size: 11px; color: var(--text-muted); }
+.ct-preview { overflow: auto; padding: 16px 18px; }
+@media (max-width: 900px) { .ct-body { grid-template-columns: 1fr; } .ct-preview { border-top: 1px solid var(--line); } .ct-search input { width: 180px; } }

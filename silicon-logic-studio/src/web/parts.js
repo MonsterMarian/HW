@@ -215,7 +215,7 @@ export const partForComp = (comp) => (comp.id === 'self' ? null : PARTS.find((p)
 export const modelRoot = (name, drill) => ({ components: [{ id: 'self', type: 'PC_BLOCK', label: name, drill, x: 0, y: 0, sx: 0, sy: 0, inputs: {}, outputs: {} }], wires: [] });
 export const childrenOf = (id) => PARTS.filter((p) => p.in === id);
 export const pathOf = (p) => (p.in ? [...pathOf(partById(p.in)), p] : [p]);
-export const projectsOf = (p) => p.projects ?? projectsOf(partById(p.in));
+export const projectsOf = (p) => p.projects ?? (p.in ? projectsOf(partById(p.in)) : []);
 // Celková přesnost = horší z modelu a schématu ('none' se nepočítá, pokud aspoň jedno existuje).
 export const overallOf = (p) => {
   const lv = [p.model[0], p.schema[0]].filter((l) => l !== 'none');

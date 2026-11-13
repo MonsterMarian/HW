@@ -3,11 +3,13 @@
 // #/compare?ids=a,b,c, #/market, #/companies, #/timeline, #/map, #/bottlenecks, #/history.
 import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { PROJECTS, projectById } from '../engine/projects.js';
-import { FIDELITY, KINDS, PARTS, overallOf, partById, projectsOf } from './parts.js';
+import { FIDELITY, PARTS, overallOf, partById, projectsOf } from './parts.js';
 import { PartPage, Badge } from './PartPage.jsx';
 import { Explorer } from './Explorer.jsx';
 import { MapView, Companies, Timeline, Notes, Market } from './ResearchViews.jsx';
 import { RESEARCH } from './research/index.js';
+import { CatalogTree } from './CatalogTree.jsx';
+import { anyById } from './catalogTree.js';
 import { GROUPS, sectionById, sectionOf } from './sections.js';
 import { bomTotal, fmtKc } from '../engine/economic/catalog.js';
 
@@ -23,49 +25,6 @@ function useRoute() {
   }, []);
   const [path, q = ''] = hash.replace(/^#/, '').split('?');
   return { seg: path.split('/').filter(Boolean), q: new URLSearchParams(q), hash: hash || '#/' };
-}
-
-function Catalog() {
-  const [q, setQ] = useState('');
-  const [proj, setProj] = useState('');
-  const [kind, setKind] = useState('');
-  const [fid, setFid] = useState('');
-  const [cmp, setCmp] = useState([]);
-  const shown = PARTS.filter((p) => (!q || `${p.name} ${p.maker} ${p.kind}`.toLowerCase().includes(q.toLowerCase()))
-    && (!proj || projectsOf(p).includes(proj)) && (!kind || p.kind === kind) && (!fid || overallOf(p) === fid));
-  const counts = Object.keys(FIDELITY).map((k) => [k, PARTS.filter((p) => overallOf(p) === k).length]);
-  return (
-    <div className="p-6">
-      <h1 className="text-3xl font-semibold mb-1">Všechny součástky mého hardwaru</h1>
-      <p className="text-(--text-muted) max-w-3xl mb-3">
-        {PARTS.length} fyzických součástek ze 4 projektů, i ty nejmenší (krystal, EEPROM, konektor). Každá má vlastní stránku: 3D model a ceny,
-        schéma až k atomům, strom dodávek, mapu, firmy, časovou osu, úzká hrdla a historii. Štítek říká, jestli je model udělaný
-        <b> přesně podle dokumentace</b>, <b>částečně</b>, nebo <b>odhadem</b>. Rešerše hotová u {Object.keys(RESEARCH).length} dílů.
-      </p>
-      <div className="flex flex-wrap gap-3 mb-4 text-xs">{counts.map(([k, n]) => <button key={k} onClick={() => setFid(fid === k ? '' : k)}><Badge level={k} small /> {n}</button>)}</div>
-      <div className="flex flex-wrap gap-2 mb-4">
-        <input className="web-input" placeholder="Hledat díl, výrobce…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="web-input" value={proj} onChange={(e) => setProj(e.target.value)}><option value="">Všechny projekty</option>{PROJECTS.map((p) => <option key={p.id} value={p.id}>{p.tab}</option>)}</select>
-        <select className="web-input" value={kind} onChange={(e) => setKind(e.target.value)}><option value="">Všechny kategorie</option>{KINDS.map((k) => <option key={k}>{k}</option>)}</select>
-        <select className="web-input" value={fid} onChange={(e) => setFid(e.target.value)}><option value="">Jakákoli přesnost</option>{Object.entries(FIDELITY).map(([k, f]) => <option key={k} value={k}>{f.label}</option>)}</select>
-        {cmp.length > 0 && <a className="web-btn" href={`#/compare?ids=${cmp.join(',')}`}>Porovnat ({cmp.length})</a>}
-      </div>
-      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
-        {shown.map((p) => (
-          <div key={p.id} className="web-card flex flex-col gap-1">
-            <a href={`#/d/${p.id}`} className="font-semibold hover:text-(--accent-amber)">{p.name}</a>
-            <div className="text-[11px] text-(--text-muted)">{p.kind} · {p.maker}{p.in ? ` · na: ${partById(p.in).name}` : ''}</div>
-            <div className="flex flex-wrap gap-1 items-center mt-1"><Badge level={overallOf(p)} /></div>
-            <div className="text-[11px] text-(--text-muted)">3D: {FIDELITY[p.model[0]].short} · schéma: {FIDELITY[p.schema[0]].short}{RESEARCH[p.id] ? ' · rešerše ✓' : ''}</div>
-            <label className="text-[11px] mt-auto pt-1 flex items-center gap-1 text-(--text-muted)">
-              <input type="checkbox" checked={cmp.includes(p.id)} disabled={!cmp.includes(p.id) && cmp.length >= 3}
-                onChange={(e) => setCmp(e.target.checked ? [...cmp, p.id] : cmp.filter((x) => x !== p.id))} /> porovnat
-            </label>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 function Compare({ ids }) {
@@ -203,7 +162,7 @@ export default function WebApp() {
   const page = seg.slice(0, 2).join('/');
   const [sel, setSel] = useState('my_pc'); // vybraná součástka zůstává při přechodu mezi sekcemi
   const [map, setMap] = useState(false);
-  const curPart = seg[0] === 'd' && partById(seg[1]) ? seg[1] : null;
+  const curPart = seg[0] === 'd' && anyById(seg[1] ?? '') ? seg[1] : null;
   if (curPart && curPart !== sel) setSel(curPart); // odvozený stav (vzor React: nastavení při renderu)
   useEffect(() => { document.getElementById('web-main')?.scrollTo(0, 0); }, [page]);
   useEffect(() => {
@@ -217,7 +176,7 @@ export default function WebApp() {
   }, []);
   const sec = sectionOf(seg);
   let body, where = sec.name;
-  if (seg[0] === 'd' && partById(seg[1])) { body = <PartPage key={seg[1]} p={partById(seg[1])} tab={seg[2]} />; where = `${partById(seg[1]).name} · ${sec.id === 'catalog' ? 'stránka dílu' : sec.name}`; }
+  if (curPart) { body = <PartPage key={seg[1]} p={anyById(seg[1])} tab={seg[2]} />; where = `${anyById(seg[1]).name} · ${sec.id === 'catalog' ? 'stránka dílu' : sec.name}`; }
   else if (seg[0] === 'p' && PROJECTS.some((p) => p.id === seg[1])) { body = <ProjectPage key={seg[1]} pr={projectById(seg[1])} view={seg[2]} />; where = projectById(seg[1]).tab; }
   else if (seg[0] === 'projects') body = <Projects />;
   else if (seg[0] === 'compare') body = <Compare ids={(q.get('ids') ?? '').split(',')} />;
@@ -227,7 +186,7 @@ export default function WebApp() {
   else if (seg[0] === 'map') body = <Page title="Mapa světa" note="Doly, rafinerie, fabriky a montáže všech mých dílů. Body označené OBECNĚ jsou typické lokality, ne doložené pro konkrétní díl."><MapView ids={allIds} /></Page>;
   else if (seg[0] === 'bottlenecks') body = <Page title="Úzká hrdla" note="Co brzdí nebo brzdilo výrobu a dostupnost mých dílů."><Notes section="bottlenecks" /></Page>;
   else if (seg[0] === 'history') body = <Page title="Historie výpadků" note="Minulé výpadky dodávek a události, které se mých dílů týkaly."><Notes section="history" /></Page>;
-  else body = <Catalog />;
+  else body = <CatalogTree />;
   return (
     <div className="rb-app">
       <Header sec={sec} sel={sel} />

@@ -57,3 +57,17 @@ test('web sections: every page maps to a section, related links exist', async ()
   assert.equal(sectionOf([]).id, 'catalog');
   assert.equal(sectionOf(['map']).id, 'map');
 });
+test('catalog tree: every block and library item has a page, tree reaches every block', async () => {
+  const { treeRoots, ALL_BLOCKS, LIBRARY, anyById } = await import('../src/web/catalogTree.js');
+  const ids = new Set();
+  for (const p of [...PARTS, ...ALL_BLOCKS, ...LIBRARY]) {
+    assert.ok(!ids.has(p.id), `duplicitní id ${p.id}`); ids.add(p.id);
+    assert.equal(anyById(p.id)?.id, p.id);
+    for (const [lv, note] of [p.model, p.schema]) assert.ok(FIDELITY[lv] && note, `${p.id}: přesnost`);
+  }
+  const seen = new Set();
+  // bez deduplikace: tranzistor podle procesu (NMOS_intel14 …) vznikne jen pod čipem s tím procesem (~300 tis. uzlů, < 1 s)
+  const walk = (n, d) => { if (n.part?.block) seen.add(n.part.block); if (d < 16) for (const c of n.children()) walk(c, d + 1); };
+  for (const r of treeRoots()) walk(r, 0);
+  for (const b of ALL_BLOCKS) assert.ok(seen.has(b.block), `blok ${b.block} není ve stromu`);
+});

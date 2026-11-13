@@ -7,7 +7,7 @@ export const GROUPS = [
   {
     id: 'part', num: '01', name: 'Součástka', question: 'Jak je jedna součástka postavená?',
     items: [
-      { id: 'catalog', name: 'Katalog', short: 'Všechny součástky', href: () => '#/', what: 'Všechny fyzické součástky ze 4 projektů se štítkem přesnosti modelu.', how: ['Filtry: projekt, kategorie, přesnost', 'Klik na kartu: stránka dílu', 'Zaškrtni až 3: porovnání'], code: 'web/WebApp.jsx (Catalog)', related: ['anatomy3d', 'compare', 'map'] },
+      { id: 'catalog', name: 'Katalog', short: 'Všechny součástky', href: () => '#/', what: 'Strom všech součástek: sestavy → díly → čipy → bloky uvnitř až k atomům, knihovna Studia a alternativy.', how: ['Šipka / dvojklik: rozbalit', 'Klik: náhled vpravo', 'Hledání: díly, bloky i knihovna', 'Štítky: filtr přesnosti'], code: 'web/WebApp.jsx (Catalog)', related: ['anatomy3d', 'compare', 'map'] },
       { id: 'anatomy3d', name: 'Anatomie ve 3D', short: 'Model po dílech', href: (s) => `#/d/${s}/anatomy3d`, what: '3D model jedné součástky. Vlevo její systémy, uprostřed model, dole rozložení na díly. Dvojklik vede dovnitř až k atomům.', how: CONTROLS_3D, code: 'web/Anatomy3D.jsx', related: ['supply', 'lab', 'map'] },
       { id: 'supply', name: 'Strom dodávek', short: 'Z čeho je, až k dolům', href: (s) => `#/d/${s}/supply`, what: 'Z čeho se součástka skládá až k dolům. Sloupce zleva: těžba → rafinace → materiál → výroba → pouzdření → výrobce → díl.', how: ['Najeď na uzel: zvýrazní cestu', 'Klik na uzel: detail a zdroj'], code: 'web/ResearchViews.jsx (SupplyTree)', related: ['anatomy3d', 'map', 'bottlenecks'] },
     ],

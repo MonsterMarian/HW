@@ -1,0 +1,14 @@
+/* Web „Silicon Studio · Hardware“: jen pár tříd navíc nad tokeny z index.css (vzhled portfolia). */
+.web-tab { display: inline-block; padding: 4px 10px; font-size: 12px; color: var(--text-muted); border-bottom: 2px solid transparent; }
+.web-tab:hover { color: var(--text-light); }
+.web-tab.is-on { color: var(--accent-amber); border-bottom-color: var(--accent-amber); }
+.web-tag { display: inline-block; padding: 1px 6px; font-size: 10px; font-family: var(--font-mono); letter-spacing: 0.04em; border: 1px solid currentColor; vertical-align: middle; white-space: nowrap; }
+.web-card { background: var(--bg-card); border: 1px solid var(--line); padding: 12px; }
+.web-chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px 8px; font-size: 12px; border: 1px solid var(--line); background: var(--bg-card-light); }
+.web-chip:hover { border-color: var(--accent-amber); }
+.web-input { background: var(--bg-card); border: 1px solid var(--line); color: var(--text-light); padding: 6px 8px; font-size: 13px; min-width: 180px; }
+.web-btn { display: inline-flex; gap: 4px; align-items: center; padding: 5px 10px; font-size: 11px; font-family: var(--font-mono); background: var(--bg-dark); border: 1px solid var(--accent-amber); color: var(--accent-amber); }
+.web-btn:hover { background: var(--accent-amber); color: var(--bg-dark); }
+.web-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.web-table th, .web-table td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.web-table th { font-size: 11px; color: var(--text-muted); font-weight: 500; }

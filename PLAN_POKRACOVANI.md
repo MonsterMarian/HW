@@ -57,6 +57,15 @@ Bloky čipů vedou přes konkrétní jednotky (`engine/unitSubcircuits.js`, 68 j
 tranzistorů na atomové mřížky všech použitých materiálů (Si, SiGe, HfO₂, TiN, W, Cu, SiCOH, ZrO₂, Al₂O₃, SiN …) až ke
 kvarkům. Zbývá jen to, co nejde bez údajů: zdroj mého PC (podle štítku), MCU myši a mikrofonu (podle nápisu).
 
+## 4c. Web „Silicon Studio · hardware“ (`web.html`, `src/web/`) – základ HOTOVÝ 13. 11. 2026
+
+75 součástek s vlastní stránkou, štítky přesnosti, rešerše u všech. Dál:
+- Rozšířit registr o pasivní součástky, které dnes v modelech nejsou (kondenzátory, rezistory, cívky VRM, tlumivky) –
+  u každé desky podle fotky / manuálu, se štítkem MODEL NENÍ, dokud nedostane model.
+- Doplnit rešerši tam, kde chybí (repro bez firem, myš bez časové osy, konkrétní fabriky čipů); po přestavbě dílů z bodu 2
+  přepsat rešerši pro skutečné modely (zdroj, skříň, chladič).
+- Při změně přesnosti modelu (bod 2, plán NV1) přepsat `model` / `schema` u dílu v `parts.js`.
+
 ## 5. Údržba
 
 - Nabídky v `offers.js` (dohledány 10. 11. 2026) přerešeršovat zhruba po měsíci; po přestavbě komponent z bodu 2

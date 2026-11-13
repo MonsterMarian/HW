@@ -158,6 +158,17 @@ npm run build
 npm run desktop   # Electron okno
 ```
 
+## Web „Silicon Studio · hardware“
+Druhý vstup téhož Vite projektu: `web.html` → `src/web/`. Desktop zůstává na simulace a interní věci, web ukazuje
+hardware. `npm run dev` a otevřít `/web.html`; `npm run build` vyrobí `dist/web.html`.
+- Katalog všech 75 fyzických součástek ze 4 projektů (`src/web/parts.js`), i malých (krystal, EEPROM, konektory).
+  Každá má štítek přesnosti zvlášť pro 3D model a pro schéma: přesně podle dokumentace / částečně / odhad / model není.
+- Stránka dílu: přehled, 3D model a ceny (ECONOMIC), schéma s RUN/STEP (laboratoř), PCB, křemík 3D, anatomie sestavy,
+  strom dodávek, mapa světa, firmy, časová osa, úzká hrdla, historie výpadků, podíl na trhu.
+- Souhrnné stránky: porovnání (max. 3), projekty se SCHEMATIC/PCB/DIE 3D/ECONOMIC/ANATOMY, trh, firmy, časová osa,
+  mapa, úzká hrdla, historie. Rešerše je v `src/web/research/*.js` (schéma dat v `index.js`): každá položka má URL
+  zdroje a `fact` – DOLOŽENO (o tomhle dílu) nebo OBECNĚ (typické pro typ dílu).
+
 ## Deník práce
 Co se má dělat dál (karta NV1 věrně podle datasheetů a envytools): [`docs/PLAN_VERNOST_NV1_2026-11-11.md`](docs/PLAN_VERNOST_NV1_2026-11-11.md).
 

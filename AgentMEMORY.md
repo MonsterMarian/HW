@@ -275,3 +275,12 @@ envytools, fotka), tabulku „model vs. skutečnost“, 8 kroků s kritériem ho
   hlouběji; test hierarchie povoluje násobky 0,5, UI píše „4,5“. Atomy: nové L8 mřížky (krystal kanálu, SiGe, W, BEOL
   W/Cu/SiCOH, kondenzátor DRAM ZrO₂/Al₂O₃, blokovací vrstva V-NAND) a L9/L10 atomy W, Ge, C, Al, Zr. MŮJ PC 87 → 153
   podobvodů, AI PC 70 → 118. Projekt NV1 jsem nechal (paralelně ho dělá jiná session podle datasheetu).
+- 2026-11-13 — „Silicon Studio jako web pro všechny moje komponenty, každá vlastní stránka, všechny funkce jako u robotů
+  (robots/), u každé napsat, jestli je model podle dokumentace nebo odhad“ → ROZHODNUTÍ UŽIVATELE: web = kopie Studia jen
+  s naším hardwarem, desktop zůstává na simulace a interní věci; stránku má každá fyzická součástka; data trhu/dodávek
+  z rešerše se zdroji. Web je druhý vstup Vite (`web.html` → `src/web/`, hash router, build `dist/web.html`), sdílí
+  engine a pohledy (EconomicView s jednou položkou = 3D + ceny, AnatomyView, LogicCanvas/PhysicsView v `Explorer.jsx`
+  s vlastním enginem). Registr `src/web/parts.js` (75 dílů; `model`/`schema` = [doc|partial|estimate|none, poznámka],
+  u položek kusovníku se 3D odvodí z `dimsSrc`). Rešerše 5 agentů → `src/web/research/*.js` (75 dílů, každá položka
+  URL + `fact` doc/estimate; konkrétní fabriky většinou nedoložené = estimate, „Ostatní“ v podílech trhu = dopočet).
+  Mapa: world-atlas + topojson-client (nové závislosti). Test `tests/web_parts.test.js`. Vizuální kontrola shot.cjs OK.

@@ -295,3 +295,11 @@ envytools, fotka), tabulku „model vs. skutečnost“, 8 kroků s kritériem ho
   Z robotí aplikace zatím NENÍ: 3D glóbus s bublinami a periodická tabulka, režim Tok/Cena ve stromu dodávek, skóre
   dílů podle úlohy + animace principu, kalkulačka (laboratoř aktuátoru), karty s tečkami 1–5, podíl na trhu v čase,
   filtry firem/časové osy, průvodce rozborkou (teardown), výukové trasy.
+- 2026-11-13 — „web je neuspořádaný, chci všechny součástky, ne jen projekty“ → uživatel vybral: bloky v čipech, knihovnu
+  Studia, pasivní součástky, alternativy a cokoli dalšího; katalog jako strom podle sestav. `src/web/catalogTree.js`:
+  stránky bloků `#/d/b.<klíč>` (226, generované z hierarchicalSubcircuits; přesnost PRAVIDLEM v `blockFidelity`:
+  L≤4 floorplan odhad / schéma částečně, L5–6 učebnice, L7–8 podle procesu, L9+ tabulky), knihovna `#/d/lib.<TYP>`
+  (PRIMITIVE_PINS + ukázkové obvody z PRESET_CIRCUITS), větev Materiály a prvky (L8 mřížky, L9 atomy). Strom se počítá
+  líně (celý má ~300 tis. uzlů, protože se bloky opakují). Rešerše agentů: `src/web/extra/passives_a.js` + `passives_b.js`
+  (110 skupin pasivních / drobných dílů pod deskami, většinou odhad typu) a `extra/alternatives.js` (30 alternativ
+  z PCYoutubeborce.md a MujPC_odhady.md, `alt` + `altOf`), rešerše k nim v `research/`. Registr teď 215 dílů.

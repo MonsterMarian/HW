@@ -161,7 +161,9 @@ npm run desktop   # Electron okno
 ## Web „Silicon Studio · hardware“
 Druhý vstup téhož Vite projektu: `web.html` → `src/web/`. Desktop zůstává na simulace a interní věci, web ukazuje
 hardware. `npm run dev` a otevřít `/web.html`; `npm run build` vyrobí `dist/web.html`.
-- Katalog všech 75 fyzických součástek ze 4 projektů (`src/web/parts.js`), i malých (krystal, EEPROM, konektory).
+- Katalog jako strom (`src/web/catalogTree.js`): sestavy → díly → čipy → bloky uvnitř až k atomům, knihovna Studia,
+  materiály a prvky, alternativy. 215 dílů v registru (`src/web/parts.js` + `src/web/extra/`: pasivní součástky desek
+  a alternativy z rešerše), 226 bloků a 51 položek knihovny – každá položka má vlastní stránku.
   Každá má štítek přesnosti zvlášť pro 3D model a pro schéma: přesně podle dokumentace / částečně / odhad / model není.
 - Rozvržení jako robotí aplikace (oblasti 01–04, Souvisí, lišta Kde jsem, Mapa aplikace na `?`) – `src/web/sections.js`.
 - Anatomie ve 3D ve stylu robotů (`src/web/Anatomy3D.jsx`): let WASD / Q/E, šipky, F, rozložení dílů, systémy, hledání;

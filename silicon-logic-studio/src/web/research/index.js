@@ -19,7 +19,10 @@ import aiPcA from './ai_pc_a.js';
 import aiPcB from './ai_pc_b.js';
 import myPcA from './my_pc_a.js';
 import myPcB from './my_pc_b.js';
+import alternatives from './alternatives.js';
+import passivesA from './passives_a.js';
+import passivesB from './passives_b.js';
 
 export const STAGES = ['Těžba', 'Rafinace', 'Materiál', 'Výroba', 'Pouzdření a montáž', 'Výrobce dílu'];
-export const RESEARCH = { ...nv1Card, ...aiPcA, ...aiPcB, ...myPcA, ...myPcB };
+export const RESEARCH = { ...nv1Card, ...aiPcA, ...aiPcB, ...myPcA, ...myPcB, ...alternatives, ...passivesA, ...passivesB };
 export const researchOf = (id) => RESEARCH[id] ?? null;

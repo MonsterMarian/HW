@@ -10,6 +10,9 @@
 // U položek kusovníku se `model` bez ruční hodnoty odvodí z `dimsSrc` (ověřeno / odhad).
 
 import { NV1_BOM, P100_PC_BOM, MY_PC_BOM, MY_PC_P100_BOM } from '../engine/economic/catalog.js';
+import ALTERNATIVES from './extra/alternatives.js';
+import PASSIVES_A from './extra/passives_a.js';
+import PASSIVES_B from './extra/passives_b.js';
 
 export const FIDELITY = {
   doc: { label: 'PŘESNĚ PODLE DOKUMENTACE', short: 'DOKUMENTACE', color: '#5fbf7f' },
@@ -201,7 +204,8 @@ const RAW = [
 
 const derive = (src) => (!src ? null : /^odhad/i.test(src) ? 'estimate' : /odhad|neověř/i.test(src) ? 'partial' : 'doc');
 
-export const PARTS = RAW.map((p) => {
+// Rešeršované doplňky: alternativy (díly mimo sestavy) a pasivní součástky desek – stejný formát jako RAW.
+export const PARTS = [...RAW, ...ALTERNATIVES, ...PASSIVES_A, ...PASSIVES_B].map((p) => {
   const item = p.bom ? BOM.get(p.bom) : null;
   const model = p.model ?? (item ? [derive(item.dimsSrc), item.dimsSrc] : ['none', 'Model není.']);
   const schema = p.schema ?? ['none', 'Schéma není.'];

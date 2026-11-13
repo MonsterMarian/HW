@@ -3,7 +3,7 @@ import React, { lazy, Suspense, useMemo } from 'react';
 import { PROJECTS, projectById } from '../engine/projects.js';
 import { HIERARCHICAL_SUBCIRCUITS as H } from '../engine/hierarchicalSubcircuits.js';
 import { fmtRange } from '../engine/economic/catalog.js';
-import { FIDELITY, childrenOf, overallOf, pathOf, projectsOf, modelRoot } from './parts.js';
+import { FIDELITY, childrenOf, overallOf, pathOf, projectsOf, modelRoot, partById } from './parts.js';
 import { Explorer } from './Explorer.jsx';
 import { SupplyTree, MapView, Companies, Timeline, Notes, Market } from './ResearchViews.jsx';
 import { researchOf } from './research/index.js';
@@ -94,6 +94,10 @@ function Overview({ p }) {
           {researchable(p) && <tr><td>Rešerše</td><td>{r ? `ověřeno ${r.checked}` : 'zatím ne'}</td></tr>}
         </tbody></table>
         {p.item?.note && <p className="text-sm text-(--text-muted) mt-2">{p.item.note}</p>}
+        {p.note && <p className="text-sm mt-2">{p.note}</p>}
+        {p.qty && <p className="text-sm mt-1"><b>Počet:</b> {p.qty}</p>}
+        {p.alt && <p className="text-sm mt-1"><b>Proč je tu:</b> {p.alt}{p.altOf && partById(p.altOf) && <> (místo <a className="text-(--accent-amber) hover:underline" href={`#/d/${p.altOf}`}>{partById(p.altOf).name}</a>)</>}</p>}
+        {p.sources?.length > 0 && <div className="text-xs mt-2 flex flex-col gap-0.5"><b>Zdroje</b>{p.sources.map((s) => <a key={s} href={s} target="_blank" rel="noreferrer" className="text-(--accent-amber) hover:underline truncate">{s}</a>)}</div>}
       </section>
       {p.block && <BlockLinks p={p} />}
       {kids.length > 0 && (

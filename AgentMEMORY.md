@@ -303,3 +303,12 @@ envytools, fotka), tabulku „model vs. skutečnost“, 8 kroků s kritériem ho
   líně (celý má ~300 tis. uzlů, protože se bloky opakují). Rešerše agentů: `src/web/extra/passives_a.js` + `passives_b.js`
   (110 skupin pasivních / drobných dílů pod deskami, většinou odhad typu) a `extra/alternatives.js` (30 alternativ
   z PCYoutubeborce.md a MujPC_odhady.md, `alt` + `altOf`), rešerše k nim v `research/`. Registr teď 215 dílů.
+- 2026-11-13 — „dodavatelé materiálů, kde koupit, jaké stroje na výrobu čipu, kde se vyrábějí, 3D modely strojů“ →
+  oblast 05 Výroba. Data z rešerše 3 agentů v `src/web/fab/`: `machines.js` (33 strojů: wafery, front-end, test
+  a pouzdření, DPS; výrobci, závody, specifikace, cena jen u EUV), `materials.js` (24 materiálů s dodavateli, závody
+  a „kde koupit“ + `ROUTES` = 7 cest k vlastnímu čipu: Tiny Tapeout, Europractice, IHP, wafer.space, ChipFoundry,
+  Efabless ukončen 2025, domácí výroba), `processes.js` (15 postupů: wafer, st05, intel22, intel14, tsmc16, tsmc28,
+  samsung8n, dram, vnand, power, pkg_*, pcb, smt; kroky → id strojů a materiálů, továrny). 3D modely strojů
+  `fab/machineModels.js` = parametrické modely z modulů (ODHAD tvaru; velikosti z rešerše použité jen u skenerů).
+  Vazba díl → postupy `processesOf` v `fab/index.js` (ručně pro čipy, desky = pcb + smt, bloky podle `process`).
+  Anatomy3D má prop `build` (moduly jako těla). Stránky stroje / materiálu `#/d/m_*`, `#/d/mat_*`, záložka Výroba.

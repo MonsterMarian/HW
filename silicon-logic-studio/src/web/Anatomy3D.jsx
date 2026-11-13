@@ -22,9 +22,9 @@ const SYS_COLORS = ['#c98a4b', '#e0a640', '#8fb05a', '#4fa3c7', '#9a7fd1', '#d06
 const VIEW_DIR = new THREE.Vector3(0.62, 0.34, 0.86).normalize(); // výchozí pohled robotí aplikace
 
 
-const systemOf = (comp) => partForComp(comp)?.kind ?? ({ PC_BLOCK: 'Bloky', PROBE: 'Sondy (měření)', INPUT: 'Ovládání' }[comp.type] ?? comp.type.replace(/_/g, ' '));
+const systemOf = (comp) => comp.system ?? partForComp(comp)?.kind ?? ({ PC_BLOCK: 'Bloky', PROBE: 'Sondy (měření)', INPUT: 'Ovládání' }[comp.type] ?? comp.type.replace(/_/g, ' '));
 
-export function Anatomy3D({ engine, hierarchyStack, onNavigateUp, onDrillDown, model, onOpenPart, partId }) {
+export function Anatomy3D({ engine, hierarchyStack, onNavigateUp, onDrillDown, model, build, onOpenPart, partId }) {
   const host = useRef(null);
   const st = useRef(null);
   const [explode, setExplode] = useState(0);
@@ -255,7 +255,12 @@ export function Anatomy3D({ engine, hierarchyStack, onNavigateUp, onDrillDown, m
     const types = new Set([...engine.components.values()].map((c) => c.type));
     const root = types.has('MYPC_BOARD') ? buildMyPcScene : types.has('DELL_T5810') ? buildAiPcScene : buildBoardScene;
     const B = {
-      model: (c) => { c.addComp([...engine.components.values()][0], buildModel(model)); return {}; },
+      // celý díl: 3D model z kusovníku, nebo stroj z modulů (build) – každý modul je samostatné tělo
+      model: (c) => {
+        if (build) build().forEach((m, i) => c.addComp({ id: `mod${i}`, label: m.name, type: 'MODULE', system: m.system, inputs: {}, outputs: {} }, m.obj));
+        else c.addComp([...engine.components.values()][0], buildModel(model));
+        return {};
+      },
       board: level <= 1 ? root : buildBoardScene, chip: buildChipCloseUp, die: buildDieScene, cells: buildCellScene, cmos: buildCmosScene, mosfet: buildMosfetScene,
       atoms: buildAtomScene, flipdie: buildDieScene, finfet: buildFinfetScene, trench: buildTrenchScene, vnand: buildVnandScene, planar: buildPlanarScene,
       lattice: buildLatticeScene, atom: buildAtomModelScene, nucleus: buildNucleusScene, nucleon: buildNucleonScene,
@@ -321,7 +326,7 @@ export function Anatomy3D({ engine, hierarchyStack, onNavigateUp, onDrillDown, m
     s.bodies.forEach((b) => sys.set(b.system, (sys.get(b.system) ?? 0) + 1));
     setSystems([...sys.entries()].map(([name, n], i) => ({ name, n, color: SYS_COLORS[i % SYS_COLORS.length] })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, entry.key, entry.id, hierarchyStack.length, engine, model]);
+  }, [kind, entry.key, entry.id, hierarchyStack.length, engine, model, build]);
 
   // posuvník Složený → Rozložený
   useEffect(() => {

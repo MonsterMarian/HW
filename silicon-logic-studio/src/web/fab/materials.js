@@ -1,0 +1,396 @@
+// Odkud se berou materiály na čipy a desky: dodavatelé, závody, kde koupit. Rešerše 2026-11.
+// Podíly na trhu pocházejí většinou z placených tržních zpráv a mezi zdroji se liší; souřadnice závodů jsou přibližné.
+// fact: 'doc' = hlavní tvrzení stojí na uvedeném zdroji, 'estimate' = odhad / neověřené podíly.
+
+const SRC = {
+  waferRank: 'https://marklapedus.substack.com/p/silicon-wafer-market-upturn-higher',
+  uniWafer: 'https://www.universitywafer.com/',
+  uniWaferShop: 'https://buy.universitywafer.com/collections/silicon-wafers',
+  hpqCru: 'https://www.crugroup.com/en/communities/thought-leadership/2025/How-has-HPQ-demand-and-supply-emerged-as-a-hot-topic/',
+  sibelcoHpq: 'https://sibelco.com/materials/high-purity-quartz',
+  sprucePine: 'https://www.tomshardware.com/tech-industry/semiconductors/chinese-quartz-approved-for-semiconductor-equipment-and-dram-manufacturing-but-it-still-cant-break-americas-monopoly-china-secures-domestic-supply-for-chipmaking-components-but-spruce-pine-still-holds-the-crucible-monopoly',
+  wackerPoly: 'https://www.wacker.com/cms/en-us/products/brands/polysilicon/polysilicon.html',
+  wackerEtch: 'https://www.wacker.com/cms/en-us/press-and-media/press/press-releases/2025/press-releases-detail-2025-257922.html',
+  hemlock: 'https://www.hscpoly.com/manufacturers-of-u-s-made-polysilicon-praise-purchase-commitments-in-phase-1-of-u-s-china-trade-deal/',
+  resistJp: 'https://www.digitaltoday.co.kr/en/view/34628/japans-materials-grip-strengthens-in-2-nanometre-era',
+  resistJsrTw: 'https://www.tomshardware.com/tech-industry/jsr-builds-first-taiwan-photoresist-plant-as-japanese-materials-makers-race-to-embed-next-to-tsmc',
+  microchem: 'https://www.microchemicals.com/SHOP/Photochemicals/Photoresist/',
+  microchemEtch: 'https://www.microchemicals.com/SHOP/Etchants/',
+  maskBlanks: 'https://karimalmansour.substack.com/p/on-mask-blanks-and-the-substrate',
+  maskMarket: 'https://www.imarcgroup.com/photomask-market',
+  frontRange: 'https://www.frontrangephotomask.com/pricing',
+  neonUsitc: 'https://www.usitc.gov/publications/332/executive_briefings/ebot_decarlo_goodman_ukraine_neon_and_semiconductors.pdf',
+  neonCnbc: 'https://www.cnbc.com/2022/03/25/russia-ukraine-war-laser-neon-shortage-threatens-semiconductor-industry.html',
+  euvSource: 'https://www.laserfocusworld.com/lasers-sources/article/16566434/cymer-and-asml-ship-first-euv-source-that-could-extend-moores-law-ten-more-years',
+  sigmaTin: 'https://www.sigmaaldrich.com/US/en/product/aldrich/204692',
+  gases70: 'https://www.hydrogenfuelnews.com/industrial-gases-market-linde-air-liquide-and-air-products-control-70/8573749',
+  hfJapan: 'https://www.asiae.co.kr/en/article/2022011109574763197',
+  hfExport: 'https://technews.tw/2019/11/18/jp-stella-chemifa-export-permission-to-s-korea-ok/',
+  temah: 'https://www.sigmaaldrich.com/US/en/product/aldrich/553123',
+  temahAld: 'https://www.sigmaaldrich.com/US/en/product/aldrich/725544',
+  filmtronics: 'https://www.filmtronics.com/',
+  sputterJx: 'https://semiconductorx.com/wafer-sputtering-targets.html',
+  leskerCu: 'https://www.lesker.com/newweb/deposition_materials/depositionmaterials_sputtertargets_1.cfm?pgid=cu1',
+  leskerTi: 'https://www.lesker.com/newweb/deposition_materials/depositionmaterials_sputtertargets_1.cfm?pgid=ti1',
+  leskerTa: 'https://www.lesker.com/newweb/deposition_materials/depositionmaterials_sputtertargets_1.cfm?pgid=ta1',
+  cmpX: 'https://semiconductorx.com/semiconductor-cmp-slurries.html',
+  cmpChina: 'https://faxiangongchang.com/en/reports/china-cmp-pad-slurry-2026',
+  abfTom: 'https://www.tomshardware.com/tech-industry/semiconductors/the-state-of-abf-substrates-in-data-center-silicon-in-2026-solving-the-supply-crunch-and-material-wall-beneath-every-ai-accelerator',
+  abfAji: 'https://www.ajinomoto.com/innovation/our_innovation/buildupfilm',
+  leadframe: 'https://www.gii.tw/report/qyr1577740-global-semiconductor-leadframe-market-report.html',
+  bondWire: 'https://www.orbisresearch.com/reports/index/global-bonding-wires-market-growth-2023-2029',
+  emc: 'https://www.marketresearch.com/Prof-Research-v4036/Epoxy-Resin-Molding-Compounds-Semiconductor-39251460',
+  ccl: 'https://pcdandf.com/pcdesign/index.php/editorial/menu-news/market-news/18208-ccl-market-declines-16-in-2023-prismark-reports',
+  jlcCap: 'https://jlcpcb.com/capabilities/pcb-capabilities',
+  eurocircuits: 'https://www.eurocircuits.com/technical-guidelines/',
+  tmeKester: 'https://www.tme.eu/en/details/kes-r276lf_10/solders-other-lead-free/kester/',
+  tmeKoki: 'https://www.tme.eu/en/details/s3x58m406d-120/solders-other-lead-free/koki/',
+  mlccDigitimes: 'https://apps.digitimes.com/news/a20250612PD224.html',
+  digikeyMlcc: 'https://www.digikey.com/en/products/filter/ceramic-capacitors/60',
+};
+
+export default [
+  // ---------- Wafery ----------
+  { id: 'mat_quartz', name: 'Vysoce čistý křemen a křemenné kelímky', cat: 'Wafery',
+    what: 'Z velmi čistého křemene (HPQ) se vyrábějí kelímky, ve kterých se při Czochralského tažení taví polykrystalický křemík; nečistoty z kelímku by se dostaly do krystalu. Na nejvyšší třídy HPQ stačí dnes jen dva doly v Spruce Pine (USA).',
+    suppliers: [
+      { name: 'Sibelco (značka IOTA)', country: 'BE', share: 'duopol se TQC v nejvyšší třídě HPQ', plants: [{ name: 'Spruce Pine, Severní Karolína', country: 'US', lat: 35.915, lon: -82.065 }] },
+      { name: 'The Quartz Corp (TQC)', country: 'NO', share: 'duopol se Sibelco', plants: [{ name: 'Spruce Pine, Severní Karolína', country: 'US', lat: 35.90, lon: -82.08 }] },
+      { name: 'Shin-Etsu Quartz Products (kelímky)', country: 'JP', share: null, plants: [{ name: 'Kórijama, Fukušima', country: 'JP', lat: 37.40, lon: 140.38 }] },
+      { name: 'Heraeus Conamic (tavený křemen)', country: 'DE', share: null, plants: [{ name: 'Hanau', country: 'DE', lat: 50.13, lon: 8.92 }] },
+    ],
+    buy: [{ label: 'Prodejci laboratorního skla a křemene', url: SRC.sibelcoHpq, note: 'HPQ prodává Sibelco jen průmyslovým odběratelům (tuny). Jednotlivec koupí nanejvýš hotové křemenné trubice/kelímky od laboratorních dodavatelů; surovinu ne.' }],
+    sources: [SRC.hpqCru, SRC.sibelcoHpq, SRC.sprucePine], fact: 'doc' },
+
+  { id: 'mat_polysilicon', name: 'Polykrystalický křemík (elektronická čistota)', cat: 'Wafery',
+    what: 'Výchozí surovina pro monokrystaly: křemík čistoty 9N až 11N (Wacker uvádí přes 99,9999999999 %), vyráběný Siemensovým procesem z trichlorsilanu. Solární polysilicon je řádově méně čistý.',
+    suppliers: [
+      { name: 'Wacker Chemie', country: 'DE', share: '1. v polovodičové třídě (vlastní analýza Wackeru)', plants: [{ name: 'Burghausen', country: 'DE', lat: 48.17, lon: 12.83 }, { name: 'Nünchritz', country: 'DE', lat: 51.30, lon: 13.40 }, { name: 'Charleston, Tennessee', country: 'US', lat: 35.29, lon: -84.76 }] },
+      { name: 'Hemlock Semiconductor', country: 'US', share: '2. v polovodičové třídě (podle Wackeru)', plants: [{ name: 'Hemlock, Michigan', country: 'US', lat: 43.415, lon: -84.23 }] },
+      { name: 'Tokuyama', country: 'JP', share: '3. v polovodičové třídě (podle Wackeru)', plants: [{ name: 'Šúnan, Jamaguči', country: 'JP', lat: 34.05, lon: 131.80 }] },
+      { name: 'Mitsubishi Materials', country: 'JP', share: null, plants: [{ name: 'Jokkaiči', country: 'JP', lat: 34.97, lon: 136.62 }] },
+    ],
+    buy: [{ label: 'Wacker – poptávka polysiliconu', url: SRC.wackerPoly, note: 'Jen průmyslové kontrakty (tuny). Jednotlivec reálně koupí až hotový wafer; kousky křemíku prodávají chemické katalogy (Sigma-Aldrich) v gramech.' }],
+    sources: [SRC.wackerPoly, SRC.wackerEtch, SRC.hemlock], fact: 'doc' },
+
+  { id: 'mat_si_wafer', name: 'Křemíkové wafery 300 mm', cat: 'Wafery',
+    what: 'Leštěné monokrystalické disky (CZ, orientace 100, tloušťka 775 µm), na nichž vznikají všechny čipy v PC. Pět výrobců pokrývá zhruba 90 % trhu; tržby oboru v roce 2023 12,3 mld. USD (SEMI).',
+    suppliers: [
+      { name: 'Shin-Etsu Handotai', country: 'JP', share: '1. místo', plants: [{ name: 'Širakawa, Fukušima', country: 'JP', lat: 37.13, lon: 140.21 }] },
+      { name: 'SUMCO', country: 'JP', share: '2. místo', plants: [{ name: 'Imari, Saga', country: 'JP', lat: 33.27, lon: 129.88 }] },
+      { name: 'GlobalWafers', country: 'TW', share: '3. místo', plants: [{ name: 'Hsinchu', country: 'TW', lat: 24.78, lon: 120.99 }, { name: 'Sherman, Texas (300 mm, 2025)', country: 'US', lat: 33.64, lon: -96.61 }] },
+      { name: 'Siltronic', country: 'DE', share: null, plants: [{ name: 'Freiberg', country: 'DE', lat: 50.92, lon: 13.34 }, { name: 'Singapur', country: 'SG', lat: 1.36, lon: 103.94 }] },
+      { name: 'SK Siltron', country: 'KR', share: null, plants: [{ name: 'Kumi', country: 'KR', lat: 36.12, lon: 128.34 }] },
+    ],
+    buy: [
+      { label: 'UniversityWafer – e-shop', url: SRC.uniWaferShop, note: 'Bez minimálního množství, i 1 kus. 150 mm wafer od 6,90 USD (dummy 4,90 USD); 300 mm prime jen na poptávku (zdroj: universitywafer.com).' },
+      { label: 'UniversityWafer – úvod a poptávky', url: SRC.uniWafer, note: 'Pro studenty, laboratoře i jednotlivce; SOI, oxidované a nitridované wafery také.' },
+    ],
+    sources: [SRC.waferRank, SRC.uniWafer], fact: 'doc' },
+
+  // ---------- Litografie ----------
+  { id: 'mat_photoresist', name: 'Fotorezisty (ArF, EUV, i-line)', cat: 'Litografie',
+    what: 'Světlocitlivé polymery, které po osvitu a vyvolání tvoří šablonu pro leptání a implantaci. Japonské firmy drží asi 80–90 % trhu; u EUV rezistů mají TOK, JSR a Shin-Etsu kolem 90 %.',
+    suppliers: [
+      { name: 'JSR', country: 'JP', share: '≈ 22 % (2024, GM Insights)', plants: [{ name: 'Jokkaiči', country: 'JP', lat: 34.97, lon: 136.62 }, { name: 'Tchaj-wan (nový závod u TSMC)', country: 'TW', lat: 22.99, lon: 120.23 }] },
+      { name: 'Tokyo Ohka Kogyo (TOK)', country: 'JP', share: null, plants: [{ name: 'Kawasaki', country: 'JP', lat: 35.53, lon: 139.70 }] },
+      { name: 'Shin-Etsu Chemical', country: 'JP', share: null, plants: [{ name: 'Naoecu, Niigata', country: 'JP', lat: 37.17, lon: 138.24 }] },
+      { name: 'Fujifilm Electronic Materials', country: 'JP', share: null, plants: [{ name: 'Jošida, Šizuoka', country: 'JP', lat: 34.77, lon: 138.25 }] },
+      { name: 'Sumitomo Chemical', country: 'JP', share: null, plants: [{ name: 'Osaka', country: 'JP', lat: 34.69, lon: 135.50 }] },
+    ],
+    buy: [{ label: 'MicroChemicals – fotorezisty AZ', url: SRC.microchem, note: 'Německý prodejce pro výzkum a start-upy (i-line/g-line rezisty AZ, vývojky). ArF a EUV rezisty jednotlivec nekoupí – jdou jen fabům na kontrakt.' }],
+    sources: [SRC.resistJp, SRC.resistJsrTw, SRC.microchem], fact: 'doc' },
+
+  { id: 'mat_photomask', name: 'Fotomasky (retikly) a blanky', cat: 'Litografie',
+    what: 'Křemenné destičky s chromovým (DUV) nebo vícevrstvým Mo/Si (EUV) vzorem, které se promítají na wafer. Asi třetinu trhu vyrábějí vlastní maskovny fabů (TSMC, Samsung, Intel); EUV blanky vyrábí hlavně Hoya, dále AGC.',
+    suppliers: [
+      { name: 'Photronics', country: 'US', share: null, plants: [{ name: 'Brookfield, Connecticut', country: 'US', lat: 41.48, lon: -73.41 }] },
+      { name: 'Tekscend Photomask (dříve Toppan)', country: 'JP', share: null, plants: [{ name: 'Asaka, Saitama', country: 'JP', lat: 35.80, lon: 139.59 }] },
+      { name: 'Dai Nippon Printing (DNP)', country: 'JP', share: null, plants: [{ name: 'Kamifukuoka, Saitama', country: 'JP', lat: 35.87, lon: 139.51 }] },
+      { name: 'Hoya (blanky)', country: 'JP', share: 'přes 75 % EUV blanků (odhad)', plants: [{ name: 'Nagasaka, Jamanaši', country: 'JP', lat: 35.84, lon: 138.37 }] },
+      { name: 'AGC (EUV blanky)', country: 'JP', share: null, plants: [{ name: 'Jokohama (výzkum, poloha přibližná)', country: 'JP', lat: 35.47, lon: 139.62 }] },
+    ],
+    buy: [{ label: 'Front Range Photomask – ceník přímého zápisu', url: SRC.frontRange, note: 'Chromové masky z CAD souboru i v malém počtu pro univerzity a prototypy (cena na poptávku). Pro domácí pokusy stačí fóliová maska z tiskárny.' }],
+    sources: [SRC.maskMarket, SRC.maskBlanks, SRC.frontRange], fact: 'estimate' },
+
+  { id: 'mat_neon', name: 'Neon a směsi pro excimerové lasery', cat: 'Litografie',
+    what: 'Neon je hlavní náplň (pufrovací plyn) směsí pro ArF a KrF excimerové lasery v DUV skenerech. Získává se jako vedlejší produkt destilace vzduchu v hutích; před rokem 2022 pocházelo asi 45–54 % polovodičového neonu z Ukrajiny.',
+    suppliers: [
+      { name: 'Ingas', country: 'UA', share: 'spolu s Cryoin ≈ 45–54 % (2022)', plants: [{ name: 'Mariupol (zastaveno 2022)', country: 'UA', lat: 47.10, lon: 37.55 }] },
+      { name: 'Cryoin', country: 'UA', share: 'spolu s Ingas ≈ 45–54 % (2022)', plants: [{ name: 'Oděsa (zastaveno 2022)', country: 'UA', lat: 46.48, lon: 30.72 }] },
+      { name: 'Linde', country: 'IE', share: null, plants: [{ name: 'Leuna', country: 'DE', lat: 51.32, lon: 12.02 }] },
+      { name: 'Air Liquide', country: 'FR', share: null, plants: [] },
+    ],
+    buy: [{ label: 'Distributoři technických plynů (Linde, Air Liquide)', url: SRC.gases70, note: 'Laserové směsi Ne/F2/Ar se prodávají jen firmám s certifikovaným zařízením; jednotlivec koupí nanejvýš lahev čistého neonu přes místního distributora plynů.' }],
+    sources: [SRC.neonUsitc, SRC.neonCnbc], fact: 'doc' },
+
+  { id: 'mat_tin_euv', name: 'Cín pro EUV zdroj', cat: 'Litografie',
+    what: 'V EUV skeneru ASML zasahuje CO2 laser kapky roztaveného cínu (asi 30 µm) až 50 000× za sekundu a vzniklé plazma září na 13,5 nm. Zdroj vyvinula firma Cymer (San Diego), dnes součást ASML; dodavatel samotného vysoce čistého cínu není veřejný.',
+    suppliers: [
+      { name: 'ASML / Cymer (zdroj světla)', country: 'NL', share: 'jediný výrobce EUV skenerů', plants: [{ name: 'Veldhoven', country: 'NL', lat: 51.41, lon: 5.42 }, { name: 'San Diego (Cymer)', country: 'US', lat: 32.90, lon: -117.20 }] },
+      { name: 'Yunnan Tin (těžba a rafinace cínu)', country: 'CN', share: null, plants: [{ name: 'Gejiu, Jün-nan', country: 'CN', lat: 23.36, lon: 103.15 }] },
+      { name: 'PT Timah', country: 'ID', share: null, plants: [{ name: 'Bangka', country: 'ID', lat: -2.13, lon: 106.11 }] },
+    ],
+    buy: [{ label: 'Sigma-Aldrich – cínové broky 99,999 %', url: SRC.sigmaTin, note: 'Laboratorní cín 5N v gramech; prodej na firmu/instituci, cena po přihlášení. Do EUV stroje se ovšem cín dodává jen v rámci servisu ASML.' }],
+    sources: [SRC.euvSource, SRC.sigmaTin], fact: 'estimate' },
+
+  // ---------- Plyny a chemie ----------
+  { id: 'mat_bulk_gases', name: 'Hromadné plyny (N2, O2, Ar, H2)', cat: 'Plyny a chemie',
+    what: 'Dusík proplachuje téměř každý krok, kyslík slouží k oxidaci, argon k naprašování a vodík k žíhání. Velké faby mají vlastní vzduchové separační jednotky provozované dodavatelem přímo na místě; čistota 9N a více.',
+    suppliers: [
+      { name: 'Linde', country: 'IE', share: 'Linde + Air Liquide + Air Products ≈ 70 % trhu průmyslových plynů', plants: [{ name: 'Pullach (centrála inženýringu)', country: 'DE', lat: 48.06, lon: 11.52 }] },
+      { name: 'Air Liquide', country: 'FR', share: null, plants: [{ name: 'Paříž (centrála)', country: 'FR', lat: 48.87, lon: 2.30 }] },
+      { name: 'Air Products', country: 'US', share: null, plants: [{ name: 'Allentown (centrála)', country: 'US', lat: 40.60, lon: -75.49 }] },
+      { name: 'Nippon Sanso', country: 'JP', share: null, plants: [{ name: 'Tokio (centrála)', country: 'JP', lat: 35.68, lon: 139.76 }] },
+    ],
+    buy: [{ label: 'Místní distributor technických plynů', url: SRC.gases70, note: 'Lahve N2/Ar/O2 koupí i jednotlivec (svářečské plyny) za stovky Kč za náplň; polovodičová čistota 6N+ jen na objednávku.' }],
+    sources: [SRC.gases70], fact: 'estimate' },
+
+  { id: 'mat_specialty_gases', name: 'Speciální plyny (SiH4, NF3, WF6, NH3 …)', cat: 'Plyny a chemie',
+    what: 'Silan a amoniak pro depozici nitridu a polykřemíku, WF6 pro wolframové kontakty, NF3 na čištění komor, fluorované plyny na leptání. Většinou jedovaté nebo samozápalné, dodávají se v cylindrech se zvláštní armaturou.',
+    suppliers: [
+      { name: 'SK Specialty', country: 'KR', share: null, plants: [{ name: 'Jongdžu', country: 'KR', lat: 36.81, lon: 128.62 }] },
+      { name: 'Kanto Denka', country: 'JP', share: null, plants: [{ name: 'Šibukawa, Gunma', country: 'JP', lat: 36.49, lon: 139.00 }] },
+      { name: 'Hyosung Chemical (NF3)', country: 'KR', share: null, plants: [{ name: 'Ulsan', country: 'KR', lat: 35.54, lon: 129.31 }] },
+      { name: 'Merck (EMD Electronics, dříve Versum)', country: 'DE', share: null, plants: [{ name: 'Darmstadt (centrála)', country: 'DE', lat: 49.87, lon: 8.65 }] },
+      { name: 'Linde', country: 'IE', share: null, plants: [] },
+    ],
+    buy: [{ label: 'Jen průmysloví dodavatelé plynů', url: SRC.gases70, note: 'Silan, WF6 a NF3 se jednotlivcům neprodávají (samozápalné/jedovaté, vyžadují plynové skříně a povolení).' }],
+    sources: [SRC.gases70], fact: 'estimate' },
+
+  { id: 'mat_wet_chem', name: 'Mokrá chemie (HF, H2SO4, H2O2, ultračistá voda)', cat: 'Plyny a chemie',
+    what: 'Kyseliny a peroxid pro čištění (RCA, piraňa) a leptání oxidu, vše v třídě s nečistotami v ppt. Vysoce čistý HF ovládají japonští Stella Chemifa a Morita (asi 80–90 %); ultračistou vodu vyrábí každý fab sám.',
+    suppliers: [
+      { name: 'Stella Chemifa', country: 'JP', share: 'Japonsko ≈ 80–90 % vysoce čistého HF', plants: [{ name: 'Sakai, Ósaka', country: 'JP', lat: 34.57, lon: 135.47 }] },
+      { name: 'Morita Chemical', country: 'JP', share: null, plants: [{ name: 'Ósaka', country: 'JP', lat: 34.69, lon: 135.50 }] },
+      { name: 'Soulbrain / ENF Technology', country: 'KR', share: null, plants: [{ name: 'Kongdžu', country: 'KR', lat: 36.45, lon: 127.12 }] },
+      { name: 'BASF', country: 'DE', share: null, plants: [{ name: 'Ludwigshafen', country: 'DE', lat: 49.49, lon: 8.43 }] },
+      { name: 'Kurita (ultračistá voda)', country: 'JP', share: null, plants: [{ name: 'Tokio (centrála)', country: 'JP', lat: 35.69, lon: 139.70 }] },
+    ],
+    buy: [{ label: 'MicroChemicals – leptadla a kyseliny', url: SRC.microchemEtch, note: 'Polovodičové třídy v litrech pro laboratoře a start-upy; HF jen pro instituce kvůli toxicitě.' }],
+    sources: [SRC.hfJapan, SRC.hfExport, SRC.microchemEtch], fact: 'doc' },
+
+  { id: 'mat_precursors', name: 'Prekurzory ALD / CVD (high-k HfO2)', cat: 'Plyny a chemie',
+    what: 'Těkavé organokovové sloučeniny, ze kterých se po atomárních vrstvách skládá hradlový dielektrik HfO2 nebo kovové vrstvy. Typicky TEMAH (tetrakis(ethylmethylamido)hafnium), citlivý na vzduch a vlhkost.',
+    suppliers: [
+      { name: 'Merck (EMD Electronics)', country: 'DE', share: null, plants: [{ name: 'Darmstadt', country: 'DE', lat: 49.87, lon: 8.65 }] },
+      { name: 'Air Liquide', country: 'FR', share: null, plants: [] },
+      { name: 'Entegris', country: 'US', share: null, plants: [{ name: 'Billerica, Massachusetts', country: 'US', lat: 42.56, lon: -71.27 }] },
+      { name: 'DNF', country: 'KR', share: null, plants: [{ name: 'Tedžon', country: 'KR', lat: 36.35, lon: 127.38 }] },
+      { name: 'SK Trichem', country: 'KR', share: null, plants: [] },
+    ],
+    buy: [
+      { label: 'Sigma-Aldrich – TEMAH 99,99 %', url: SRC.temah, note: 'Laboratorní balení pro výzkum; prodej jen na instituci/firmu.' },
+      { label: 'Sigma-Aldrich – TEMAH v ocelovém cylindru pro ALD', url: SRC.temahAld, note: 'Rovnou připojitelné k depozičnímu zařízení.' },
+    ],
+    sources: [SRC.temah, SRC.temahAld], fact: 'estimate' },
+
+  { id: 'mat_dopants', name: 'Zdroje dopantů B, P, As pro implantaci', cat: 'Plyny a chemie',
+    what: 'Iontové implantéry používají plyny BF3, PH3 a AsH3, dnes většinou v podtlakových lahvích (adsorbované, aby neunikly). Doma a v malých laboratořích se místo nich dopuje difúzí z nanášených spin-on dopantů.',
+    suppliers: [
+      { name: 'Entegris (lahve SDS/VAC)', country: 'US', share: null, plants: [{ name: 'Billerica, Massachusetts', country: 'US', lat: 42.56, lon: -71.27 }] },
+      { name: 'Linde', country: 'IE', share: null, plants: [] },
+      { name: 'Air Products', country: 'US', share: null, plants: [{ name: 'Allentown', country: 'US', lat: 40.60, lon: -75.49 }] },
+      { name: 'Filmtronics (spin-on difuzanty)', country: 'US', share: null, plants: [{ name: 'Butler, Pensylvánie', country: 'US', lat: 40.86, lon: -79.90 }] },
+    ],
+    buy: [{ label: 'Filmtronics – difuzanty (spin-on dopanty)', url: SRC.filmtronics, note: 'Kapalné zdroje B a P pro difúzi v peci; tuto cestu použil i Sam Zeloof při domácí výrobě. Arsin a fosfin jednotlivec nekoupí.' }],
+    sources: [SRC.filmtronics], fact: 'estimate' },
+
+  // ---------- Kovy a planarizace ----------
+  { id: 'mat_sputter_targets', name: 'Naprašovací terče (Cu, Ta, Ti, W, Co, Al)', cat: 'Kovy a planarizace',
+    what: 'Disky z vysoce čistého kovu (4N–6N), z nichž se ve vakuu naprašují zárodečné, bariérové a kontaktní vrstvy. JX Advanced Metals drží podle Fuji Keizai asi 60–64 % trhu polovodičových terčů (2023).',
+    suppliers: [
+      { name: 'JX Advanced Metals', country: 'JP', share: '≈ 64 % (2023, Fuji Keizai)', plants: [{ name: 'Isohara, Ibaraki', country: 'JP', lat: 36.80, lon: 140.75 }] },
+      { name: 'Solstice Advanced Materials (dříve Honeywell)', country: 'US', share: null, plants: [{ name: 'Spokane Valley, Washington', country: 'US', lat: 47.67, lon: -117.24 }] },
+      { name: 'Tosoh SMD', country: 'JP', share: null, plants: [{ name: 'Grove City, Ohio', country: 'US', lat: 39.88, lon: -83.09 }] },
+      { name: 'Materion', country: 'US', share: null, plants: [] },
+    ],
+    buy: [
+      { label: 'Kurt J. Lesker – terče Cu 4N/5N', url: SRC.leskerCu, note: 'Prodej i malým laboratořím, průměry 1 až 4 palce.' },
+      { label: 'Kurt J. Lesker – terče Ti', url: SRC.leskerTi, note: 'Např. Ti Grade 2, 2 palce × 0,125 palce za 101 USD (ceník Lesker, může být starší).' },
+      { label: 'Kurt J. Lesker – terče Ta 99,95 %', url: SRC.leskerTa, note: 'Průměry 1 až 8 palců.' },
+    ],
+    sources: [SRC.sputterJx, SRC.leskerTi], fact: 'doc' },
+
+  { id: 'mat_cu_plating', name: 'Chemie pro galvanickou měď (damascén)', cat: 'Kovy a planarizace',
+    what: 'Lázně síranu měďnatého s organickými přísadami (akcelerátor, supresor, vyrovnávač), které plní měděné spoje odspodu bez dutin. Přísady jsou know-how několika firem.',
+    suppliers: [
+      { name: 'DuPont / Qnity Electronics', country: 'US', share: null, plants: [{ name: 'Marlborough, Massachusetts', country: 'US', lat: 42.35, lon: -71.55 }] },
+      { name: 'MacDermid Enthone (Element Solutions)', country: 'US', share: null, plants: [{ name: 'Waterbury, Connecticut', country: 'US', lat: 41.55, lon: -73.04 }] },
+      { name: 'BASF', country: 'DE', share: null, plants: [{ name: 'Ludwigshafen', country: 'DE', lat: 49.49, lon: 8.43 }] },
+      { name: 'C. Uyemura', country: 'JP', share: null, plants: [{ name: 'Ósaka', country: 'JP', lat: 34.69, lon: 135.50 }] },
+    ],
+    buy: [{ label: 'MicroChemicals – chemikálie pro laboratoře', url: SRC.microchemEtch, note: 'Damascénské lázně se prodávají jen fabům. Pro pokusy stačí síran měďnatý z chemického katalogu.' }],
+    sources: [SRC.cmpX], fact: 'estimate' },
+
+  { id: 'mat_cmp_slurry', name: 'Suspenze a podložky CMP', cat: 'Kovy a planarizace',
+    what: 'Abrazivní suspenze (oxid křemičitý/ceričitý s chemií) a polyuretanové podložky pro chemicko-mechanické leštění, které po každé vrstvě srovná wafer do roviny. Podložky téměř ovládá DuPont (řada IC1000).',
+    suppliers: [
+      { name: 'Entegris (CMC Materials)', country: 'US', share: '≈ 30 % suspenzí (odhad)', plants: [{ name: 'Aurora, Illinois', country: 'US', lat: 41.76, lon: -88.32 }] },
+      { name: 'DuPont / Qnity (podložky)', country: 'US', share: '≈ 75–80 % tvrdých podložek (odhad)', plants: [{ name: 'Newark, Delaware', country: 'US', lat: 39.68, lon: -75.75 }] },
+      { name: 'Fujimi', country: 'JP', share: '≈ 15 % (odhad)', plants: [{ name: 'Kijosu, Aiči', country: 'JP', lat: 35.22, lon: 136.85 }] },
+      { name: 'Resonac', country: 'JP', share: '≈ 8–10 % (odhad)', plants: [] },
+    ],
+    buy: [{ label: 'Jen průmyslové kontrakty', url: SRC.cmpX, note: 'Jednotlivec CMP suspenzi běžně nekoupí; na leštění vzorků se používají metalografické suspenze.' }],
+    sources: [SRC.cmpX, SRC.cmpChina], fact: 'estimate' },
+
+  // ---------- Pouzdření ----------
+  { id: 'mat_substrate_abf', name: 'ABF substráty pro flip-chip', cat: 'Pouzdření',
+    what: 'Vícevrstvé organické substráty pod CPU a GPU; izolační vrstvy tvoří film Ajinomoto Build-up Film (podle Ajinomota přes 95 % výkonných čipů). Substráty z něj vyrábějí hlavně Ibiden, Unimicron, Shinko a AT&S.',
+    suppliers: [
+      { name: 'Ajinomoto Fine-Techno (film ABF)', country: 'JP', share: '> 95 % (údaj Ajinomoto)', plants: [{ name: 'Kawasaki', country: 'JP', lat: 35.53, lon: 139.73 }] },
+      { name: 'Ibiden', country: 'JP', share: null, plants: [{ name: 'Ógaki', country: 'JP', lat: 35.36, lon: 136.61 }] },
+      { name: 'Unimicron', country: 'TW', share: null, plants: [{ name: 'Tchao-jüan', country: 'TW', lat: 24.99, lon: 121.30 }] },
+      { name: 'Shinko Electric', country: 'JP', share: null, plants: [{ name: 'Nagano', country: 'JP', lat: 36.65, lon: 138.19 }] },
+      { name: 'AT&S', country: 'AT', share: null, plants: [{ name: 'Leoben', country: 'AT', lat: 47.38, lon: 15.09 }, { name: 'Kulim', country: 'MY', lat: 5.37, lon: 100.56 }] },
+    ],
+    buy: [{ label: 'Ajinomoto – informace o ABF', url: SRC.abfAji, note: 'Jen pro výrobce substrátů a OSAT. Jednotlivec nejblíže: pouzdro QFN/BGA v rámci MPW nebo Tiny Tapeout.' }],
+    sources: [SRC.abfTom, SRC.abfAji], fact: 'doc' },
+
+  { id: 'mat_leadframe', name: 'Vývodové rámečky (leadframe)', cat: 'Pouzdření',
+    what: 'Leptané nebo lisované rámečky z mědi či slitiny Fe-Ni, na které se lepí čip u pouzder QFN, SOIC nebo TO. Tři největší výrobci mají asi 35 % trhu.',
+    suppliers: [
+      { name: 'Mitsui High-tec', country: 'JP', share: null, plants: [{ name: 'Kitakjúšú', country: 'JP', lat: 33.88, lon: 130.87 }] },
+      { name: 'Shinko Electric', country: 'JP', share: null, plants: [{ name: 'Nagano', country: 'JP', lat: 36.65, lon: 138.19 }] },
+      { name: 'Chang Wah Technology', country: 'TW', share: null, plants: [{ name: 'Kaohsiung', country: 'TW', lat: 22.63, lon: 120.30 }] },
+      { name: 'Haesung DS', country: 'KR', share: null, plants: [{ name: 'Čchangwon', country: 'KR', lat: 35.23, lon: 128.68 }] },
+    ],
+    buy: [{ label: 'Jen pro pouzdřírny (OSAT)', url: SRC.leadframe, note: 'Rámečky se nakupují v cívkách po tisících; jednotlivec dostane pouzdřený čip od služby MPW.' }],
+    sources: [SRC.leadframe], fact: 'estimate' },
+
+  { id: 'mat_bond_wire', name: 'Bondovací drátky (Au, Cu)', cat: 'Pouzdření',
+    what: 'Drátky o průměru 15–50 µm spojující plošky čipu s vývody; zlato ustupuje levnější mědi s palladiovým povlakem. Čtyři největší výrobci měli asi 29 % trhu (2023).',
+    suppliers: [
+      { name: 'Heraeus Electronics', country: 'DE', share: null, plants: [{ name: 'Hanau', country: 'DE', lat: 50.13, lon: 8.92 }, { name: 'Singapur', country: 'SG', lat: 1.33, lon: 103.74 }] },
+      { name: 'Tanaka Denshi Kogyo', country: 'JP', share: null, plants: [{ name: 'Saga', country: 'JP', lat: 33.26, lon: 130.30 }] },
+      { name: 'MK Electron', country: 'KR', share: null, plants: [{ name: 'Jongin', country: 'KR', lat: 37.24, lon: 127.18 }] },
+      { name: 'Nippon Micrometal', country: 'JP', share: null, plants: [{ name: 'Iruma, Saitama', country: 'JP', lat: 35.84, lon: 139.39 }] },
+    ],
+    buy: [{ label: 'Tržní přehled dodavatelů', url: SRC.bondWire, note: 'Cívky drátu prodávají výrobci i v malém množství laboratořím (cena podle ceny zlata); pro ruční bonder na univerzitě.' }],
+    sources: [SRC.bondWire], fact: 'estimate' },
+
+  { id: 'mat_mold_compound', name: 'Zalévací hmota (EMC)', cat: 'Pouzdření',
+    what: 'Epoxidová pryskyřice plněná až z 90 % křemenným pískem, která obalí čip a vytvoří černé tělo pouzdra. Sumitomo Bakelite má asi 20 % tržeb, Resonac (dříve Hitachi Chemical/Showa Denko) asi 10 %.',
+    suppliers: [
+      { name: 'Sumitomo Bakelite', country: 'JP', share: '≈ 20 % (tržní zpráva)', plants: [{ name: 'Ucunomija', country: 'JP', lat: 36.56, lon: 139.88 }] },
+      { name: 'Resonac', country: 'JP', share: '≈ 10 % (tržní zpráva)', plants: [{ name: 'Šimodate, Ibaraki', country: 'JP', lat: 36.30, lon: 139.98 }] },
+      { name: 'Chang Chun Group', country: 'TW', share: '≈ 4 % (tržní zpráva)', plants: [] },
+      { name: 'Panasonic Industry', country: 'JP', share: null, plants: [] },
+    ],
+    buy: [{ label: 'Jen pro pouzdřírny', url: SRC.emc, note: 'EMC se skladuje v mrazu a dodává v tabletách pro lisy; jednotlivci se neprodává. Doma lze čip zalít epoxidem typu glob-top.' }],
+    sources: [SRC.emc], fact: 'estimate' },
+
+  { id: 'mat_underfill', name: 'Underfill', cat: 'Pouzdření',
+    what: 'Nízkoviskózní epoxid, který kapilárně zateče pod flip-chip čip mezi kuličky a rozloží mechanické napětí při teplotních cyklech.',
+    suppliers: [
+      { name: 'Namics', country: 'JP', share: null, plants: [{ name: 'Niigata', country: 'JP', lat: 37.92, lon: 139.04 }] },
+      { name: 'Henkel (Loctite)', country: 'DE', share: null, plants: [{ name: 'Düsseldorf', country: 'DE', lat: 51.18, lon: 6.86 }] },
+      { name: 'Resonac', country: 'JP', share: null, plants: [] },
+      { name: 'Won Chemical', country: 'KR', share: null, plants: [] },
+    ],
+    buy: [{ label: 'Jen pro pouzdřírny a osazovny', url: SRC.emc, note: 'Underfilly pro BGA (např. Loctite) se prodávají i v malých stříkačkách přes distributory elektroniky; konkrétní produktovou stránku jsem neověřil.' }],
+    sources: [SRC.emc], fact: 'estimate' },
+
+  { id: 'mat_solder', name: 'Pájky SAC a pájecí kuličky', cat: 'Pouzdření',
+    what: 'Bezolovnatá slitina Sn96,5Ag3Cu0,5 (SAC305, tání 217 °C) tvoří kuličky BGA i spoje na desce; pro flip-chip se používají mikrobumpy a měděné sloupky s cínovou čepičkou.',
+    suppliers: [
+      { name: 'Senju Metal Industry', country: 'JP', share: null, plants: [{ name: 'Tokio', country: 'JP', lat: 35.69, lon: 139.79 }] },
+      { name: 'Indium Corporation', country: 'US', share: null, plants: [{ name: 'Clinton, New York', country: 'US', lat: 43.05, lon: -75.38 }] },
+      { name: 'MacDermid Alpha', country: 'US', share: null, plants: [] },
+      { name: 'Duksan Hi-Metal (kuličky)', country: 'KR', share: null, plants: [{ name: 'Ulsan', country: 'KR', lat: 35.54, lon: 129.31 }] },
+    ],
+    buy: [{ label: 'TME – pasta Kester SAC305', url: SRC.tmeKester, note: 'Pájky a kuličky na reballing koupí kdokoli od distributorů elektroniky (TME, Mouser) v gramech.' }],
+    sources: [SRC.tmeKester], fact: 'estimate' },
+
+  // ---------- Desky ----------
+  { id: 'mat_pcb_laminate', name: 'Lamináty FR-4 / high-Tg a měděná fólie', cat: 'Desky',
+    what: 'Skelná tkanina napuštěná epoxidem s měděnou fólií (CCL) a prepregy, ze kterých se lisují vícevrstvé desky; pro základní desky a DDR5 high-Tg (170 °C) a nízkoztrátové materiály. Čtyři největší (Kingboard, Shengyi, EMC, Nan Ya) mají asi 48 % trhu (Prismark 2023).',
+    suppliers: [
+      { name: 'Kingboard Laminates', country: 'HK', share: 'top 4 ≈ 48 % (Prismark 2023)', plants: [{ name: 'Kanton (Guangdong)', country: 'CN', lat: 23.13, lon: 113.26 }] },
+      { name: 'Shengyi Technology', country: 'CN', share: 'top 4', plants: [{ name: 'Dongguan', country: 'CN', lat: 23.02, lon: 113.75 }] },
+      { name: 'Elite Material (EMC)', country: 'TW', share: 'top 4', plants: [{ name: 'Tchao-jüan', country: 'TW', lat: 24.99, lon: 121.30 }] },
+      { name: 'Nan Ya Plastics', country: 'TW', share: 'top 4', plants: [{ name: 'Šu-lin, Nová Tchaj-pej', country: 'TW', lat: 24.99, lon: 121.42 }] },
+      { name: 'ITEQ', country: 'TW', share: null, plants: [] },
+      { name: 'Panasonic (Megtron)', country: 'JP', share: null, plants: [{ name: 'Kadoma, Ósaka', country: 'JP', lat: 34.74, lon: 135.59 }] },
+    ],
+    buy: [
+      { label: 'JLCPCB – parametry a materiály', url: SRC.jlcCap, note: 'Jednotlivec si objedná hotovou desku (FR-4 od Nan Ya, KB, Shengyi; HDI s Tg 170). Cena podle online kalkulačky.' },
+      { label: 'Eurocircuits – technická pravidla', url: SRC.eurocircuits, note: 'Evropský výrobce prototypů a malých sérií, i pro studenty.' },
+    ],
+    sources: [SRC.ccl, SRC.jlcCap], fact: 'doc' },
+
+  { id: 'mat_solder_paste', name: 'Pájecí pasta', cat: 'Desky',
+    what: 'Směs práškové pájky (typicky SAC305, zrno 25–45 µm) a tavidla, která se tiskne šablonou na plošky a přetaví v peci. Bizmutové pasty (Bi58Sn42, 138 °C) pro nízkoteplotní pájení.',
+    suppliers: [
+      { name: 'Indium Corporation', country: 'US', share: null, plants: [{ name: 'Clinton, New York', country: 'US', lat: 43.05, lon: -75.38 }] },
+      { name: 'MacDermid Alpha', country: 'US', share: null, plants: [] },
+      { name: 'Senju Metal Industry', country: 'JP', share: null, plants: [{ name: 'Tokio', country: 'JP', lat: 35.69, lon: 139.79 }] },
+      { name: 'Kester', country: 'US', share: null, plants: [{ name: 'Itasca, Illinois', country: 'US', lat: 41.97, lon: -88.02 }] },
+      { name: 'KOKI', country: 'JP', share: null, plants: [] },
+    ],
+    buy: [
+      { label: 'TME – Kester SAC305', url: SRC.tmeKester, note: 'Prodej i jednotlivcům, malá balení.' },
+      { label: 'TME – KOKI SAC305 ve stříkačce 120 g', url: SRC.tmeKoki, note: 'Vhodné pro ruční nanášení a horkovzdušné pájení.' },
+    ],
+    sources: [SRC.tmeKester, SRC.tmeKoki], fact: 'doc' },
+
+  { id: 'mat_smd_passives', name: 'SMD pasivní součástky (MLCC, rezistory)', cat: 'Desky',
+    what: 'Keramické vícevrstvé kondenzátory a tlustovrstvé rezistory – na základní desce jich jsou stovky až tisíce. Murata má přes 40 % trhu MLCC, Samsung Electro-Mechanics asi 24 % (1. pol. 2024).',
+    suppliers: [
+      { name: 'Murata', country: 'JP', share: '> 40 % MLCC (Digitimes 2024)', plants: [{ name: 'Izumo, Šimane', country: 'JP', lat: 35.37, lon: 132.75 }] },
+      { name: 'Samsung Electro-Mechanics', country: 'KR', share: '≈ 24 % MLCC (1. pol. 2024)', plants: [{ name: 'Suwon', country: 'KR', lat: 37.26, lon: 127.03 }, { name: 'Pusan', country: 'KR', lat: 35.10, lon: 128.86 }] },
+      { name: 'TDK', country: 'JP', share: '10–20 %', plants: [{ name: 'Akita', country: 'JP', lat: 39.72, lon: 140.10 }] },
+      { name: 'Taiyo Yuden', country: 'JP', share: '10–20 %', plants: [{ name: 'Takasaki, Gunma', country: 'JP', lat: 36.32, lon: 139.00 }] },
+      { name: 'Yageo (vč. KEMET)', country: 'TW', share: '10–20 %', plants: [{ name: 'Kaohsiung', country: 'TW', lat: 22.63, lon: 120.30 }] },
+    ],
+    buy: [
+      { label: 'Digi-Key – keramické kondenzátory', url: SRC.digikeyMlcc, note: 'Od 1 kusu, i pro jednotlivce; např. Murata 0,1 µF 0402 ve skladu po milionech.' },
+      { label: 'Digi-Key – sady kondenzátorů', url: 'https://www.digikey.com/en/products/filter/capacitor-kits/651', note: 'Sortimenty (např. KEMET 10 pF až 2,2 µF) pro dílnu. V Evropě stejně funguje TME a Mouser.' },
+    ],
+    sources: [SRC.mlccDigitimes, SRC.digikeyMlcc], fact: 'doc' },
+];
+
+// Jak si jednotlivec může nechat vyrobit VLASTNÍ čip – stav k listopadu 2026.
+export const ROUTES = [
+  { id: 'route_tinytapeout', name: 'Tiny Tapeout',
+    what: 'Sdílený čip rozdělený na dlaždice (tiles); návrh v Verilogu nebo analog, otevřené nástroje v prohlížeči. V listopadu 2026 otevřené běhy SKY26d/SKY26e (SkyWater) a GF26c/GF26d (GlobalFoundries přes wafer.space); IHP běhy TTIHP26a/b uzavřeny, čipy 2027.',
+    cost: 'IHP 25b: ≈ 50 EUR za dlaždici, 100 EUR devkit, 25 EUR poštovné (FAQ Tiny Tapeout); aktuální ceny jen v kalkulačce, early bird pro jednotlivce',
+    process: 'SkyWater SKY130 130 nm, GF180MCU 180 nm, IHP SG13G2 130 nm',
+    url: 'https://tinytapeout.com/', sources: ['https://tinytapeout.com/runs', 'https://docs.google.com/document/d/12KPutDPBst7FF0ncB1qyxErDYeATmXoQLGjRq38dfjU/mobilebasic', 'https://app.tinytapeout.com/calculator?tiles=1&pcbs=1'], fact: 'doc' },
+
+  { id: 'route_waferspace', name: 'wafer.space (GF180MCU)',
+    what: 'Singapurská služba Tima Ansella (zakladatele open-source shuttle programu) vzniklá po pádu Efabless; celý vlastní čip na sdíleném waferu, dodání jako holé čipy nebo COB na malé desce. Běhy se prodávají přes Crowd Supply (běh 3 v roce 2026).',
+    cost: '7 000 USD za 1 000 hotových čipů (Tiny Tapeout, září 2025)',
+    process: 'GlobalFoundries GF180MCU 180 nm (open PDK)',
+    url: 'https://www.crowdsupply.com/wafer-space/gf180mcu-run-3', sources: ['https://tinytapeout.com/news/wafer-space-partnership/'], fact: 'doc' },
+
+  { id: 'route_europractice', name: 'Europractice MPW (mini@sic)',
+    what: 'Evropská služba pro univerzity a firmy: čip na sdíleném waferu u desítek technologií (IHP, X-FAB, ams OSRAM, GF, TSMC…). Jednotlivec potřebuje univerzitu nebo firmu jako smluvní stranu (NDA, exportní kontrola).',
+    cost: 'IHP SG13G2 7 300 EUR/mm² (sleva 6 205), min. 0,8 mm²; open-source běh 2 800 EUR/mm²; GF180MCU 913 EUR/mm², min. 6 mm² (ceník Europractice 2026)',
+    process: 'např. IHP SG13G2 130 nm SiGe BiCMOS, GF180MCU, X-FAB XH018',
+    url: 'https://europractice-ic.com/?p=33787', sources: ['https://europractice-ic.com/?p=33787', 'https://europractice-ic.com/wp-content/uploads/2026/02/IHP_February_2026.pdf'], fact: 'doc' },
+
+  { id: 'route_ihp_open', name: 'IHP open-source shuttle (SG13G2)',
+    what: 'IHP (Frankfurt nad Odrou) zveřejnil open PDK SG13G2. Bezplatné běhy 2024–2025 financoval projekt FMD-QNC; od 2026 jen placené open-source běhy (návrh musí být otevřený). Nejlevnější cesta je přes Tiny Tapeout IHP běhy.',
+    cost: 'koncept 2026+: 2 400–3 500 EUR za open-source návrh, uzavřený 3 500 EUR (akademie) / 5 800 EUR (průmysl) (prezentace IHP, MOS-AK 2025)',
+    process: 'IHP SG13G2 130 nm SiGe:C BiCMOS',
+    url: 'https://www.github.com/IHP-GmbH/IHP-Open-PDK', sources: ['https://www.github.com/IHP-GmbH/IHP-Open-PDK', 'https://www.mos-ak.org/munich_2025/presentations/W2_1_Melik_MOS-AK_Munich2025.pdf'], fact: 'estimate' },
+
+  { id: 'route_chipfoundry', name: 'ChipFoundry (nástupce chipIgnite, SkyWater)',
+    what: 'Založili bývalí lidé z Efabless; MPW běhy SKY130 se šablonou Caravel. Běh se uskuteční jen při alespoň 50% obsazení.',
+    cost: '15 000 USD za 100 čipů (zvýšeno z 10 000 USD; eeNews Europe, květen 2025)',
+    process: 'SkyWater SKY130 130 nm',
+    url: 'https://chipfoundry.io/', sources: ['https://www.eenewseurope.com/en/tiny-tapeout-sees-industrial-boost-as-it-recovers-from-efabless-closure/', 'https://tinytapeout.com/news/chipfoundry-sponsor/'], fact: 'doc' },
+
+  { id: 'route_efabless', name: 'Efabless chipIgnite / Open MPW (ukončeno)',
+    what: 'Efabless ukončil činnost v březnu 2025 kvůli financování; chipIgnite i bezplatné Google Open MPW skončily. Uvedeno jen pro úplnost – v roce 2026 už nefunguje.',
+    cost: 'dříve 9 750 USD za projekt (100 pouzder QFN, 10 mm²); dnes nedostupné',
+    process: 'SkyWater SKY130 130 nm',
+    url: 'https://tinytapeout.com/news/efabless-shutsdown/', sources: ['https://tinytapeout.com/news/efabless-shutsdown/', 'https://www.hackster.io/news/open-source-silicon-project-tiny-tapeout-hits-trouble-as-efabless-shuts-its-doors-9ac7fab1649d'], fact: 'doc' },
+
+  { id: 'route_zeloof', name: 'Domácí výroba (Sam Zeloof)',
+    what: 'Sam Zeloof vyrobil v garáži rodičů (New Jersey) bez čistých prostor čip Z2 (2021): pole 100 tranzistorů s polykřemíkovým hradlem, proces 10 µm, z nakoupených waferů, spin-on dopantů a podomácku stavěných pecí a litografie. Ukazuje, co jde doma: technologii úrovně 70. let.',
+    cost: 'řádově tisíce USD za vybavení z druhé ruky (odhad; přesná částka nezveřejněna)',
+    process: 'vlastní PMOS/NMOS proces 10 µm, polykřemíkové hradlo',
+    url: 'https://en.wikipedia.org/wiki/Sam_Zeloof', sources: ['https://en.wikipedia.org/wiki/Sam_Zeloof', 'https://hackaday.com/2021/08/14/the-zeloof-z2-intergrated-circuit-has-100-transistors'], fact: 'doc' },
+];

@@ -71,3 +71,17 @@ test('catalog tree: every block and library item has a page, tree reaches every 
   for (const r of treeRoots()) walk(r, 0);
   for (const b of ALL_BLOCKS) assert.ok(seen.has(b.block), `blok ${b.block} není ve stromu`);
 });
+test('fab: processes reference existing machines and materials, every machine has a 3D model and a page', async () => {
+  const { MACHINES, MATERIALS, PROCESSES, ROUTES, processesOf, fabById } = await import('../src/web/fab/index.js');
+  const { MACHINE_MODELS, buildMachine } = await import('../src/web/fab/machineModels.js');
+  const { anyById } = await import('../src/web/catalogTree.js');
+  for (const [k, pr] of Object.entries(PROCESSES)) for (const s of pr.steps) {
+    for (const id of s.machines ?? []) assert.ok(fabById(id)?.kind === 'Stroj', `${k}: stroj ${id}`);
+    for (const id of s.materials ?? []) assert.ok(fabById(id)?.kind === 'Materiál a dodavatel', `${k}: materiál ${id}`);
+    assert.match(s.src, /^https?:\/\//, `${k}: zdroj kroku`);
+  }
+  for (const m of MACHINES) { assert.ok(MACHINE_MODELS[m.id], `3D model ${m.id}`); assert.ok(buildMachine(m.id).length > 1); assert.equal(anyById(m.id)?.id, m.id); }
+  for (const m of [...MACHINES, ...MATERIALS]) for (const c of m.makers ?? m.suppliers) for (const p of c.plants ?? []) assert.ok(Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180, `${m.id}: ${p.name}`);
+  assert.ok(ROUTES.length > 0);
+  assert.deepEqual(processesOf(PARTS.find((p) => p.id === 'i7_9700')), ['wafer', 'intel14', 'pkg_flipchip']);
+});

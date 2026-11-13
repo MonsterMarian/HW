@@ -5,6 +5,7 @@ import { HIERARCHICAL_SUBCIRCUITS as H, findSubcircuit } from '../engine/hierarc
 import { PRIMITIVE_PINS } from '../engine/logicEngine.js';
 import { PRESET_CIRCUITS } from '../engine/aiCopilot.js';
 import { PARTS, partById, childrenOf, projectsOf } from './parts.js';
+import { MACHINES, MATERIALS, fabById } from './fab/index.js';
 
 // ── bloky uvnitř čipů ────────────────────────────────────────────────────────────────────────────────────
 // Přesnost bloků je pravidlo, ne ruční údaj: vyšší úrovně jsou model podle veřejných popisů, nízké úrovně
@@ -115,10 +116,16 @@ export function treeRoots() {
     { id: 'mat/l8', label: `Materiály – atomové mřížky (${mats.length})`, children: () => mats.map((b) => blockNode(b.block, [{ key: '__mat', level: 7 }], 'mat/l8')) },
     { id: 'mat/l9', label: `Prvky – atomy (${atoms.length})`, children: () => atoms.map((b) => blockNode(b.block, [{ key: '__mat', level: 8 }], 'mat/l9')) },
   ] });
+  // výroba: stroje a materiály podle kategorií
+  const cats = (list, pre) => [...new Set(list.map((x) => x.cat))].map((c) => ({ id: `${pre}/${c}`, label: `${c} (${list.filter((x) => x.cat === c).length})`, children: () => list.filter((x) => x.cat === c).map((x) => ({ id: `${pre}/${x.id}`, part: x, children: () => [] })) }));
+  roots.push({ id: 'fab', label: `Výroba: stroje (${MACHINES.length}) a materiály (${MATERIALS.length})`, children: () => [
+    { id: 'fab/m', label: `Stroje (${MACHINES.length})`, children: () => cats(MACHINES, 'fab/m') },
+    { id: 'fab/mat', label: `Materiály a dodavatelé (${MATERIALS.length})`, children: () => cats(MATERIALS, 'fab/mat') },
+  ] });
   if (alts.length) roots.push({ id: 'alt', label: `Alternativy a kandidáti (${alts.length})`, children: () => alts.map((p) => ({ id: `alt/${p.id}`, part: p, children: () => [] })) });
   return roots;
 }
 
 // Všechno, co má stránku (pro hledání a odkazy): díly, bloky, knihovna.
 export const ALL_BLOCKS = Object.keys(H).filter((k) => H[k].key === k).map(blockPart);
-export const anyById = (id) => (id.startsWith('b.') ? blockPart(id.slice(2)) : id.startsWith('lib.') ? LIBRARY.find((l) => l.id === id) : partById(id)) ?? null;
+export const anyById = (id) => (id.startsWith('b.') ? blockPart(id.slice(2)) : id.startsWith('lib.') ? LIBRARY.find((l) => l.id === id) : partById(id) ?? fabById(id)) ?? null;

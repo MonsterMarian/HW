@@ -36,14 +36,25 @@ export const GROUPS = [
       { id: 'history', name: 'Historie výpadků', short: 'Minulé výpadky', href: () => '#/history', what: 'Minulé výpadky dodávek a události, které se mých dílů týkaly.', how: ['Klik na případ: detail a zdroj'], code: 'web/ResearchViews.jsx (Notes)', related: ['bottlenecks', 'map'] },
     ],
   },
+  {
+    id: 'fab', num: '05', name: 'Výroba', question: 'Na čem a z čeho se díly vyrábějí?',
+    items: [
+      { id: 'processes', name: 'Výrobní postupy', short: 'Kroky od waferu', href: () => '#/fab/processes', what: 'Výrobní postupy čipů a desek: kroky, stroje, materiály a továrny (Intel 14 nm, TSMC 16 nm, Samsung 8N, DRAM, 3D NAND, pouzdření, DPS, osazení).', how: ['Klik na postup: rozbalí kroky', 'Klik na stroj / materiál: jeho stránka'], code: 'web/FabViews.jsx (ProcessList)', related: ['machines', 'materials', 'routes'] },
+      { id: 'machines', name: 'Stroje', short: 'Co je potřeba, 3D', href: () => '#/fab/machines', what: 'Výrobní stroje (litografie, depozice, leptání, test, pouzdření, osazování) s výrobci, závody a 3D modelem.', how: ['Klik na stroj: Anatomie ve 3D', 'Ve 3D: posuvník rozloží stroj na moduly'], code: 'web/fab/machineModels.js', related: ['processes', 'materials', 'map'] },
+      { id: 'materials', name: 'Materiály a dodavatelé', short: 'Kde je koupit', href: () => '#/fab/materials', what: 'Materiály na výrobu (wafery, rezisty, plyny, chemie, terče, substráty, pájky): kdo je dodává, kde se vyrábějí a kde je koupit.', how: ['Klik na materiál: dodavatelé, mapa, kde koupit'], code: 'web/fab/materials.js', related: ['processes', 'machines', 'routes'] },
+      { id: 'routes', name: 'Vlastní čip', short: 'Jak si ho nechat vyrobit', href: () => '#/fab/routes', what: 'Cesty, jak si jednotlivec může nechat vyrobit vlastní čip (sdílené wafery MPW, open-source PDK) a co jde doma.', how: ['Klik na odkaz: stránka služby'], code: 'web/FabViews.jsx (Routes)', related: ['processes', 'materials'] },
+    ],
+  },
 ];
-
 export const SECTIONS = GROUPS.flatMap((g) => g.items.map((s) => ({ ...s, group: g })));
 export const sectionById = (id) => SECTIONS.find((s) => s.id === id);
-const PART_TAB = { anatomy3d: 'anatomy3d', supply: 'supply', schema: 'lab', pcb: 'lab', map: 'map', companies: 'companies', timeline: 'timeline', bottlenecks: 'bottlenecks', history: 'history', market: 'market' };
+const PART_TAB = { vyroba: 'processes', anatomy3d: 'anatomy3d', supply: 'supply', schema: 'lab', pcb: 'lab', map: 'map', companies: 'companies', timeline: 'timeline', bottlenecks: 'bottlenecks', history: 'history', market: 'market' };
 // Sekce podle adresy (seg = části hashe). Stránka dílu bez vlastní sekce patří do oblasti 01.
 export function sectionOf(seg) {
+  if (seg[0] === 'd' && /^mat_/.test(seg[1] ?? '')) return sectionById('materials');
+  if (seg[0] === 'd' && /^m_/.test(seg[1] ?? '')) return sectionById('machines');
   if (seg[0] === 'd') return sectionById(PART_TAB[seg[2]] ?? 'catalog');
+  if (seg[0] === 'fab') return sectionById(seg[1] ?? 'processes') ?? sectionById('processes');
   if (seg[0] === 'p') return sectionById('projects');
   return sectionById(seg[0] ?? 'catalog') ?? sectionById('catalog');
 }

@@ -10,6 +10,7 @@ import { MapView, Companies, Timeline, Notes, Market } from './ResearchViews.jsx
 import { RESEARCH } from './research/index.js';
 import { CatalogTree } from './CatalogTree.jsx';
 import { anyById } from './catalogTree.js';
+import { FabList, ProcessList, Routes } from './FabViews.jsx';
 import { GROUPS, sectionById, sectionOf } from './sections.js';
 import { bomTotal, fmtKc } from '../engine/economic/catalog.js';
 
@@ -179,6 +180,10 @@ export default function WebApp() {
   if (curPart) { body = <PartPage key={seg[1]} p={anyById(seg[1])} tab={seg[2]} />; where = `${anyById(seg[1]).name} · ${sec.id === 'catalog' ? 'stránka dílu' : sec.name}`; }
   else if (seg[0] === 'p' && PROJECTS.some((p) => p.id === seg[1])) { body = <ProjectPage key={seg[1]} pr={projectById(seg[1])} view={seg[2]} />; where = projectById(seg[1]).tab; }
   else if (seg[0] === 'projects') body = <Projects />;
+  else if (seg[0] === 'fab' && seg[1] === 'machines') body = <Page title="Výrobní stroje" note="Stroje, které jsou potřeba na výrobu čipů a desek v mých sestavách: kdo je vyrábí, kde a jak vypadají (3D model z modulů, zjednodušený)."><FabList kind="machines" /></Page>;
+  else if (seg[0] === 'fab' && seg[1] === 'materials') body = <Page title="Materiály a dodavatelé" note="Z čeho se čipy a desky vyrábějí, kdo materiály dodává, kde je vyrábí a kde se dají koupit."><FabList kind="materials" /></Page>;
+  else if (seg[0] === 'fab' && seg[1] === 'routes') body = <Page title="Vlastní čip" note="Jak si jednotlivec může nechat vyrobit vlastní čip a co jde udělat doma."><Routes /></Page>;
+  else if (seg[0] === 'fab') body = <Page title="Výrobní postupy" note="Kroky výroby od křemene po hotovou desku, se stroji, materiály a továrnami. Postupy jednotlivých dílů jsou i v záložce Výroba na stránce dílu."><ProcessList /></Page>;
   else if (seg[0] === 'compare') body = <Compare ids={(q.get('ids') ?? '').split(',')} />;
   else if (seg[0] === 'market') body = <Page title="Podíl na trhu" note="Podíly výrobců v kategoriích mých dílů, jen se zdrojem. Položky „Ostatní“ jsou dopočet do 100 %."><Market /></Page>;
   else if (seg[0] === 'companies') body = <Page title="Firmy" note="Všechny firmy z řetězců dodávek mých dílů, od těžby po výrobce."><Companies /></Page>;

@@ -8,6 +8,9 @@ import { Explorer } from './Explorer.jsx';
 import { SupplyTree, MapView, Companies, Timeline, Notes, Market } from './ResearchViews.jsx';
 import { researchOf } from './research/index.js';
 import { usedInOf, blockPart, blockChildren } from './catalogTree.js';
+import { processesOf } from './fab/index.js';
+import { buildMachine } from './fab/machineModels.js';
+import { FabOverview, PartFab } from './FabViews.jsx';
 
 const EconomicView = lazy(() => import('../views/EconomicView').then((m) => ({ default: m.EconomicView })));
 const AnatomyView = lazy(() => import('../views/AnatomyView').then((m) => ({ default: m.AnatomyView })));
@@ -22,14 +25,16 @@ export const Badge = ({ level, small }) => (
 const assemblyOf = (p) => (p.root ? projectById(p.root) : p.bom && PROJECTS.find((pr) => pr.bom.some((it) => it.id === p.bom)));
 
 // Rešerše (dodávky, mapa, firmy…) mají jen fyzické díly z registru, ne bloky uvnitř čipů ani knihovna.
-const researchable = (p) => !p.block && !p.circuit;
+const isFab = (p) => p.kind === 'Stroj' || p.kind === 'Materiál a dodavatel';
+const researchable = (p) => !p.block && !p.circuit && !isFab(p);
 const TABS = [
   { id: 'prehled', name: 'Přehled', has: () => true },
-  { id: 'anatomy3d', name: 'Anatomie ve 3D', has: (p) => !!(p.item || p.drill || p.root || p.circuit) },
+  { id: 'anatomy3d', name: 'Anatomie ve 3D', has: (p) => !!(p.item || p.drill || p.root || p.circuit) || p.kind === 'Stroj' },
   { id: 'schema', name: 'Schéma · laboratoř', has: (p) => !!(p.drill || p.root || p.circuit) },
   { id: 'pcb', name: 'PCB', has: (p) => !!p.root && projectById(p.root).views.includes('hardware') },
   { id: 'model', name: 'Ceny a rozměry', has: (p) => !!p.item },
   { id: 'anatomy', name: 'Sestava (výkres)', has: (p) => !!assemblyOf(p) },
+  { id: 'vyroba', name: 'Výroba', has: (p) => processesOf(p).length > 0 },
   { id: 'supply', name: 'Strom dodávek', has: researchable },
   { id: 'map', name: 'Mapa světa', has: researchable },
   { id: 'companies', name: 'Firmy', has: researchable },
@@ -50,6 +55,7 @@ const circuitProps = (p) => {
 // 3D: celý projekt (L1), nebo 3D model dílu z kusovníku a dvojklikem jeho podobvod, nebo rovnou podobvod čipu.
 function Anatomy({ p }) {
   const props = useMemo(() => {
+    if (p.kind === 'Stroj') return { circuit: modelRoot(p.name), title: p.name, subtitle: p.example ?? p.cat, level: 1, rootKey: '__model', build: () => buildMachine(p.id) };
     const sub = p.drill && H[p.drill];
     if (p.item && !p.root) return { circuit: modelRoot(p.name, p.drill), title: p.name, subtitle: p.kind, level: sub ? sub.level - 1 : 1, rootKey: '__model', model: p.item };
     return circuitProps(p);
@@ -129,7 +135,8 @@ export function PartPage({ p, tab }) {
       </div>
       <div className={full ? 'flex-1 min-h-[480px] relative' : 'p-6'}>
         <Suspense fallback={<div className="p-4 meta">NAČÍTÁM…</div>}>
-          {cur.id === 'prehled' && <Overview p={p} />}
+          {cur.id === 'prehled' && (isFab(p) ? <FabOverview p={p} /> : <Overview p={p} />)}
+          {cur.id === 'vyroba' && <PartFab p={p} />}
           {cur.id === 'anatomy3d' && <Anatomy p={p} />}
           {cur.id === 'model' && <EconomicView key={p.id} project={{ id: p.id, title: p.name, bom: [p.item] }} />}
           {VIEW_OF[cur.id] && (

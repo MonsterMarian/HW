@@ -165,7 +165,10 @@ hardware. `npm run dev` a otevřít `/web.html`; `npm run build` vyrobí `dist/w
   materiály a prvky, alternativy. 215 dílů v registru (`src/web/parts.js` + `src/web/extra/`: pasivní součástky desek
   a alternativy z rešerše), 226 bloků a 51 položek knihovny – každá položka má vlastní stránku.
   Každá má štítek přesnosti zvlášť pro 3D model a pro schéma: přesně podle dokumentace / částečně / odhad / model není.
-- Rozvržení jako robotí aplikace (oblasti 01–04, Souvisí, lišta Kde jsem, Mapa aplikace na `?`) – `src/web/sections.js`.
+- Oblast 05 Výroba (`src/web/fab/`): výrobní postupy (15, kroky → stroje → materiály → továrny), 33 výrobních strojů
+  s výrobci, závody a 3D modelem z modulů, 24 materiálů s dodavateli a odkazy „kde koupit“, cesty k vlastnímu čipu
+  (Tiny Tapeout, Europractice, IHP…); u každé součástky záložka Výroba.
+- Rozvržení jako robotí aplikace (oblasti 01–05, Souvisí, lišta Kde jsem, Mapa aplikace na `?`) – `src/web/sections.js`.
 - Anatomie ve 3D ve stylu robotů (`src/web/Anatomy3D.jsx`): let WASD / Q/E, šipky, F, rozložení dílů, systémy, hledání;
   dvojklik = dovnitř (díl → deska → čip → buňky → tranzistor → atomy → kvarky).
 - Stránka dílu: přehled, Anatomie ve 3D, ceny a rozměry (ECONOMIC), schéma s RUN/STEP (laboratoř), PCB, sestava,

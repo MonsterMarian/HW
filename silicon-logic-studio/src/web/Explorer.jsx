@@ -10,7 +10,7 @@ import { MemoryEditor } from '../components/MemoryEditor';
 const Anatomy3D = lazy(() => import('./Anatomy3D.jsx').then((m) => ({ default: m.Anatomy3D })));
 
 
-export function Explorer({ circuit, title, subtitle, level = 1, rootKey = 'root', view, model, onOpenPart, partId }) {
+export function Explorer({ circuit, title, subtitle, level = 1, rootKey = 'root', view, model, build, onOpenPart, partId }) {
   // obvod se načte hned při vytvoření enginu: 3D i schéma (děti) staví scénu dřív, než by doběhl efekt rodiče
   const engine = useMemo(() => {
     const e = new LogicEngine();
@@ -60,7 +60,7 @@ export function Explorer({ circuit, title, subtitle, level = 1, rootKey = 'root'
     <div className="absolute inset-0">
       <Suspense fallback={<div className="p-4 meta">NAČÍTÁM 3D…</div>}>
         {mode === 'physics'
-          ? <Anatomy3D engine={engine} hierarchyStack={stack} onNavigateUp={up} onDrillDown={drill} model={model} onOpenPart={onOpenPart} partId={partId} />
+          ? <Anatomy3D engine={engine} hierarchyStack={stack} onNavigateUp={up} onDrillDown={drill} model={model} build={build} onOpenPart={onOpenPart} partId={partId} />
           : <LogicCanvas engine={engine} displayMode={mode} selectedComponentId={sel} onSelectComponent={setSel}
               hierarchyStack={stack} onNavigateUp={up} onDrillDown={drill} />}
       </Suspense>

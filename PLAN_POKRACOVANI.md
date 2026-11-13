@@ -59,7 +59,13 @@ kvarkům. Zbývá jen to, co nejde bez údajů: zdroj mého PC (podle štítku),
 
 ## 4c. Web „Silicon Studio · hardware“ (`web.html`, `src/web/`) – základ HOTOVÝ 13. 11. 2026
 
-75 součástek s vlastní stránkou, štítky přesnosti, rešerše u všech. Dál:
+75 součástek s vlastní stránkou, štítky přesnosti, rešerše u všech. 13. 11. přidaná Anatomie ve 3D ve stylu robotů
+(let kamerou, rozložení, dvojklik dovnitř až k atomům) a robotí rozvržení stránky. Dál – funkce robotí aplikace, které chybí:
+- Mapa světa jako 3D glóbus s bublinami (shlukování, klik rozdělí) a periodická tabulka prvků, ze kterých díly jsou
+  (vyžaduje v rešerši strukturované prvky u uzlů těžby).
+- Strom dodávek: režim Tok (animované pulzy) / Cena, přizpůsobení, filtr země.
+- Porovnání dílů se skóre 1–5 podle úlohy a animacemi principu; laboratoř = kalkulačka (např. zatížení zdroje, chlazení).
+- Karty sestav s tečkami 1–5, podíl na trhu v čase (graf), filtry firem a časové osy, průvodce rozborkou (teardown).
 - Rozšířit registr o pasivní součástky, které dnes v modelech nejsou (kondenzátory, rezistory, cívky VRM, tlumivky) –
   u každé desky podle fotky / manuálu, se štítkem MODEL NENÍ, dokud nedostane model.
 - Doplnit rešerši tam, kde chybí (repro bez firem, myš bez časové osy, konkrétní fabriky čipů); po přestavbě dílů z bodu 2

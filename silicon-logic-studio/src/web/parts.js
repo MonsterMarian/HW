@@ -209,6 +209,10 @@ export const PARTS = RAW.map((p) => {
 });
 
 export const partById = (id) => PARTS.find((p) => p.id === id);
+// Díl, kterému odpovídá součástka ve 3D scéně / schématu (podle podobvodu nebo typu); 'self' = kořen „celý díl“.
+export const partForComp = (comp) => (comp.id === 'self' ? null : PARTS.find((p) => p.drill && (p.drill === comp.drill || p.drill === comp.type)) ?? null);
+// Kořen „celý díl“ nad podobvodem: jedna součástka s 3D modelem z kusovníku, dvojklik vede do `drill`.
+export const modelRoot = (name, drill) => ({ components: [{ id: 'self', type: 'PC_BLOCK', label: name, drill, x: 0, y: 0, sx: 0, sy: 0, inputs: {}, outputs: {} }], wires: [] });
 export const childrenOf = (id) => PARTS.filter((p) => p.in === id);
 export const pathOf = (p) => (p.in ? [...pathOf(partById(p.in)), p] : [p]);
 export const projectsOf = (p) => p.projects ?? projectsOf(partById(p.in));

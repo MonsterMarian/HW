@@ -284,3 +284,14 @@ envytools, fotka), tabulku „model vs. skutečnost“, 8 kroků s kritériem ho
   u položek kusovníku se 3D odvodí z `dimsSrc`). Rešerše 5 agentů → `src/web/research/*.js` (75 dílů, každá položka
   URL + `fact` doc/estimate; konkrétní fabriky většinou nedoložené = estimate, „Ostatní“ v podílech trhu = dopočet).
   Mapa: world-atlas + topojson-client (nové závislosti). Test `tests/web_parts.test.js`. Vizuální kontrola shot.cjs OK.
+- 2026-11-13 — „modely ve stylu robotů, pohyb v 3D, dvojklik dovnitř; chybí funkce robotí stránky“ → `src/web/Anatomy3D.jsx`
+  = robotí 3D (hodnoty převzaté z robots/src/app/Anatomy-*.jsx: Hemisphere 0xfff0dc/0x2a1f16 1,15 + 3 směrová světla,
+  GridHelper 0x6b5435/0x3a2c1f, matné materiály drsnost 0,58 kov 0,06, kamera FOV 32, OrbitControls damping 0,15
+  zoomToCursor, WASD/Q/E/Shift let + repivot, šipky, +/−, F, přelet 450 ms, záře `radial-gradient` za průhledným
+  canvasem). Obsah staví stejné buildery jako desktopové DIE 3D → dvojklik = findSubcircuit + drill (když dál nejde,
+  otočí se kolem bodu). Kořen „celý díl“ = `modelRoot` v parts.js (jedna součástka s modelem z kusovníku, drill = podobvod).
+  Rozvržení jako roboti: `src/web/sections.js` (oblasti 01–04, Souvisí, ovládání), lišta Kde jsem, Mapa aplikace (?).
+  PAST: Explorer musí načíst obvod do enginu hned v useMemo – efekty dětí (3D scéna) běží dřív než efekt rodiče.
+  Z robotí aplikace zatím NENÍ: 3D glóbus s bublinami a periodická tabulka, režim Tok/Cena ve stromu dodávek, skóre
+  dílů podle úlohy + animace principu, kalkulačka (laboratoř aktuátoru), karty s tečkami 1–5, podíl na trhu v čase,
+  filtry firem/časové osy, průvodce rozborkou (teardown), výukové trasy.

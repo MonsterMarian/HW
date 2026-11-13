@@ -7,20 +7,23 @@ import { findSubcircuit } from '../engine/hierarchicalSubcircuits';
 import { LogicCanvas } from '../views/LogicCanvas';
 import { MemoryEditor } from '../components/MemoryEditor';
 
-const PhysicsView = lazy(() => import('../views/PhysicsView').then((m) => ({ default: m.PhysicsView })));
+const Anatomy3D = lazy(() => import('./Anatomy3D.jsx').then((m) => ({ default: m.Anatomy3D })));
 
-export function Explorer({ circuit, title, subtitle, level = 1, rootKey = 'root', view }) {
-  const engine = useMemo(() => new LogicEngine(), []);
+
+export function Explorer({ circuit, title, subtitle, level = 1, rootKey = 'root', view, model, onOpenPart, partId }) {
+  // obvod se načte hned při vytvoření enginu: 3D i schéma (děti) staví scénu dřív, než by doběhl efekt rodiče
+  const engine = useMemo(() => {
+    const e = new LogicEngine();
+    e.loadCircuit(circuit);
+    if (circuit.components.some((c) => c.type === 'NV1_CORE')) e.setFrequency(Infinity); // karta běží na reálných MHz
+    return e;
+  }, [circuit]);
   const [stack, setStack] = useState(() => [{ id: 'root', key: rootKey, title, subtitle, level, state: null }]);
   const [sel, setSel] = useState(null);
   const [hint, setHint] = useState(null);
   const [running, setRunning] = useState(false);
 
-  useEffect(() => {
-    engine.loadCircuit(circuit);
-    if (circuit.components.some((c) => c.type === 'NV1_CORE')) engine.setFrequency(Infinity); // karta běží na reálných MHz
-    return () => engine.stop();
-  }, [engine, circuit]);
+  useEffect(() => () => engine.stop(), [engine]);
 
   useEffect(() => {
     if (!hint) return;
@@ -54,10 +57,10 @@ export function Explorer({ circuit, title, subtitle, level = 1, rootKey = 'root'
   // PCB dává smysl jen na nejvyšší úrovni, uvnitř čipu se ukáže schéma (jako v desktopu)
   const mode = view === 'hardware' && stack.length > 1 ? 'schematic' : view;
   return (
-    <div className="relative h-full">
+    <div className="absolute inset-0">
       <Suspense fallback={<div className="p-4 meta">NAČÍTÁM 3D…</div>}>
         {mode === 'physics'
-          ? <PhysicsView engine={engine} hierarchyStack={stack} onNavigateUp={up} onDrillDown={drill} />
+          ? <Anatomy3D engine={engine} hierarchyStack={stack} onNavigateUp={up} onDrillDown={drill} model={model} onOpenPart={onOpenPart} partId={partId} />
           : <LogicCanvas engine={engine} displayMode={mode} selectedComponentId={sel} onSelectComponent={setSel}
               hierarchyStack={stack} onNavigateUp={up} onDrillDown={drill} />}
       </Suspense>

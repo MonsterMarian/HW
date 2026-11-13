@@ -46,3 +46,14 @@ test('research: every item has a source URL and fact level, supply tree points f
     if (r.market) for (const s of r.market.shares) assert.ok(s.pct >= 0 && s.pct <= 100, `${id}: podíl`);
   }
 });
+
+test('web sections: every page maps to a section, related links exist', async () => {
+  const { SECTIONS, sectionById, sectionOf } = await import('../src/web/sections.js');
+  for (const s of SECTIONS) for (const r of s.related) assert.ok(sectionById(r), `${s.id} → ${r}`);
+  assert.equal(sectionOf(['d', 'i7_9700', 'anatomy3d']).id, 'anatomy3d');
+  assert.equal(sectionOf(['d', 'i7_9700', 'schema']).id, 'lab');
+  assert.equal(sectionOf(['d', 'i7_9700']).id, 'catalog');
+  assert.equal(sectionOf(['p', 'mypc']).id, 'projects');
+  assert.equal(sectionOf([]).id, 'catalog');
+  assert.equal(sectionOf(['map']).id, 'map');
+});

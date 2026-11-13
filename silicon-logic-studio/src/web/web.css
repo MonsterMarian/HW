@@ -12,3 +12,77 @@
 .web-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .web-table th, .web-table td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .web-table th { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+/* Anatomie ve 3D – rozvržení a barvy jako robotí aplikace (panel vlevo, scéna s jantarovou září, lišta dole). */
+.hw3d { position: absolute; inset: 0; display: grid; grid-template-columns: 228px minmax(0, 1fr); background: #0b0a09; }
+.hw3d-side { overflow: auto; padding: 12px; border-right: 1px solid var(--line); background: #120f0c; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.hw3d-title { font-weight: 700; font-size: 15px; line-height: 1.2; text-transform: uppercase; }
+.hw3d-sub { font-size: 11px; color: var(--text-muted); }
+.hw3d-h { display: flex; justify-content: space-between; margin-top: 8px; font: 600 10px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); }
+.hw3d-h button { color: var(--accent-amber); font: 600 12px var(--font-sans); text-transform: none; letter-spacing: 0; }
+.hw3d-sys { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+.hw3d-dot { width: 10px; height: 10px; flex: none; }
+.hw3d-n { margin-left: auto; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; }
+.hw3d-pick { margin-top: 8px; padding: 10px; border: 1px solid var(--line); background: #16110d; display: flex; flex-direction: column; gap: 4px; }
+.hw3d-link { text-align: left; color: var(--accent-amber); font-size: 12px; }
+.hw3d-link:hover { text-decoration: underline; }
+.hw3d-stage { position: relative; min-height: 0; background: radial-gradient(circle at 50% 42%, rgba(255, 181, 46, .35), transparent 70%); }
+.hw3d-search { position: absolute; z-index: 5; top: 12px; left: 50%; transform: translateX(-50%); width: 240px; }
+.hw3d-search input { width: 100%; padding: 8px 12px; background: #0a0b0ed9; border: 1px solid var(--line); color: var(--text-light); font-size: 13px; }
+.hw3d-found { display: flex; flex-direction: column; background: #0a0b0e; border: 1px solid var(--line); border-top: 0; }
+.hw3d-found button { text-align: left; padding: 5px 12px; font-size: 12px; }
+.hw3d-found button:hover { background: #16110d; color: var(--accent-amber); }
+.hw3d-crumb { position: absolute; z-index: 5; top: 56px; left: 50%; transform: translateX(-50%); display: flex; max-width: 90%; overflow-x: auto; background: #0a0b0ed9; border: 1px solid var(--line); font: 11px var(--font-mono); white-space: nowrap; }
+.hw3d-crumb button { padding: 5px 8px; color: var(--text-muted); }
+.hw3d-crumb button:hover:not(:disabled) { color: var(--accent-amber); }
+.hw3d-crumb button:disabled { color: var(--text-light); }
+.hw3d-crumb b { color: var(--accent-amber); }
+.hw3d-back { display: flex; align-items: center; gap: 4px; background: var(--accent-amber); color: var(--bg-dark) !important; font-weight: 700; }
+.hw3d-tip { position: absolute; z-index: 5; bottom: 64px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; padding: 8px 14px; background: #0a0b0ee6; border: 1px solid var(--line); font-size: 12px; pointer-events: none; text-align: center; }
+.hw3d-tip span { color: var(--accent-amber); font-size: 11px; }
+.hw3d-bar { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #120f0ce6; border-top: 1px solid var(--line); font-size: 13px; color: var(--text-muted); }
+.hw3d-bar input[type=range] { flex: 0 1 330px; accent-color: #ffb52e; }
+.hw3d-bar label { display: flex; align-items: center; gap: 6px; color: var(--text-light); }
+.hw3d-btn { margin-left: auto; padding: 6px 14px; border: 1px solid var(--line); color: var(--text-light); font-size: 12px; font-weight: 600; }
+.hw3d-btn:hover { border-color: var(--accent-amber); }
+.hw3d-side input[type=checkbox], .hw3d-bar input[type=checkbox] { accent-color: #4a8fe0; }
+.hw3d-label { font: 700 10px var(--font-mono); color: #ffb52e; background: #0a0b0ecc; border: 1px solid #ffb52e66; padding: 1px 5px; white-space: nowrap; }
+@media (max-width: 720px) { .hw3d { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .hw3d-side { max-height: 160px; } }
+/* Robotí rozvržení stránky (oblasti, stránky oblasti, Souvisí, lišta Kde jsem, Mapa aplikace). */
+.rb-app { height: 100vh; display: flex; flex-direction: column; background: var(--bg-dark); color: var(--text-light); }
+.rb-main { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.rb-main > * { flex: none; }
+.rb-main > .rb-fill { flex: 1; }
+.rb-head { flex: none; border-bottom: 1px solid var(--line); }
+.rb-top { display: flex; align-items: center; gap: 40px; height: 54px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+.rb-logo { font-weight: 800; font-size: 18px; letter-spacing: .02em; white-space: nowrap; }
+.rb-badge { margin-left: 8px; padding: 2px 6px; border: 1px solid var(--line); font: 600 10px var(--font-mono); letter-spacing: .1em; color: var(--text-muted); vertical-align: middle; }
+.rb-groups { display: flex; gap: 4px; }
+.rb-groups a { padding: 8px 14px; font-weight: 700; font-size: 15px; color: var(--text-muted); }
+.rb-groups a small { font: 11px var(--font-mono); margin-right: 4px; }
+.rb-groups a:hover { color: var(--text-light); }
+.rb-groups a.is-on { background: #ffb52e; color: #0b0a09; }
+.rb-sub { display: flex; align-items: center; gap: 24px; min-height: 62px; padding: 6px 16px; }
+.rb-q { width: 210px; flex: none; font: 11px/1.35 var(--font-mono); letter-spacing: .06em; color: var(--text-muted); }
+.rb-q b { color: var(--text-light); margin-right: 4px; }
+.rb-pages { display: flex; gap: 8px; flex-wrap: wrap; }
+.rb-pages a { display: flex; flex-direction: column; padding: 6px 12px; border: 1px solid var(--line); min-width: 120px; }
+.rb-pages a b { font-size: 13px; }
+.rb-pages a small { font: 10px var(--font-mono); color: var(--text-muted); }
+.rb-pages a:hover { border-color: #ffb52e; }
+.rb-pages a.is-on { background: #ece7df; color: #0b0a09; border-color: #ece7df; }
+.rb-pages a.is-on small { color: #4a4540; }
+.rb-rel { margin-left: auto; display: flex; gap: 16px; align-items: center; font-size: 13px; font-weight: 600; color: #ffb52e; flex-wrap: wrap; }
+.rb-rel small { font: 10px var(--font-mono); letter-spacing: .12em; color: var(--text-muted); }
+.rb-rel a:hover { text-decoration: underline; }
+.rb-foot { flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: 4px 16px; align-items: center; padding: 6px 16px; border-top: 1px solid var(--line); background: #0b0a09; font-size: 13px; }
+.rb-where { grid-column: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-crumb { display: inline-block; padding: 3px 8px; margin-right: 10px; background: #ece7df; color: #0b0a09; font: 700 11px var(--font-mono); letter-spacing: .08em; }
+.rb-ctl { grid-column: 1; display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; align-items: center; }
+.rb-ctl small { font: 10px var(--font-mono); letter-spacing: .12em; color: var(--text-muted); margin-right: 6px; }
+.rb-ctl span { padding: 2px 7px; border: 1px solid var(--line); font: 11px var(--font-mono); }
+.rb-mapbtn { grid-column: 2; grid-row: 1 / 3; padding: 10px 16px; background: #ffb52e; color: #0b0a09; font-weight: 800; font-size: 13px; letter-spacing: .04em; }
+.rb-modal { position: fixed; inset: 0; z-index: 100; background: #000a; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.rb-modal-in { width: min(1000px, 100%); max-height: 90vh; overflow: auto; background: var(--bg-card); border: 1px solid var(--line); padding: 20px; }
+@media (max-width: 900px) { .rb-top { gap: 12px; } .rb-groups a { padding: 6px 8px; font-size: 13px; } .rb-q { display: none; } .rb-rel { display: none; } }
+.hw3d-select { width: 100%; padding: 8px 10px; background: #0b0a09; border: 1px solid var(--line); color: var(--text-light); font-weight: 700; font-size: 13px; }

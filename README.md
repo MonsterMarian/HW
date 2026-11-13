@@ -163,7 +163,10 @@ Druhý vstup téhož Vite projektu: `web.html` → `src/web/`. Desktop zůstáv�
 hardware. `npm run dev` a otevřít `/web.html`; `npm run build` vyrobí `dist/web.html`.
 - Katalog všech 75 fyzických součástek ze 4 projektů (`src/web/parts.js`), i malých (krystal, EEPROM, konektory).
   Každá má štítek přesnosti zvlášť pro 3D model a pro schéma: přesně podle dokumentace / částečně / odhad / model není.
-- Stránka dílu: přehled, 3D model a ceny (ECONOMIC), schéma s RUN/STEP (laboratoř), PCB, křemík 3D, anatomie sestavy,
+- Rozvržení jako robotí aplikace (oblasti 01–04, Souvisí, lišta Kde jsem, Mapa aplikace na `?`) – `src/web/sections.js`.
+- Anatomie ve 3D ve stylu robotů (`src/web/Anatomy3D.jsx`): let WASD / Q/E, šipky, F, rozložení dílů, systémy, hledání;
+  dvojklik = dovnitř (díl → deska → čip → buňky → tranzistor → atomy → kvarky).
+- Stránka dílu: přehled, Anatomie ve 3D, ceny a rozměry (ECONOMIC), schéma s RUN/STEP (laboratoř), PCB, sestava,
   strom dodávek, mapa světa, firmy, časová osa, úzká hrdla, historie výpadků, podíl na trhu.
 - Souhrnné stránky: porovnání (max. 3), projekty se SCHEMATIC/PCB/DIE 3D/ECONOMIC/ANATOMY, trh, firmy, časová osa,
   mapa, úzká hrdla, historie. Rešerše je v `src/web/research/*.js` (schéma dat v `index.js`): každá položka má URL

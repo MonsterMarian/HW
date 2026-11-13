@@ -1,9 +1,9 @@
 // Stránka jedné součástky: přesnost modelu, naše pohledy (3D + ceny, schéma, PCB, křemík, anatomie) a rešerše.
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useMemo } from 'react';
 import { PROJECTS, projectById } from '../engine/projects.js';
 import { HIERARCHICAL_SUBCIRCUITS as H } from '../engine/hierarchicalSubcircuits.js';
 import { fmtRange } from '../engine/economic/catalog.js';
-import { FIDELITY, childrenOf, overallOf, pathOf, projectsOf } from './parts.js';
+import { FIDELITY, childrenOf, overallOf, pathOf, projectsOf, modelRoot } from './parts.js';
 import { Explorer } from './Explorer.jsx';
 import { SupplyTree, MapView, Companies, Timeline, Notes, Market } from './ResearchViews.jsx';
 import { researchOf } from './research/index.js';
@@ -22,11 +22,11 @@ const assemblyOf = (p) => (p.root ? projectById(p.root) : p.bom && PROJECTS.find
 
 const TABS = [
   { id: 'prehled', name: 'Přehled', has: () => true },
-  { id: 'model', name: '3D model a ceny', has: (p) => !!p.item },
+  { id: 'anatomy3d', name: 'Anatomie ve 3D', has: (p) => !!(p.item || p.drill || p.root) },
   { id: 'schema', name: 'Schéma · laboratoř', has: (p) => !!(p.drill || p.root) },
   { id: 'pcb', name: 'PCB', has: (p) => !!p.root && projectById(p.root).views.includes('hardware') },
-  { id: 'die', name: 'Křemík 3D', has: (p) => !!(p.drill || p.root) },
-  { id: 'anatomy', name: 'Anatomie sestavy', has: (p) => !!assemblyOf(p) },
+  { id: 'model', name: 'Ceny a rozměry', has: (p) => !!p.item },
+  { id: 'anatomy', name: 'Sestava (výkres)', has: (p) => !!assemblyOf(p) },
   { id: 'supply', name: 'Strom dodávek', has: () => true },
   { id: 'map', name: 'Mapa světa', has: () => true },
   { id: 'companies', name: 'Firmy', has: () => true },
@@ -35,7 +35,18 @@ const TABS = [
   { id: 'history', name: 'Historie výpadků', has: () => true },
   { id: 'market', name: 'Podíl na trhu', has: () => true },
 ];
-const VIEW_OF = { schema: 'schematic', pcb: 'hardware', die: 'physics' };
+const VIEW_OF = { schema: 'schematic', pcb: 'hardware' };
+
+// 3D: celý projekt (L1), nebo 3D model dílu z kusovníku a dvojklikem jeho podobvod, nebo rovnou podobvod čipu.
+function Anatomy({ p }) {
+  const props = useMemo(() => {
+    const sub = p.drill && H[p.drill];
+    if (p.root) { const pr = projectById(p.root); return { circuit: pr.circuit, title: pr.title, subtitle: pr.subtitle }; }
+    if (p.item) return { circuit: modelRoot(p.name, p.drill), title: p.name, subtitle: p.kind, level: sub ? sub.level - 1 : 1, rootKey: '__model', model: p.item };
+    return { circuit: sub, title: sub.name, subtitle: sub.subtitle, level: sub.level, rootKey: sub.key };
+  }, [p]);
+  return <Explorer key={p.id + '3d'} view="physics" partId={p.id} {...props} onOpenPart={(id) => window.location.assign(`#/d/${id}/anatomy3d`)} />;
+}
 
 function Overview({ p }) {
   const kids = childrenOf(p.id);
@@ -79,22 +90,23 @@ export function PartPage({ p, tab }) {
   const cur = tabs.find((t) => t.id === tab) ?? tabs[0];
   const asm = assemblyOf(p);
   const sub = p.drill && H[p.drill];
-  const full = ['model', 'schema', 'pcb', 'die', 'anatomy'].includes(cur.id);
+  const full = ['model', 'schema', 'pcb', 'anatomy3d', 'anatomy'].includes(cur.id);
   return (
-    <div className="flex flex-col min-h-0">
-      <div className="px-6 pt-4">
+    <div className="flex flex-col rb-fill">
+      <div className="px-6 pt-3">
         <div className="text-[11px] text-(--text-muted) mb-1">
           <a href="#/" className="hover:underline">Katalog</a>{pathOf(p).map((x) => <span key={x.id}> / <a href={`#/d/${x.id}`} className="hover:underline">{x.name}</a></span>)}
         </div>
-        <h1 className="text-2xl font-semibold">{p.name} <Badge level={overallOf(p)} /></h1>
+        <h1 className="text-xl font-semibold">{p.name} <Badge level={overallOf(p)} /></h1>
         <p className="text-sm text-(--text-muted)">{p.kind} · {p.maker}</p>
         <nav className="flex flex-wrap gap-1 mt-3 border-b border-(--line)">
           {tabs.map((t) => <a key={t.id} href={`#/d/${p.id}/${t.id}`} className={`web-tab ${t.id === cur.id ? 'is-on' : ''}`}>{t.name}</a>)}
         </nav>
       </div>
-      <div className={full ? 'h-[calc(100vh-190px)] min-h-[520px] relative' : 'p-6'}>
+      <div className={full ? 'flex-1 min-h-[480px] relative' : 'p-6'}>
         <Suspense fallback={<div className="p-4 meta">NAČÍTÁM…</div>}>
           {cur.id === 'prehled' && <Overview p={p} />}
+          {cur.id === 'anatomy3d' && <Anatomy p={p} />}
           {cur.id === 'model' && <EconomicView key={p.id} project={{ id: p.id, title: p.name, bom: [p.item] }} />}
           {VIEW_OF[cur.id] && (
             <Explorer key={p.id} view={VIEW_OF[cur.id]}

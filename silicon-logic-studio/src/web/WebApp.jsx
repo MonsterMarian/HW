@@ -10,7 +10,7 @@ import { MapView, Companies, Timeline, Notes, Market } from './ResearchViews.jsx
 import { RESEARCH } from './research/index.js';
 import { CatalogTree } from './CatalogTree.jsx';
 import { anyById } from './catalogTree.js';
-import { FabList, ProcessList, Routes } from './FabViews.jsx';
+import { FabList, ProcessList, Routes, BuildCard } from './FabViews.jsx';
 import { GROUPS, sectionById, sectionOf } from './sections.js';
 import { bomTotal, fmtKc } from '../engine/economic/catalog.js';
 
@@ -182,6 +182,7 @@ export default function WebApp() {
   else if (seg[0] === 'projects') body = <Projects />;
   else if (seg[0] === 'fab' && seg[1] === 'machines') body = <Page title="Výrobní stroje" note="Stroje, které jsou potřeba na výrobu čipů a desek v mých sestavách: kdo je vyrábí, kde a jak vypadají (3D model z modulů, zjednodušený)."><FabList kind="machines" /></Page>;
   else if (seg[0] === 'fab' && seg[1] === 'materials') body = <Page title="Materiály a dodavatelé" note="Z čeho se čipy a desky vyrábějí, kdo materiály dodává, kde je vyrábí a kde se dají koupit."><FabList kind="materials" /></Page>;
+  else if (seg[0] === 'fab' && seg[1] === 'build') body = <Page title="Postav si grafickou kartu" note="Co bychom potřebovali, kdybychom kartu stavěli sami: každý díl a kde ho koupit, stroje na výrobu a osazení desky a kde je pořídit, nebo služby, které to udělají za nás."><BuildCard key={seg[2]} id={seg[2]} /></Page>;
   else if (seg[0] === 'fab' && seg[1] === 'routes') body = <Page title="Vlastní čip" note="Jak si jednotlivec může nechat vyrobit vlastní čip a co jde udělat doma."><Routes /></Page>;
   else if (seg[0] === 'fab') body = <Page title="Výrobní postupy" note="Kroky výroby od křemene po hotovou desku, se stroji, materiály a továrnami. Postupy jednotlivých dílů jsou i v záložce Výroba na stránce dílu."><ProcessList /></Page>;
   else if (seg[0] === 'compare') body = <Compare ids={(q.get('ids') ?? '').split(',')} />;

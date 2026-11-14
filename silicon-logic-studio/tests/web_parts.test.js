@@ -85,3 +85,19 @@ test('fab: processes reference existing machines and materials, every machine ha
   assert.ok(ROUTES.length > 0);
   assert.deepEqual(processesOf(PARTS.find((p) => p.id === 'i7_9700')), ['wafer', 'intel14', 'pkg_flipchip']);
 });
+test('buy: distributors, part offers and machine sellers point to real ids, URLs and valid coordinates', async () => {
+  const { DISTRIBUTORS, PART_BUY, MACHINE_BUY, SERVICES, GPU_BUILD, CARDS, fabById } = await import('../src/web/fab/index.js');
+  const url = /^https?:\/\//, geo = (p, what) => p == null || assert.ok(Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 && p.country, what);
+  for (const d of DISTRIBUTORS) { assert.match(d.url, url, d.id); if (d.search) assert.ok(d.search.includes('{q}'), `${d.id}: {q}`); geo(d.place, d.id); }
+  for (const [id, b] of Object.entries(PART_BUY)) {
+    assert.ok(partById(id), `PART_BUY ${id} není díl`);
+    for (const o of b.offers ?? []) { assert.match(o.url, url, `${id}: ${o.shop}`); assert.ok(['doc', 'estimate'].includes(o.fact), `${id}: fact`); }
+  }
+  for (const [id, list] of Object.entries(MACHINE_BUY)) {
+    assert.equal(fabById(id)?.kind, 'Stroj', `MACHINE_BUY ${id} není stroj`);
+    for (const o of list) { assert.match(o.url ?? o.src, url, `${id}: ${o.label}`); geo(o.place, `${id}: ${o.label}`); }
+  }
+  for (const s of SERVICES) { assert.match(s.url, url, s.id); geo(s.place, s.id); }
+  for (const g of GPU_BUILD) assert.match(g.src, url, g.title);
+  for (const c of CARDS) assert.equal(partById(c)?.kind, 'Deska a karta', c);
+});

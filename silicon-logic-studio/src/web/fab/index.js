@@ -5,7 +5,15 @@ import MACHINES_RAW from './machines.js';
 import MATERIALS_RAW, { ROUTES } from './materials.js';
 import PROCESSES from './processes.js';
 
-export { PROCESSES, ROUTES };
+import { DISTRIBUTORS, PART_BUY } from './buy_parts.js';
+import { MACHINE_BUY, SERVICES, GPU_BUILD } from './buy_machines.js';
+
+export { PROCESSES, ROUTES, DISTRIBUTORS, PART_BUY, MACHINE_BUY, SERVICES, GPU_BUILD };
+
+// Stavba karty: grafické karty z mých sestav a stroje na desku (výroba DPS + osazení).
+export const CARDS = ['edge3d', 'tesla_p100', 'k620', 'rtx3060ti'];
+export const machinesOf = (keys) => [...new Set(keys.flatMap((k) => PROCESSES[k]?.steps.flatMap((s) => s.machines ?? []) ?? []))];
+export const searchUrl = (d, q) => d.search.replace('{q}', encodeURIComponent(d.space ? q.trim().replace(/\s+/g, d.space) : q));
 
 export const MACHINES = MACHINES_RAW.map((m) => ({
   ...m, kind: 'Stroj', maker: m.example ?? m.makers.map((x) => x.name).join(', '),

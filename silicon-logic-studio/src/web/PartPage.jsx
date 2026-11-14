@@ -8,9 +8,9 @@ import { Explorer } from './Explorer.jsx';
 import { SupplyTree, MapView, Companies, Timeline, Notes, Market } from './ResearchViews.jsx';
 import { researchOf } from './research/index.js';
 import { usedInOf, blockPart, blockChildren } from './catalogTree.js';
-import { processesOf } from './fab/index.js';
+import { processesOf, PART_BUY, CARDS } from './fab/index.js';
 import { buildMachine } from './fab/machineModels.js';
-import { FabOverview, PartFab } from './FabViews.jsx';
+import { FabOverview, PartFab, PartBuy } from './FabViews.jsx';
 
 const EconomicView = lazy(() => import('../views/EconomicView').then((m) => ({ default: m.EconomicView })));
 const AnatomyView = lazy(() => import('../views/AnatomyView').then((m) => ({ default: m.AnatomyView })));
@@ -106,6 +106,13 @@ function Overview({ p }) {
         {p.sources?.length > 0 && <div className="text-xs mt-2 flex flex-col gap-0.5"><b>Zdroje</b>{p.sources.map((s) => <a key={s} href={s} target="_blank" rel="noreferrer" className="text-(--accent-amber) hover:underline truncate">{s}</a>)}</div>}
       </section>
       {p.block && <BlockLinks p={p} />}
+      {PART_BUY[p.id] && (
+        <section className="web-card md:col-span-2">
+          <h3 className="meta mb-2">Kde koupit</h3>
+          <PartBuy id={p.id} />
+        </section>
+      )}
+      {CARDS.includes(p.id) && <a href={`#/fab/build/${p.id}`} className="web-card md:col-span-2 hover:border-(--accent-amber)"><b>Postav si tuhle kartu →</b> <span className="text-sm text-(--text-muted)">kusovník s obchody, stroje na desku a kde je pořídit, mapa</span></a>}
       {kids.length > 0 && (
         <section className="web-card md:col-span-2">
           <h3 className="meta mb-2">Součástky na tomhle dílu ({kids.length})</h3>

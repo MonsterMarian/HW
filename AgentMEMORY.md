@@ -312,3 +312,11 @@ envytools, fotka), tabulku „model vs. skutečnost“, 8 kroků s kritériem ho
   `fab/machineModels.js` = parametrické modely z modulů (ODHAD tvaru; velikosti z rešerše použité jen u skenerů).
   Vazba díl → postupy `processesOf` v `fab/index.js` (ručně pro čipy, desky = pcb + smt, bloky podle `process`).
   Anatomy3D má prop `build` (moduly jako těla). Stránky stroje / materiálu `#/d/m_*`, `#/d/mat_*`, záložka Výroba.
+- 2026-11-14 — „mapa se součástkami správně, kde koupit nejmenší díly, kde pořídit stroj, co bychom potřebovali na
+  grafickou kartu“ → stránka `#/fab/build/<karta>` (BuildCard ve FabViews.jsx) pro edge3d, tesla_p100, k620, rtx3060ti:
+  kusovník s obchody + vyhledávání u distributorů, stroje na DPS a osazení s nabídkami (nový / hobby / použitý /
+  služba), služby DPS + osazení, GPU_BUILD (co je potřeba), mapa všeho. Data: `fab/buy_parts.js` (13 distributorů
+  s `search` šablonou `{q}`, `space` pro Bazoš; PART_BUY 50 dílů), `fab/buy_machines.js` (MACHINE_BUY pro všech 33
+  strojů, SERVICES 7, GPU_BUILD 8). Mapa: přiblížení kolečkem, posun tažením, vrstvy skryvatelné, `legend="fab"`
+  (opravena legenda – stroje se dřív ukazovaly jako „Výrobce dílu“). Šablony hledání Mouser/Farnell/RS/Arrow/LCSC
+  neověřené (searchOk: false), ceny strojů většinou z výpisů vyhledávače.
